@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#053033" />
+  <title>TAct H — Studio d'identités visuelles</title>
+  <meta name="description" content="TAct H. Studio d'identités visuelles pour institutions, administrations et organisations exigeantes." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;0,9..144,700;0,9..144,900;1,9..144,500;1,9..144,700;1,9..144,900&family=Inter:wght@300;400;500;600;700&display=swap" />
+  <link rel="stylesheet" href="styles/main.css" />
+  <link rel="icon" type="image/svg+xml" href="assets/tacth-logo.svg" />
+</head>
+<body>
+  <div class="grain" aria-hidden="true"></div>
+  <div class="cursor" aria-hidden="true"></div>
+
+  <header class="nav">
+    <a href="#top" class="nav__logo" aria-label="TAct H — accueil">
+      <span class="nav__mark" aria-hidden="true">
+        <svg viewBox="0 0 100 80" width="34" height="28" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="22" cy="50" r="20"/>
+          <circle cx="78" cy="50" r="20"/>
+          <path d="M22 50 L60 14 L78 50 Z"/>
+          <path d="M44 18 L66 18"/>
+        </svg>
+      </span>
+      <span class="nav__word"><em>T</em>A<small>ct</small> H</span>
+    </a>
+    <nav class="nav__links" aria-label="Navigation principale">
+      <a href="#realisations" data-link>Réalisations</a>
+      <a href="#contact" data-link>Contact</a>
+    </nav>
+  </header>
+
+  <main id="top">
+    <!-- HERO -->
+    <section class="hero" data-section>
+      <div class="hero__meta">
+        <span class="dot"></span>
+        <span>Studio · 2026</span>
+        <span class="sep">/</span>
+        <span>Identités institutionnelles</span>
+      </div>
+
+      <h1 class="hero__title">
+        <span class="line"><em>L'identité</em></span>
+        <span class="line">comme</span>
+        <span class="line accent"><em>preuve</em>.</span>
+      </h1>
+
+      <p class="hero__lede">
+        TAct H conçoit des identités visuelles pour institutions,
+        administrations et organisations qui exigent du sens et du soin.
+      </p>
+
+      <div class="hero__scroll" aria-hidden="true">
+        <span>défilez</span>
+        <svg viewBox="0 0 24 60" width="14" height="40" fill="none" stroke="currentColor" stroke-width="1.2">
+          <path d="M12 2 V52 M6 46 L12 56 L18 46"/>
+        </svg>
+      </div>
+
+      <!-- Decorative oversize wordmark -->
+      <div class="hero__bg" aria-hidden="true">
+        <svg viewBox="0 0 1200 300" preserveAspectRatio="xMidYMid meet">
+          <text x="50%" y="78%" text-anchor="middle"
+                font-family="Fraunces, serif" font-weight="900" font-style="italic"
+                font-size="320" fill="none"
+                stroke="currentColor" stroke-width="1" letter-spacing="-10">TAct H</text>
+        </svg>
+      </div>
+    </section>
+
+    <!-- MANIFESTO -->
+    <section class="manifesto" data-section>
+      <div class="manifesto__rail">
+        <span>01 — Manifeste</span>
+      </div>
+      <h2 class="manifesto__text">
+        <span class="reveal">Concevoir un emblème,</span>
+        <span class="reveal">c'est <em>écrire</em> une institution</span>
+        <span class="reveal">en un seul regard.</span>
+      </h2>
+      <div class="manifesto__cols">
+        <p><strong>01</strong> Un trait juste.<br/>Aucune décoration vaine.</p>
+        <p><strong>02</strong> Une forme qui dure.<br/>Au-delà des modes.</p>
+        <p><strong>03</strong> Un sens immédiat.<br/>Lisible, mémorable, officiel.</p>
+      </div>
+    </section>
+
+    <!-- FEATURED — BEFORE / AFTER -->
+    <section id="realisations" class="featured" data-section>
+      <header class="featured__head">
+        <span class="rail">02 — Réalisation phare</span>
+        <h2>
+          <span class="reveal">Armée de l'Air</span>
+          <span class="reveal accent"><em>du Sénégal</em></span>
+        </h2>
+        <p class="featured__sub">Refonte de l'emblème officiel.<br/>Du symbole hérité à la version contemporaine.</p>
+      </header>
+
+      <div class="ba" data-ba>
+        <div class="ba__frame">
+          <div class="ba__after">
+            <img src="assets/armee-air-after.svg" alt="Nouvelle identité — Armée de l'Air du Sénégal" />
+            <span class="ba__tag ba__tag--after">Après</span>
+          </div>
+          <div class="ba__before" data-ba-before>
+            <img src="assets/armee-air-before.svg" alt="Emblème originel — Armée de l'Air du Sénégal" />
+            <span class="ba__tag ba__tag--before">Avant</span>
+          </div>
+          <button class="ba__handle" data-ba-handle aria-label="Glisser pour comparer">
+            <span class="ba__line"></span>
+            <span class="ba__knob">
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9 6 L3 12 L9 18"/>
+                <path d="M15 6 L21 12 L15 18"/>
+              </svg>
+            </span>
+          </button>
+        </div>
+        <p class="ba__hint">Glissez pour révéler.</p>
+      </div>
+
+      <div class="featured__notes">
+        <div>
+          <span class="rail">Mission</span>
+          <p>Préserver l'autorité du symbole tout en affirmant une identité<br/>résolument moderne, technique et nationale.</p>
+        </div>
+        <div>
+          <span class="rail">Livraison</span>
+          <p>Emblème officiel · déclinaisons protocolaires · charte couleur · grilles d'usage.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- BREATH -->
+    <section class="breath" data-section>
+      <p class="breath__line">
+        <span class="reveal">— le détail comme </span>
+        <span class="reveal accent"><em>signature</em>.</span>
+      </p>
+    </section>
+
+    <!-- ISS COLLABORATION -->
+    <section class="iss" data-section>
+      <div class="iss__grid">
+        <div class="iss__visual">
+          <div class="iss__halo" aria-hidden="true"></div>
+          <img src="assets/iss-emblem.svg" alt="Emblème officiel — Inspection des Services de Sécurité" />
+        </div>
+        <div class="iss__copy">
+          <span class="rail">03 — Collaboration institutionnelle</span>
+          <h2>
+            <span class="reveal">Inspection des</span>
+            <span class="reveal">Services de</span>
+            <span class="reveal accent"><em>Sécurité.</em></span>
+          </h2>
+          <p class="lede">
+            Une institution rattachée au ministère de l'Intérieur nous a confié
+            la création de son nouvel emblème officiel.
+          </p>
+          <ul class="iss__usage">
+            <li><span>—</span> Adopté en pins protocolaire</li>
+            <li><span>—</span> Présent sur les uniformes</li>
+            <li><span>—</span> Apposé sur les documents officiels</li>
+          </ul>
+          <p class="iss__seal">Une marque de confiance institutionnelle.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- WORKS GRID -->
+    <section class="works" data-section>
+      <header class="works__head">
+        <span class="rail">04 — Sélection</span>
+        <h2><span class="reveal">D'autres <em>réalisations.</em></span></h2>
+      </header>
+      <div class="works__grid">
+        <figure class="work" data-tilt>
+          <img src="assets/realisations/work-01.svg" alt="Identité — Ministère"/>
+          <figcaption><strong>Ministère</strong><span>Identité — 2025</span></figcaption>
+        </figure>
+        <figure class="work" data-tilt>
+          <img src="assets/realisations/work-02.svg" alt="Direction — Blason"/>
+          <figcaption><strong>Direction</strong><span>Blason — 2025</span></figcaption>
+        </figure>
+        <figure class="work" data-tilt>
+          <img src="assets/realisations/work-03.svg" alt="Agence — Système visuel"/>
+          <figcaption><strong>Agence</strong><span>Système visuel — 2024</span></figcaption>
+        </figure>
+        <figure class="work" data-tilt>
+          <img src="assets/realisations/work-04.svg" alt="Programme — Emblème"/>
+          <figcaption><strong>Programme</strong><span>Emblème — 2024</span></figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <!-- BREATH 2 -->
+    <section class="breath breath--two" data-section>
+      <p class="breath__line">
+        <span class="reveal">Pour ceux qui </span>
+        <span class="reveal"><em>doivent</em> être </span>
+        <span class="reveal accent">reconnus.</span>
+      </p>
+    </section>
+
+    <!-- CONTACT -->
+    <section id="contact" class="contact" data-section>
+      <span class="rail">05 — Contact</span>
+      <h2>
+        <span class="reveal">Confiez-nous</span>
+        <span class="reveal accent"><em>votre identité.</em></span>
+      </h2>
+      <div class="contact__lines">
+        <a href="mailto:studio@tact-h.com" class="contact__link">
+          <span class="contact__label">Écrire</span>
+          <span class="contact__value">studio@tact-h.com</span>
+          <span class="contact__arrow" aria-hidden="true">→</span>
+        </a>
+        <a href="#" class="contact__link">
+          <span class="contact__label">Studio</span>
+          <span class="contact__value">Dakar — Sénégal</span>
+          <span class="contact__arrow" aria-hidden="true">→</span>
+        </a>
+      </div>
+      <p class="contact__note">Sur invitation et recommandation.<br/>Réponse sous 48h.</p>
+    </section>
+
+    <footer class="foot">
+      <div class="foot__row">
+        <span>© 2026 — TAct H Studio</span>
+        <span class="foot__mid">Identités pour institutions exigeantes.</span>
+        <span>Dakar · Sénégal</span>
+      </div>
+    </footer>
+  </main>
+
+  <script src="scripts/main.js"></script>
+</body>
+</html>
