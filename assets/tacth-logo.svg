@@ -1,19 +1,13 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 120" fill="none">
-  <g fill="currentColor">
-    <!-- Stylised mark: interlinked geometric bicycle-like glyph -->
-    <g transform="translate(8 18)" stroke="currentColor" stroke-width="6" fill="none" stroke-linecap="round" stroke-linejoin="round">
-      <circle cx="22" cy="58" r="22"/>
-      <circle cx="78" cy="58" r="22"/>
-      <path d="M22 58 L60 18 L78 58 Z"/>
-      <path d="M44 22 L66 22"/>
-      <path d="M55 22 L60 18"/>
-      <circle cx="60" cy="18" r="3" fill="currentColor"/>
-      <circle cx="22" cy="58" r="3" fill="currentColor"/>
-      <circle cx="78" cy="58" r="3" fill="currentColor"/>
-    </g>
-    <!-- Wordmark TActH -->
-    <g transform="translate(125 90)" font-family="'Fraunces','Times New Roman',serif" font-weight="700" font-style="italic" font-size="92" letter-spacing="-2">
-      <text x="0" y="0">TA<tspan font-size="64" dy="-2">ct</tspan><tspan dx="14" dy="2">H</tspan></text>
-    </g>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 260 72" fill="none">
+  <!-- Clean typographic wordmark TAct H.
+       Uses currentColor so it picks up the theme foreground (ivory or dark). -->
+  <g fill="currentColor"
+     font-family="'Fraunces','Times New Roman',serif"
+     font-weight="700" font-style="italic" letter-spacing="-1">
+    <text x="6" y="54" font-size="58">T</text>
+    <text x="42" y="54" font-size="58">A</text>
+    <text x="92" y="54" font-size="36" font-weight="600">ct</text>
+    <text x="148" y="54" font-size="58">H</text>
+    <circle cx="212" cy="50" r="3.2"/>
   </g>
 </svg>
