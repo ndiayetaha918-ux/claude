@@ -3,14 +3,29 @@
   const prefersReduced =
     window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  /* ---------- Nav scroll state ---------- */
+  /* ---------- Nav : état scroll + thème selon la section survolée ---------- */
   const nav = document.querySelector('.nav');
+  const themedSections = Array.from(document.querySelectorAll('[data-theme]'));
   const setNavState = () => {
     if (window.scrollY > 24) nav.classList.add('is-scrolled');
     else nav.classList.remove('is-scrolled');
+
+    // Déterminer le thème de la section actuellement derrière la nav
+    const navY = 40; // point d'échantillonnage sous la nav
+    let current = null;
+    for (const s of themedSections) {
+      const r = s.getBoundingClientRect();
+      if (r.top <= navY && r.bottom > navY) { current = s; break; }
+    }
+    if (current && current.dataset.theme === 'paper') {
+      nav.classList.add('is-over-paper');
+    } else {
+      nav.classList.remove('is-over-paper');
+    }
   };
   setNavState();
   window.addEventListener('scroll', setNavState, { passive: true });
+  window.addEventListener('resize', setNavState);
 
   /* ---------- Section reveal on scroll ---------- */
   const sections = document.querySelectorAll('[data-section]');

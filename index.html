@@ -3,14 +3,14 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="theme-color" content="#0C0C0E" />
+  <meta name="theme-color" content="#0F1018" />
   <title>TAct H — Studio d'identités</title>
   <meta name="description" content="TAct H. Studio d'identités pour institutions et organisations exigeantes." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,800;1,9..144,400;1,9..144,600&family=Inter:wght@400;500;600;700;800&family=Instrument+Serif:ital@0;1&display=swap" />
   <link rel="stylesheet" href="styles/main.css" />
-  <link rel="icon" type="image/svg+xml" href="assets/tacth-logo.svg" />
+  <link rel="icon" type="image/svg+xml" href="assets/tacth-icon.svg" />
 </head>
 <body>
   <div class="grain" aria-hidden="true"></div>
@@ -29,11 +29,15 @@
   <main id="top">
 
     <!-- HERO -->
-    <section class="hero" data-section>
+    <section class="hero" data-section data-theme="ink">
       <span class="meta">
         <span class="dot"></span>
         Studio d'identités — Dakar, 2026
       </span>
+
+      <div class="hero__mark" aria-hidden="true">
+        <img src="assets/tacth-icon.svg" alt="" />
+      </div>
 
       <h1 class="hero__title">
         L'identité <em>comme</em> preuve.
@@ -53,8 +57,8 @@
       </a>
     </section>
 
-    <!-- 01 — ISS : collaboration institutionnelle (en tête, mis en valeur) -->
-    <section id="iss" class="feature feature--iss" data-section>
+    <!-- 01 — ISS : collaboration institutionnelle (fond paper pour valoriser le badge couleur) -->
+    <section id="iss" class="feature feature--iss" data-section data-theme="paper">
       <header class="feature__head">
         <span class="rail">01 — Collaboration institutionnelle</span>
         <h2>
@@ -64,8 +68,7 @@
       </header>
 
       <figure class="feature__stage feature__stage--iss">
-        <div class="stage__halo" aria-hidden="true"></div>
-        <img src="assets/iss-emblem.svg" alt="Emblème — Inspection des Services de Sécurité" />
+        <img src="assets/iss-emblem.svg" alt="Emblème officiel — Inspection des Services de Sécurité" />
       </figure>
 
       <aside class="feature__copy">
@@ -86,8 +89,8 @@
       </aside>
     </section>
 
-    <!-- 02 — Armée de l'Air : avant / après (dual hover) -->
-    <section id="armee" class="feature feature--ba" data-section>
+    <!-- 02 — Armée de l'Air (fond ink) -->
+    <section id="armee" class="feature feature--ba" data-section data-theme="ink">
       <header class="feature__head">
         <span class="rail">02 — Exercice de rebranding</span>
         <h2>
@@ -111,8 +114,6 @@
           </figcaption>
         </figure>
 
-        <span class="dual__divider" aria-hidden="true"></span>
-
         <figure class="dual__item" data-dual-item="after">
           <div class="dual__frame">
             <img src="assets/armee-air-after.svg" alt="Proposition contemporaine — Armée de l'Air du Sénégal" />
@@ -127,15 +128,15 @@
       <p class="dual__hint">Survolez l'un ou l'autre pour comparer.</p>
     </section>
 
-    <!-- 03 — Autres réalisations : Traveler + Starlab -->
-    <section id="works" class="works" data-section>
+    <!-- 03 — Autres réalisations -->
+    <section id="works" class="works" data-section data-theme="paper">
       <header class="feature__head">
         <span class="rail">03 — Logotypes</span>
         <h2>D'autres <em>réalisations</em>.</h2>
       </header>
 
       <div class="works__grid">
-        <figure class="work" style="--work-bg:#111214; --work-fg:#5BE432;">
+        <figure class="work" data-bg="ink" style="--work-bg:#0E0F15; --work-fg:#5BE432;">
           <div class="work__stage">
             <img src="assets/realisations/traveler.svg" alt="Traveler — logotype" />
           </div>
@@ -145,7 +146,7 @@
           </figcaption>
         </figure>
 
-        <figure class="work" style="--work-bg:#5B4EE8; --work-fg:#0A0A14;">
+        <figure class="work" data-bg="violet" style="--work-bg:#5B4EE8; --work-fg:#F4EDDC;">
           <div class="work__stage">
             <img src="assets/realisations/starlab.svg" alt="Starlab — logotype" />
           </div>
@@ -154,18 +155,28 @@
             <span>Logotype · technologies</span>
           </figcaption>
         </figure>
+
+        <figure class="work" data-bg="ink" style="--work-bg:#0E0F15; --work-fg:#F4EDDC;">
+          <div class="work__stage">
+            <img src="assets/realisations/verifiq.svg" alt="Verifiq — logotype" />
+          </div>
+          <figcaption>
+            <strong>Verifiq</strong>
+            <span>Logotype · système fictif de vérification de pièces officielles</span>
+          </figcaption>
+        </figure>
       </div>
     </section>
 
     <!-- Breath -->
-    <section class="breath" data-section>
+    <section class="breath" data-section data-theme="ink">
       <p class="breath__line">
         Un <em>trait juste</em>. Une forme qui <em>dure</em>. Un sens <em>immédiat</em>.
       </p>
     </section>
 
     <!-- Contact -->
-    <section id="contact" class="contact" data-section>
+    <section id="contact" class="contact" data-section data-theme="paper">
       <span class="rail">04 — Contact</span>
       <h2>Confiez-nous <em>votre identité</em>.</h2>
 
@@ -187,7 +198,7 @@
       </p>
     </section>
 
-    <footer class="foot">
+    <footer class="foot" data-theme="ink">
       <div class="foot__row">
         <span>© 2026 — TAct H Studio</span>
         <span class="foot__mid"><em>Identités pour institutions exigeantes.</em></span>

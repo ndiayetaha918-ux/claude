@@ -1,21 +1,129 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 440" fill="none">
-  <!-- White-on-transparent faithful vectorization of ISS emblem:
-       magnifying glass containing a stylized eye, with a V/marker dropping below.  -->
-  <g stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" fill="none">
-    <!-- Magnifying glass circle -->
-    <circle cx="180" cy="150" r="118" stroke-width="18"/>
-    <!-- Handle of the magnifier -->
-    <line x1="265" y1="235" x2="305" y2="278" stroke-width="22"/>
-    <!-- Upper eyelid arc -->
-    <path d="M84 128 Q180 106 276 128" stroke-width="10"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 720" fill="none">
+  <!-- Emblème ISS — Inspection des Services de Sécurité.
+       Reproduction fidèle du badge circulaire officiel :
+       anneau blanc (texte curviligne), arcs tricolores (drapeau SN),
+       disque noir central, figure centrale en V, "I.S.S" et mots-clés. -->
+  <defs>
+    <path id="iss-topArc" d="M 90 360 A 270 270 0 0 1 630 360"/>
+    <path id="iss-botArc" d="M 94 360 A 266 266 0 0 0 626 360"/>
+    <path id="iss-perfArc" d="M 180 560 A 220 220 0 0 1 180 160"/>
+    <path id="iss-ethArc"  d="M 540 160 A 220 220 0 0 1 540 560"/>
+    <linearGradient id="iss-vBlue" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0"   stop-color="#2612C9"/>
+      <stop offset=".55" stop-color="#4418C0"/>
+      <stop offset="1"   stop-color="#6018B0"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Anneau blanc externe -->
+  <circle cx="360" cy="360" r="350" fill="#FFFFFF" stroke="#0A0A0A" stroke-width="2"/>
+
+  <!-- Arcs tricolores sénégalais (vert - jaune - rouge) en 6 segments
+       entre l'anneau blanc et le disque noir central. -->
+  <g>
+    <!-- Secteur gauche (vert au centre, jaune et rouge en haut/bas) -->
+    <path d="M 55 360 A 305 305 0 0 1 360 55 L 360 90 A 270 270 0 0 0 90 360 Z" fill="#F4C430"/>
+    <path d="M 360 665 A 305 305 0 0 1 55 360 L 90 360 A 270 270 0 0 0 360 630 Z" fill="#C9252D"/>
+    <!-- Bande verte gauche large centrale -->
+    <path d="M 55 360 A 305 305 0 0 1 360 55 L 360 665 A 305 305 0 0 1 55 360 Z"
+          fill="#1FA63F" opacity="0"/>
+    <!-- Secteur droit -->
+    <path d="M 360 55 A 305 305 0 0 1 665 360 L 630 360 A 270 270 0 0 0 360 90 Z" fill="#1FA63F"/>
+    <path d="M 665 360 A 305 305 0 0 1 360 665 L 360 630 A 270 270 0 0 0 630 360 Z" fill="#C9252D"/>
+    <!-- Fond vert sous tout, masqué par les couleurs -->
   </g>
-  <!-- Iris (white ring) -->
-  <circle cx="180" cy="168" r="40" fill="currentColor"/>
-  <circle cx="180" cy="168" r="24" fill="#000"/>
-  <!-- Pupil (small white) -->
-  <circle cx="180" cy="168" r="5" fill="currentColor"/>
-  <!-- V pin / marker pointing down from the circle -->
-  <path d="M118 258 L180 420 L242 258"
-        stroke="currentColor" stroke-width="18"
-        stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <!-- On redessine par-dessus les arcs tricolores "propres" en 6 tranches -->
+  <g>
+    <!-- Gauche haut (vert) -->
+    <path d="M 55 360 A 305 305 0 0 1 167 143 L 199 173 A 270 270 0 0 0 90 360 Z" fill="#1FA63F"/>
+    <!-- Gauche milieu (jaune) – bande verticale gauche -->
+    <path d="M 90 360 A 270 270 0 0 1 199 173 L 231 201 A 235 235 0 0 0 125 360 Z" fill="#F4C430"/>
+    <!-- Gauche bas (rouge) -->
+    <path d="M 55 360 A 305 305 0 0 0 167 577 L 199 547 A 270 270 0 0 1 90 360 Z" fill="#C9252D"/>
+    <path d="M 90 360 A 270 270 0 0 0 199 547 L 231 519 A 235 235 0 0 1 125 360 Z" fill="#F4C430"/>
+    <!-- Droite haut (vert) -->
+    <path d="M 665 360 A 305 305 0 0 0 553 143 L 521 173 A 270 270 0 0 1 630 360 Z" fill="#1FA63F"/>
+    <path d="M 630 360 A 270 270 0 0 0 521 173 L 489 201 A 235 235 0 0 1 595 360 Z" fill="#F4C430"/>
+    <!-- Droite bas (rouge) -->
+    <path d="M 665 360 A 305 305 0 0 1 553 577 L 521 547 A 270 270 0 0 0 630 360 Z" fill="#C9252D"/>
+    <path d="M 630 360 A 270 270 0 0 1 521 547 L 489 519 A 235 235 0 0 0 595 360 Z" fill="#F4C430"/>
+  </g>
+
+  <!-- Disque noir central -->
+  <circle cx="360" cy="360" r="236" fill="#0A0A0A"/>
+
+  <!-- Texte curviligne anneau blanc (haut) -->
+  <text font-family="'Inter','Helvetica',sans-serif" font-weight="900"
+        font-size="36" letter-spacing="3.6" fill="#0A0A0A">
+    <textPath href="#iss-topArc" startOffset="50%" text-anchor="middle">
+      INSPECTION DES SERVICES
+    </textPath>
+  </text>
+  <text font-family="'Inter','Helvetica',sans-serif" font-weight="900"
+        font-size="36" letter-spacing="3.6" fill="#0A0A0A">
+    <textPath href="#iss-botArc" startOffset="50%" text-anchor="middle">
+      DE SÉCURITÉ
+    </textPath>
+  </text>
+
+  <!-- Étoiles vertes haut / bas sur le ruban -->
+  <g fill="#1FA63F">
+    <polygon points="360,96 367,114 386,114 371,126 377,145 360,133 343,145 349,126 334,114 353,114"/>
+    <polygon points="360,624 367,606 386,606 371,594 377,575 360,587 343,575 349,594 334,606 353,606"/>
+  </g>
+
+  <!-- Petits ronds drapeau SN à gauche et à droite -->
+  <g>
+    <circle cx="42" cy="360" r="18" fill="#FFFFFF" stroke="#0A0A0A" stroke-width="1"/>
+    <g clip-path="circle(17px at 42 360)">
+      <rect x="24" y="342" width="12" height="36" fill="#1FA63F"/>
+      <rect x="36" y="342" width="12" height="36" fill="#F4C430"/>
+      <rect x="48" y="342" width="12" height="36" fill="#C9252D"/>
+    </g>
+    <circle cx="678" cy="360" r="18" fill="#FFFFFF" stroke="#0A0A0A" stroke-width="1"/>
+    <g clip-path="circle(17px at 678 360)">
+      <rect x="660" y="342" width="12" height="36" fill="#1FA63F"/>
+      <rect x="672" y="342" width="12" height="36" fill="#F4C430"/>
+      <rect x="684" y="342" width="12" height="36" fill="#C9252D"/>
+    </g>
+  </g>
+
+  <!-- Mots-clés blancs sur le disque noir -->
+  <text x="360" y="196" text-anchor="middle"
+        font-family="'Inter',sans-serif" font-weight="500" font-style="italic"
+        font-size="30" fill="#FFFFFF">contrôle</text>
+  <text font-family="'Inter',sans-serif" font-weight="500" font-style="italic"
+        font-size="30" fill="#FFFFFF" letter-spacing="1">
+    <textPath href="#iss-perfArc" startOffset="50%" text-anchor="middle">performance</textPath>
+  </text>
+  <text font-family="'Inter',sans-serif" font-weight="500" font-style="italic"
+        font-size="30" fill="#FFFFFF" letter-spacing="1">
+    <textPath href="#iss-ethArc" startOffset="50%" text-anchor="middle">éthique</textPath>
+  </text>
+
+  <!-- Liserés circulaires fins -->
+  <circle cx="360" cy="360" r="236" fill="none" stroke="#FFFFFF" stroke-width="2" opacity=".7"/>
+  <circle cx="360" cy="360" r="220" fill="none" stroke="#FFFFFF" stroke-width="1" opacity=".35"
+          stroke-dasharray="2 6"/>
+
+  <!-- Figure centrale : personnage stylisé en V, tête, bras déployés -->
+  <g transform="translate(360 380)">
+    <!-- Tête -->
+    <circle cx="0" cy="-70" r="26" fill="url(#iss-vBlue)"/>
+    <!-- Cou / torse -->
+    <rect x="-14" y="-48" width="28" height="46" fill="url(#iss-vBlue)"/>
+    <!-- V / bras déployés -->
+    <path d="M -120 -10
+             L 0 120
+             L 120 -10
+             L 74 -10
+             L 0 72
+             L -74 -10 Z"
+          fill="url(#iss-vBlue)" stroke="#FFFFFF" stroke-width="3" stroke-linejoin="round"/>
+  </g>
+
+  <!-- Texte I.S.S -->
+  <text x="360" y="556" text-anchor="middle"
+        font-family="'Inter',sans-serif" font-weight="900"
+        font-size="78" fill="#FFFFFF" letter-spacing="4">I.S.S</text>
 </svg>

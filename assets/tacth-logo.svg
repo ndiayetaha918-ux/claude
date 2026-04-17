@@ -1,13 +1,28 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 260 72" fill="none">
-  <!-- Clean typographic wordmark TAct H.
-       Uses currentColor so it picks up the theme foreground (ivory or dark). -->
-  <g fill="currentColor"
-     font-family="'Fraunces','Times New Roman',serif"
-     font-weight="700" font-style="italic" letter-spacing="-1">
-    <text x="6" y="54" font-size="58">T</text>
-    <text x="42" y="54" font-size="58">A</text>
-    <text x="92" y="54" font-size="36" font-weight="600">ct</text>
-    <text x="148" y="54" font-size="58">H</text>
-    <circle cx="212" cy="50" r="3.2"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 200" fill="currentColor">
+  <!-- Logo TAct H — wordmark complet : icône + texte « TActH ».
+       currentColor pour adaptation automatique au fond. -->
+
+  <!-- Icône à gauche -->
+  <g transform="translate(0 4)">
+    <circle cx="56" cy="48" r="34" fill="none" stroke="currentColor" stroke-width="12"/>
+    <path d="M114 0 H186 V70 H150 Z"/>
+    <path d="M114 0 L186 0 L150 38 Z" fill="#FFFFFF"/>
+    <line x1="186" y1="0"  x2="108" y2="92" stroke="currentColor" stroke-width="10"/>
+    <line x1="30"  y1="70" x2="178" y2="170" stroke="currentColor" stroke-width="10"/>
+    <line x1="170" y1="66" x2="50"  y2="178" stroke="currentColor" stroke-width="10"/>
+    <circle cx="50"  cy="132" r="34" fill="none" stroke="currentColor" stroke-width="10"/>
+    <line x1="20"  y1="158" x2="80" y2="106" stroke="currentColor" stroke-width="10"/>
+    <circle cx="148" cy="154" r="20" fill="none" stroke="currentColor" stroke-width="9"/>
+    <circle cx="148" cy="154" r="3.5"/>
+    <circle cx="50"  cy="132" r="5"/>
+  </g>
+
+  <!-- Wordmark « TActH » -->
+  <g font-family="'Fraunces','Times New Roman',serif"
+     font-weight="900" font-style="italic"
+     letter-spacing="-6">
+    <text x="226" y="148" font-size="168">TA</text>
+    <text x="400" y="148" font-size="104" font-weight="800">ct</text>
+    <text x="500" y="148" font-size="168">H</text>
   </g>
 </svg>
