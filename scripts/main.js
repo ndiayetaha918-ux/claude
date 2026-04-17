@@ -124,4 +124,37 @@
       demo.observe(dual);
     }
   }
+
+  /* ---------- Stack de slides : la slide visée monte, les autres reculent ---------- */
+  const stack = document.querySelector('[data-stack]');
+  if (stack) {
+    const items = stack.querySelectorAll('[data-stack-item]');
+    const setStackFocus = (k) => {
+      if (k === null || k === undefined) stack.removeAttribute('data-focus');
+      else stack.setAttribute('data-focus', String(k));
+    };
+    items.forEach((it) => {
+      const k = it.getAttribute('data-stack-item');
+      it.addEventListener('mouseenter', () => setStackFocus(k));
+      it.addEventListener('focusin',    () => setStackFocus(k));
+      it.addEventListener('click',      () => setStackFocus(k));
+      it.setAttribute('tabindex', '0');
+    });
+    stack.addEventListener('mouseleave', () => setStackFocus(null));
+
+    /* Démo d'intro : balaye une fois quand visible */
+    if (!prefersReduced && 'IntersectionObserver' in window) {
+      const demo = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return;
+          demo.disconnect();
+          setTimeout(() => setStackFocus('0'), 400);
+          setTimeout(() => setStackFocus('1'), 1200);
+          setTimeout(() => setStackFocus('2'), 2000);
+          setTimeout(() => setStackFocus(null), 2900);
+        });
+      }, { threshold: 0.35 });
+      demo.observe(stack);
+    }
+  }
 })();

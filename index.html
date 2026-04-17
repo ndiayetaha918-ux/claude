@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,800;1,9..144,400;1,9..144,600&family=Inter:wght@400;500;600;700;800&family=Instrument+Serif:ital@0;1&display=swap" />
   <link rel="stylesheet" href="styles/main.css" />
-  <link rel="icon" type="image/svg+xml" href="assets/tacth-icon.svg" />
+  <link rel="icon" type="image/png" href="assets/tacth-icon.png" />
 </head>
 <body>
   <div class="grain" aria-hidden="true"></div>
@@ -18,17 +18,19 @@
 
   <header class="nav">
     <a href="#top" class="nav__logo" aria-label="TAct H — accueil">
-      <img src="assets/tacth-logo.svg" alt="TAct H" />
+      <img src="assets/tacth-logo.png" alt="TAct H" class="logo-mark" />
     </a>
     <nav class="nav__links" aria-label="Navigation principale">
       <a href="#iss" data-link>Réalisations</a>
+      <a href="#editions" data-link>Éditions</a>
+      <a href="#process" data-link>Process</a>
       <a href="#contact" data-link>Contact</a>
     </nav>
   </header>
 
   <main id="top">
 
-    <!-- HERO -->
+    <!-- HERO (ink) -->
     <section class="hero" data-section data-theme="ink">
       <span class="meta">
         <span class="dot"></span>
@@ -36,7 +38,7 @@
       </span>
 
       <div class="hero__mark" aria-hidden="true">
-        <img src="assets/tacth-icon.svg" alt="" />
+        <img src="assets/tacth-icon.png" alt="" class="logo-mark" />
       </div>
 
       <h1 class="hero__title">
@@ -44,9 +46,9 @@
       </h1>
 
       <p class="hero__lede">
-        <strong>TAct H</strong> conçoit des emblèmes et identités pour
-        <em>institutions</em>, administrations et organisations qui exigent
-        du <em>sens</em> et du soin.
+        <strong>TAct H</strong> conçoit emblèmes, logotypes et éditions
+        pour <em>institutions</em>, marques de caractère et projets
+        culturels qui exigent du <em>sens</em> et du soin.
       </p>
 
       <a class="hero__cta" href="#iss" data-link>
@@ -57,7 +59,7 @@
       </a>
     </section>
 
-    <!-- 01 — ISS : collaboration institutionnelle (fond paper pour valoriser le badge couleur) -->
+    <!-- 01 — ISS (paper) -->
     <section id="iss" class="feature feature--iss" data-section data-theme="paper">
       <header class="feature__head">
         <span class="rail">01 — Collaboration institutionnelle</span>
@@ -68,7 +70,7 @@
       </header>
 
       <figure class="feature__stage feature__stage--iss">
-        <img src="assets/iss-emblem.svg" alt="Emblème officiel — Inspection des Services de Sécurité" />
+        <img src="assets/iss-emblem.jpg" alt="Emblème officiel — Inspection des Services de Sécurité" />
       </figure>
 
       <aside class="feature__copy">
@@ -89,7 +91,7 @@
       </aside>
     </section>
 
-    <!-- 02 — Armée de l'Air (fond ink) -->
+    <!-- 02 — Armée de l'Air (ink) -->
     <section id="armee" class="feature feature--ba" data-section data-theme="ink">
       <header class="feature__head">
         <span class="rail">02 — Exercice de rebranding</span>
@@ -109,7 +111,7 @@
             <img src="assets/armee-air-before.svg" alt="Emblème hérité — Armée de l'Air du Sénégal" />
           </div>
           <figcaption>
-            <span class="rail rail--paper">Avant</span>
+            <span class="rail">Avant</span>
             <span class="dual__label">Emblème <em>hérité</em></span>
           </figcaption>
         </figure>
@@ -119,7 +121,7 @@
             <img src="assets/armee-air-after.svg" alt="Proposition contemporaine — Armée de l'Air du Sénégal" />
           </div>
           <figcaption>
-            <span class="rail rail--paper">Après</span>
+            <span class="rail">Après</span>
             <span class="dual__label">Proposition <em>2026</em></span>
           </figcaption>
         </figure>
@@ -128,56 +130,166 @@
       <p class="dual__hint">Survolez l'un ou l'autre pour comparer.</p>
     </section>
 
-    <!-- 03 — Autres réalisations -->
-    <section id="works" class="works" data-section data-theme="paper">
+    <!-- 03 — Logotypes (paper) -->
+    <section id="logotypes" class="works" data-section data-theme="paper">
       <header class="feature__head">
         <span class="rail">03 — Logotypes</span>
-        <h2>D'autres <em>réalisations</em>.</h2>
+        <h2>Marques &amp; <em>logotypes</em>.</h2>
       </header>
 
-      <div class="works__grid">
-        <figure class="work" data-bg="ink" style="--work-bg:#0E0F15; --work-fg:#5BE432;">
+      <div class="works__grid works__grid--five">
+        <figure class="work">
           <div class="work__stage">
-            <img src="assets/realisations/traveler.svg" alt="Traveler — logotype" />
+            <img src="assets/realisations/traveler.jpg" alt="Traveler — logotype" />
           </div>
           <figcaption>
             <strong>Traveler</strong>
-            <span>Logotype · aviation de loisir</span>
+            <span>Aviation de loisir</span>
           </figcaption>
         </figure>
 
-        <figure class="work" data-bg="violet" style="--work-bg:#5B4EE8; --work-fg:#F4EDDC;">
+        <figure class="work">
           <div class="work__stage">
-            <img src="assets/realisations/starlab.svg" alt="Starlab — logotype" />
+            <img src="assets/realisations/starlab.jpg" alt="Starlab — logotype" />
           </div>
           <figcaption>
             <strong>Starlab</strong>
-            <span>Logotype · technologies</span>
+            <span>Technologies</span>
           </figcaption>
         </figure>
 
-        <figure class="work" data-bg="ink" style="--work-bg:#0E0F15; --work-fg:#F4EDDC;">
+        <figure class="work">
           <div class="work__stage">
-            <img src="assets/realisations/verifiq.svg" alt="Verifiq — logotype" />
+            <img src="assets/realisations/verifiq.jpg" alt="Verifiq — logotype" />
           </div>
           <figcaption>
             <strong>Verifiq</strong>
-            <span>Logotype · système fictif de vérification de pièces officielles</span>
+            <span>Vérification de pièces officielles</span>
+          </figcaption>
+        </figure>
+
+        <figure class="work">
+          <div class="work__stage work__stage--paper">
+            <img src="assets/realisations/black-cat-five.png" alt="Black Cat Five — logotype" />
+          </div>
+          <figcaption>
+            <strong>Black Cat Five</strong>
+            <span>Groupe / scène alternative</span>
+          </figcaption>
+        </figure>
+
+        <figure class="work">
+          <div class="work__stage">
+            <img src="assets/realisations/focus.jpg" alt="f*cus — logotype" />
+          </div>
+          <figcaption>
+            <strong>f<em>★</em>cus</strong>
+            <span>Magazine / direction artistique</span>
           </figcaption>
         </figure>
       </div>
     </section>
 
-    <!-- Breath -->
+    <!-- 04 — Éditions / Kakemonos (ink) -->
+    <section id="editions" class="editions" data-section data-theme="ink">
+      <header class="feature__head">
+        <span class="rail">04 — Éditions, kakemonos &amp; brochures</span>
+        <h2>
+          Pièces <em>imprimées</em><br/>
+          à fort caractère.
+        </h2>
+      </header>
+
+      <div class="editions__grid">
+        <figure class="edition">
+          <div class="edition__stage">
+            <img src="assets/editions/fragment.jpg" alt="Fragment — kakemono recueil de manga" />
+          </div>
+          <figcaption>
+            <span class="rail">Kakemono</span>
+            <strong>Fragment</strong>
+            <p>Recueil de manga édité par <em>Kibun</em>, en partenariat
+            avec <em>Clairefontaine</em>. Plus de <em>11 000 €</em> levés
+            en financement participatif.</p>
+          </figcaption>
+        </figure>
+
+        <figure class="edition">
+          <div class="edition__stage">
+            <img src="assets/editions/taama.jpg" alt="Taama — kakemono BD africaine" />
+          </div>
+          <figcaption>
+            <span class="rail">Kakemono</span>
+            <strong>Taama</strong>
+            <p>Recueil de BD <em>100% africaines</em> — direction
+            artistique éditoriale, sponsorisé par <em>Wexan</em>.</p>
+          </figcaption>
+        </figure>
+
+        <figure class="edition">
+          <div class="edition__stage">
+            <img src="assets/editions/rgpd.jpg" alt="Brochure — La protection des données personnelles" />
+          </div>
+          <figcaption>
+            <span class="rail">Brochure</span>
+            <strong>Données personnelles</strong>
+            <p>Brochure <em>pédagogique</em> sur le RGPD, la CNIL, les
+            risques et les bons réflexes — composition mixte typo &amp;
+            illustration.</p>
+          </figcaption>
+        </figure>
+
+        <figure class="edition">
+          <div class="edition__stage">
+            <img src="assets/editions/burger-house.jpg" alt="Menu Burger House" />
+          </div>
+          <figcaption>
+            <span class="rail">Carte</span>
+            <strong>Burger House</strong>
+            <p>Menu et offre du moment — <em>identité commerciale</em>
+            chaleureuse, hiérarchie claire, lecture rapide en restaurant.</p>
+          </figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <!-- 05 — Slides stack (paper) -->
+    <section id="process" class="slides" data-section data-theme="paper">
+      <header class="feature__head">
+        <span class="rail">05 — Présentations &amp; pitchs</span>
+        <h2>
+          Slides qui <em>tiennent</em><br/>
+          la salle.
+        </h2>
+        <p class="slides__lede">
+          Système éditorial complet — palette, typographie, gabarits.
+          <em>Survolez</em> une slide pour la faire monter ; les autres se posent en retrait.
+        </p>
+      </header>
+
+      <div class="stack" data-stack>
+        <figure class="stack__item" data-stack-item="0">
+          <img src="assets/slides/slide-01.jpg" alt="Slide — Les gens pensent / Un media buyer" />
+        </figure>
+        <figure class="stack__item" data-stack-item="1">
+          <img src="assets/slides/slide-02.jpg" alt="Slide — Quatre compétences" />
+        </figure>
+        <figure class="stack__item" data-stack-item="2">
+          <img src="assets/slides/slide-03.jpg" alt="Slide — Citation Marc Andreessen" />
+        </figure>
+      </div>
+    </section>
+
+    <!-- Breath (ink) -->
     <section class="breath" data-section data-theme="ink">
       <p class="breath__line">
         Un <em>trait juste</em>. Une forme qui <em>dure</em>. Un sens <em>immédiat</em>.
       </p>
     </section>
 
-    <!-- Contact -->
+    <!-- Contact (paper) -->
     <section id="contact" class="contact" data-section data-theme="paper">
-      <span class="rail">04 — Contact</span>
+      <span class="rail">06 — Contact</span>
       <h2>Confiez-nous <em>votre identité</em>.</h2>
 
       <div class="contact__lines">
