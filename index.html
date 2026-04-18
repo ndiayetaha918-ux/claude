@@ -18,7 +18,8 @@
 
   <header class="nav">
     <a href="#top" class="nav__logo" aria-label="TAct Hand — accueil">
-      <span class="logo-mark" role="img" aria-label="TAct Hand"></span>
+      <span class="logo-mark" aria-hidden="true"></span>
+      <span class="nav__wordmark">TAct Hand</span>
     </a>
     <nav class="nav__links" aria-label="Navigation principale">
       <a href="#iss" data-link>Réalisations</a>
@@ -200,8 +201,8 @@
         </h2>
       </header>
 
-      <div class="editions__grid editions__grid--bento">
-        <figure class="edition edition--tall">
+      <div class="editions__grid" data-edition-grid>
+        <figure class="edition" tabindex="0">
           <div class="edition__stage">
             <img src="assets/editions/fragment.jpg" alt="Fragment — kakemono recueil de manga" />
           </div>
@@ -214,7 +215,19 @@
           </figcaption>
         </figure>
 
-        <figure class="edition edition--wide">
+        <figure class="edition" tabindex="0">
+          <div class="edition__stage">
+            <img src="assets/editions/taama.jpg" alt="Taama — kakemono BD africaine" />
+          </div>
+          <figcaption>
+            <span class="rail">Kakemono</span>
+            <strong>Taama</strong>
+            <p>Recueil de BD <em>100% africaines</em> — direction
+            artistique éditoriale, sponsorisé par <em>Wexan</em>.</p>
+          </figcaption>
+        </figure>
+
+        <figure class="edition" tabindex="0">
           <div class="edition__stage">
             <img src="assets/editions/rgpd.jpg" alt="Brochure — La protection des données personnelles" />
           </div>
@@ -227,7 +240,7 @@
           </figcaption>
         </figure>
 
-        <figure class="edition edition--square">
+        <figure class="edition" tabindex="0">
           <div class="edition__stage">
             <img src="assets/editions/burger-house.jpg" alt="Menu Burger House" />
           </div>
@@ -235,19 +248,7 @@
             <span class="rail">Carte</span>
             <strong>Burger House</strong>
             <p>Menu et offre du moment — <em>identité commerciale</em>
-            chaleureuse, hiérarchie claire.</p>
-          </figcaption>
-        </figure>
-
-        <figure class="edition edition--tall">
-          <div class="edition__stage">
-            <img src="assets/editions/taama.jpg" alt="Taama — kakemono BD africaine" />
-          </div>
-          <figcaption>
-            <span class="rail">Kakemono</span>
-            <strong>Taama</strong>
-            <p>Recueil de BD <em>100% africaines</em> — direction
-            artistique éditoriale, sponsorisé par <em>Wexan</em>.</p>
+            chaleureuse, hiérarchie claire, lecture rapide en restaurant.</p>
           </figcaption>
         </figure>
       </div>
