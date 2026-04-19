@@ -766,6 +766,140 @@ section { position: relative; padding: clamp(90px, 14vh, 160px) var(--gutter); }
 }
 .slides__lede em { font-family: var(--italic); font-weight: 400; font-size: 1.1em; color: var(--fg); }
 
+/* ==========================================================================
+   CASES — slider auto, 3 mockups en situation
+   ========================================================================== */
+.cases-section { max-width: var(--maxw); margin: 0 auto; }
+.cases__lede {
+  max-width: 600px;
+  margin: 22px 0 0;
+  font-family: var(--sans);
+  font-weight: 600;
+  font-size: clamp(15px, 1.1vw, 17px);
+  line-height: 1.6;
+  color: var(--fg-soft);
+}
+.cases__lede em { font-family: var(--italic); font-weight: 400; font-size: 1.08em; color: var(--fg); }
+
+.cases {
+  margin: clamp(50px, 6vw, 90px) auto 0;
+  width: 100%;
+}
+.cases__viewport {
+  position: relative;
+  border-radius: 18px;
+  overflow: hidden;
+  background: var(--ink-deep);
+  border: 1px solid var(--rule);
+  aspect-ratio: 16 / 9;
+  box-shadow:
+    0 30px 60px rgba(15, 16, 24, 0.18),
+    0 8px 18px rgba(15, 16, 24, 0.10);
+}
+.cases__track {
+  position: absolute;
+  inset: 0;
+  list-style: none;
+  margin: 0; padding: 0;
+  display: flex;
+  width: 100%; height: 100%;
+  transition: transform .9s cubic-bezier(.7, 0, .2, 1);
+  will-change: transform;
+}
+.case-slide {
+  flex: 0 0 100%;
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+.case-slide img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+/* Voile dégradé bas pour la lisibilité de la légende */
+.case-slide::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 45%;
+  background: linear-gradient(
+    to top,
+    rgba(8, 8, 15, 0.85) 0%,
+    rgba(8, 8, 15, 0.55) 40%,
+    rgba(8, 8, 15, 0) 100%
+  );
+  pointer-events: none;
+}
+
+/* Légendes : superposées en bas-gauche, fade entre elles */
+.cases__captions {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  padding: clamp(20px, 3vw, 36px) clamp(22px, 3.5vw, 44px);
+  z-index: 2;
+  pointer-events: none;
+}
+.case-caption {
+  margin: 0;
+  position: absolute;
+  left: clamp(22px, 3.5vw, 44px);
+  right: clamp(22px, 3.5vw, 44px);
+  bottom: clamp(20px, 3vw, 36px);
+  font-family: var(--sans);
+  font-size: clamp(14px, 1.05vw, 17px);
+  line-height: 1.5;
+  color: var(--paper);
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity .55s var(--ease-out), transform .55s var(--ease-out);
+}
+.case-caption.is-active {
+  opacity: 1;
+  transform: none;
+}
+.case-caption .rail {
+  display: block;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: rgba(244, 237, 220, 0.65);
+  margin-bottom: 6px;
+}
+.case-caption strong {
+  font-family: var(--serif);
+  font-weight: 600;
+  font-style: normal;
+  font-size: 1.15em;
+  color: var(--paper);
+}
+
+/* Pips d'avancement, discrets */
+.cases__pips {
+  position: absolute;
+  top: clamp(16px, 2vw, 24px);
+  right: clamp(18px, 2.4vw, 28px);
+  display: flex;
+  gap: 8px;
+  z-index: 3;
+}
+.cases__pips span {
+  width: 22px; height: 3px;
+  border-radius: 2px;
+  background: rgba(244, 237, 220, 0.30);
+  transition: background .4s var(--ease), width .4s var(--ease);
+}
+.cases__pips span.is-active {
+  background: var(--paper);
+  width: 32px;
+}
+
+@media (max-width: 640px) {
+  .cases__viewport { aspect-ratio: 4 / 5; }
+}
+
 .stack {
   position: relative;
   margin: clamp(50px, 6vw, 90px) auto 0;

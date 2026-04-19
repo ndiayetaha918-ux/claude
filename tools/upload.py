@@ -26,6 +26,7 @@ ALLOWED_FOLDERS = {
     "assets/realisations":  ASSETS / "realisations",
     "assets/editions":      ASSETS / "editions",
     "assets/slides":        ASSETS / "slides",
+    "assets/cases":         ASSETS / "cases",
 }
 
 SAFE_NAME = re.compile(r"[^A-Za-z0-9._-]+")
@@ -101,6 +102,7 @@ PAGE = """<!doctype html>
           <option value="assets/realisations">assets/realisations/ (logotypes)</option>
           <option value="assets/editions">assets/editions/ (éditions, kakemonos)</option>
           <option value="assets/slides">assets/slides/ (slides / présentations)</option>
+          <option value="assets/cases">assets/cases/ (cas d'usage — slider)</option>
         </select>
       </label>
       <label class="field">

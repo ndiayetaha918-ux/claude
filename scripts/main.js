@@ -157,4 +157,54 @@
       demo.observe(stack);
     }
   }
+
+  /* ---------- Cases : slider auto, change toutes les 3.8s ---------- */
+  const cases = document.querySelector('[data-cases]');
+  if (cases) {
+    const track   = cases.querySelector('[data-cases-track]');
+    const slides  = cases.querySelectorAll('[data-case-slide]');
+    const caps    = cases.querySelectorAll('[data-case-caption]');
+    const pips    = cases.querySelectorAll('[data-cases-pip]');
+    const total   = slides.length;
+    const interval = 3800;
+    let idx = 0;
+    let timer = null;
+    let visible = false;
+
+    const render = () => {
+      track.style.transform = `translateX(-${idx * 100}%)`;
+      caps.forEach((c, i) => c.classList.toggle('is-active', i === idx));
+      pips.forEach((p, i) => p.classList.toggle('is-active', i === idx));
+    };
+    const next = () => { idx = (idx + 1) % total; render(); };
+    const start = () => {
+      if (prefersReduced || timer) return;
+      timer = setInterval(next, interval);
+    };
+    const stop = () => {
+      if (timer) { clearInterval(timer); timer = null; }
+    };
+
+    /* Pause quand l'onglet n'est pas visible (économie de batterie) */
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) stop();
+      else if (visible) start();
+    });
+
+    /* Démarre / arrête selon la visibilité dans le viewport */
+    if ('IntersectionObserver' in window) {
+      const io2 = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          visible = entry.isIntersecting;
+          if (visible) start();
+          else stop();
+        });
+      }, { threshold: 0.25 });
+      io2.observe(cases);
+    } else {
+      start();
+    }
+
+    render();
+  }
 })();
