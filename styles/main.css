@@ -375,15 +375,15 @@ section { position: relative; padding: clamp(90px, 14vh, 160px) var(--gutter); }
   width: auto;
   filter: drop-shadow(0 30px 50px rgba(0,0,0,0.18));
 }
-/* ISS : on laisse l'emblème brut — pas de cadre, pas d'ajout.
-   Clip circulaire juste pour ôter le fond carré natif du JPG. */
+/* ISS : emblème brut, aucun ajout. Le liseré gris natif est conservé,
+   clip circulaire uniquement pour ôter le fond carré du JPG. */
 .feature__stage--iss img {
   background: transparent;
   border: 0;
-  clip-path: circle(49.5% at 50% 50%);
+  clip-path: circle(50% at 50% 50%);
   max-width: 78%;
   max-height: 96%;
-  filter: drop-shadow(0 30px 50px rgba(0,0,0,0.12));
+  filter: none;
 }
 
 .feature__copy {
