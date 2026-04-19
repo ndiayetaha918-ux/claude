@@ -230,6 +230,15 @@ strong {
   display: flex; flex-direction: column; align-items: flex-start;
   justify-content: center;
   overflow: hidden;
+  /* Dégradé d'encre subtil : halo tiède au centre, ténèbres en bas.
+     Pas de couleur nouvelle — juste de la profondeur. */
+  background:
+    radial-gradient(
+      120% 90% at 50% 20%,
+      #1a1b28 0%,
+      var(--ink) 55%,
+      var(--ink-deep) 100%
+    );
 }
 .meta {
   display: inline-flex; align-items: center; gap: 12px;
@@ -380,9 +389,9 @@ section { position: relative; padding: clamp(90px, 14vh, 160px) var(--gutter); }
 .feature__stage--iss img {
   background: transparent;
   border: 0;
-  clip-path: circle(50% at 50% 50%);
-  max-width: 78%;
-  max-height: 96%;
+  clip-path: circle(42% at 50% 50%);
+  max-width: 82%;
+  max-height: 100%;
   filter: none;
 }
 
@@ -740,27 +749,30 @@ section { position: relative; padding: clamp(90px, 14vh, 160px) var(--gutter); }
 
 .stack {
   position: relative;
-  margin: clamp(60px, 8vw, 110px) auto 0;
-  width: min(900px, 100%);
-  aspect-ratio: 16 / 9;
-  perspective: 1400px;
+  margin: clamp(50px, 6vw, 90px) auto 0;
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: clamp(18px, 2.4vw, 30px);
+}
+@media (max-width: 820px) {
+  .stack { grid-template-columns: 1fr; gap: 22px; }
 }
 .stack__item {
-  position: absolute;
-  inset: 0;
+  position: relative;
   margin: 0;
+  aspect-ratio: 16 / 9;
   border-radius: 14px;
   overflow: hidden;
   border: 1px solid var(--rule);
   background: #fff;
   box-shadow:
-    0 30px 60px rgba(15, 16, 24, 0.18),
-    0 8px 18px rgba(15, 16, 24, 0.10);
+    0 22px 44px rgba(15, 16, 24, 0.16),
+    0 6px 14px rgba(15, 16, 24, 0.08);
   transition:
-    transform .7s var(--ease-out),
-    box-shadow .6s var(--ease),
-    filter .5s var(--ease),
-    z-index 0s linear .35s;
+    transform .5s var(--ease),
+    box-shadow .45s var(--ease),
+    filter .4s var(--ease);
   transform-origin: center bottom;
   cursor: pointer;
 }
@@ -770,38 +782,42 @@ section { position: relative; padding: clamp(90px, 14vh, 160px) var(--gutter); }
   display: block;
 }
 
-/* Empilement par défaut (la 0 dessous, la 2 dessus) */
-.stack__item[data-stack-item="0"] {
-  transform: translate(-7%, 7%) rotate(-4deg);
-  z-index: 1;
-}
-.stack__item[data-stack-item="1"] {
-  transform: translate(0, 0) rotate(0deg);
-  z-index: 2;
-}
+/* Défaut : les 3 slides posées côte à côte, sans rotation */
+.stack__item[data-stack-item="0"],
+.stack__item[data-stack-item="1"],
 .stack__item[data-stack-item="2"] {
-  transform: translate(7%, -3%) rotate(4deg);
-  z-index: 3;
+  transform: none;
+  z-index: 1;
 }
 
-/* Quand le stack a un focus : la slide visée monte et passe au-dessus,
-   les autres reculent et sombrent. */
+/* Hover : la slide visée monte, les autres se posent en retrait */
+.stack:hover .stack__item:not(:hover):not(:focus-visible) {
+  filter: brightness(.8) saturate(.9);
+  transform: scale(.97);
+}
+.stack__item:hover,
+.stack__item:focus-visible {
+  transform: translateY(-12px) scale(1.03);
+  z-index: 10;
+  box-shadow:
+    0 40px 70px rgba(15, 16, 24, 0.30),
+    0 12px 24px rgba(15, 16, 24, 0.14);
+}
+
+/* Démo d'intro pilotée par le JS (data-focus) */
 .stack[data-focus] .stack__item {
-  filter: brightness(.55) saturate(.85);
-  transform: scale(.94) translateY(8px) rotate(0deg);
-  z-index: 1;
-  transition-delay: 0s;
+  filter: brightness(.8) saturate(.9);
+  transform: scale(.97);
 }
 .stack[data-focus="0"] .stack__item[data-stack-item="0"],
 .stack[data-focus="1"] .stack__item[data-stack-item="1"],
 .stack[data-focus="2"] .stack__item[data-stack-item="2"] {
   filter: none;
-  transform: translateY(-22px) scale(1.04);
+  transform: translateY(-12px) scale(1.03);
   z-index: 10;
   box-shadow:
-    0 50px 90px rgba(15, 16, 24, 0.28),
-    0 16px 30px rgba(15, 16, 24, 0.16);
-  transition-delay: 0s, 0s, 0s, 0s;
+    0 40px 70px rgba(15, 16, 24, 0.30),
+    0 12px 24px rgba(15, 16, 24, 0.14);
 }
 
 /* ==========================================================================
