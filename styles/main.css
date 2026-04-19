@@ -378,6 +378,25 @@ section { position: relative; padding: clamp(90px, 14vh, 160px) var(--gutter); }
 .feature__stage--iss {
   background: var(--paper-deep);       /* ivoire un ton plus foncé pour poser le badge */
 }
+/* Cercle gris posé derrière l'emblème : il dépasse légèrement
+   du disque clippé, ce qui crée un liseré gris net tout autour. */
+.feature__stage--iss::before {
+  content: "";
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  height: calc((100% - 2 * clamp(32px, 5vw, 68px)) * 0.84 + 16px);
+  aspect-ratio: 1 / 1;
+  border-radius: 50%;
+  background: #b9bcb8;
+  box-shadow: 0 1px 0 rgba(255,255,255,.35) inset;
+  pointer-events: none;
+  z-index: 1;
+}
+.feature__stage--iss img {
+  position: relative;
+  z-index: 2;
+}
 .feature__stage img {
   max-width: 62%;
   max-height: 88%;
@@ -392,17 +411,7 @@ section { position: relative; padding: clamp(90px, 14vh, 160px) var(--gutter); }
   clip-path: circle(42% at 50% 50%);
   max-width: 82%;
   max-height: 100%;
-  /* Liseré gris posé autour de la coupe circulaire : 8 drop-shadows
-     en étoile = stroke franc de ~6px sur le pourtour. */
-  filter:
-    drop-shadow( 6px 0 0 #b9bcb8)
-    drop-shadow(-6px 0 0 #b9bcb8)
-    drop-shadow(0  6px 0 #b9bcb8)
-    drop-shadow(0 -6px 0 #b9bcb8)
-    drop-shadow( 4.2px  4.2px 0 #b9bcb8)
-    drop-shadow(-4.2px  4.2px 0 #b9bcb8)
-    drop-shadow( 4.2px -4.2px 0 #b9bcb8)
-    drop-shadow(-4.2px -4.2px 0 #b9bcb8);
+  filter: none;
 }
 
 .feature__copy {
@@ -946,22 +955,87 @@ section { position: relative; padding: clamp(90px, 14vh, 160px) var(--gutter); }
 }
 
 /* ==========================================================================
-   REVEAL
+   REVEAL — niveau section (containers directs)
    ========================================================================== */
-[data-section] > :not(.hero__bg) {
+[data-section]:not(.hero) > :not(.hero__bg) {
   opacity: 0;
   transform: translateY(24px);
   transition: opacity .9s var(--ease-out), transform .9s var(--ease-out);
 }
-[data-section].is-visible > :not(.hero__bg) { opacity: 1; transform: none; }
-[data-section].is-visible > :nth-child(1) { transition-delay: 0ms; }
-[data-section].is-visible > :nth-child(2) { transition-delay: 120ms; }
-[data-section].is-visible > :nth-child(3) { transition-delay: 240ms; }
-[data-section].is-visible > :nth-child(4) { transition-delay: 360ms; }
+[data-section]:not(.hero).is-visible > :not(.hero__bg) { opacity: 1; transform: none; }
+[data-section]:not(.hero).is-visible > :nth-child(1) { transition-delay: 0ms; }
+[data-section]:not(.hero).is-visible > :nth-child(2) { transition-delay: 120ms; }
+[data-section]:not(.hero).is-visible > :nth-child(3) { transition-delay: 240ms; }
+[data-section]:not(.hero).is-visible > :nth-child(4) { transition-delay: 360ms; }
 
-.hero > * { opacity: 1 !important; transform: none !important; }
+/* Reveal — niveau items (grilles & listes internes) */
+[data-section] .work,
+[data-section] .edition,
+[data-section] .stack__item,
+[data-section] .stamps li,
+[data-section] .contact__link,
+[data-section] .dual__item {
+  opacity: 0;
+  transform: translateY(18px);
+  transition: opacity .7s var(--ease-out), transform .7s var(--ease-out);
+}
+[data-section].is-visible .work,
+[data-section].is-visible .edition,
+[data-section].is-visible .stack__item,
+[data-section].is-visible .stamps li,
+[data-section].is-visible .contact__link,
+[data-section].is-visible .dual__item {
+  opacity: 1;
+  transform: none;
+}
+.works__grid .work:nth-child(1) { transition-delay: 120ms; }
+.works__grid .work:nth-child(2) { transition-delay: 200ms; }
+.works__grid .work:nth-child(3) { transition-delay: 280ms; }
+.works__grid .work:nth-child(4) { transition-delay: 360ms; }
+.works__grid .work:nth-child(5) { transition-delay: 440ms; }
+
+.editions__grid .edition:nth-child(1) { transition-delay: 120ms; }
+.editions__grid .edition:nth-child(2) { transition-delay: 220ms; }
+.editions__grid .edition:nth-child(3) { transition-delay: 320ms; }
+.editions__grid .edition:nth-child(4) { transition-delay: 420ms; }
+
+.stack .stack__item:nth-child(1) { transition-delay: 120ms; }
+.stack .stack__item:nth-child(2) { transition-delay: 240ms; }
+.stack .stack__item:nth-child(3) { transition-delay: 360ms; }
+
+.stamps li:nth-child(1) { transition-delay: 80ms; }
+.stamps li:nth-child(2) { transition-delay: 170ms; }
+.stamps li:nth-child(3) { transition-delay: 260ms; }
+
+.contact__lines .contact__link:nth-child(1) { transition-delay: 120ms; }
+.contact__lines .contact__link:nth-child(2) { transition-delay: 220ms; }
+.contact__lines .contact__link:nth-child(3) { transition-delay: 320ms; }
+
+.dual .dual__item:nth-child(1) { transition-delay: 120ms; }
+.dual .dual__item:nth-child(2) { transition-delay: 260ms; }
+
+/* Hero — animation d'entrée au chargement (cascade) */
+@keyframes fadeRise {
+  from { opacity: 0; transform: translateY(18px); }
+  to   { opacity: 1; transform: none; }
+}
+.hero > * {
+  animation: fadeRise .9s var(--ease-out) both;
+}
+.hero > :nth-child(1) { animation-delay: .15s; }
+.hero > :nth-child(2) { animation-delay: .28s; }
+.hero > :nth-child(3) { animation-delay: .40s; }
+.hero > :nth-child(4) { animation-delay: .54s; }
+.hero > :nth-child(5) { animation-delay: .68s; }
 
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; }
   [data-section] > * { opacity: 1 !important; transform: none !important; }
+  .hero > * { opacity: 1 !important; transform: none !important; }
+  [data-section] .work,
+  [data-section] .edition,
+  [data-section] .stack__item,
+  [data-section] .stamps li,
+  [data-section] .contact__link,
+  [data-section] .dual__item { opacity: 1 !important; transform: none !important; }
 }
