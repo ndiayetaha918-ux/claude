@@ -393,16 +393,16 @@ section { position: relative; padding: clamp(90px, 14vh, 160px) var(--gutter); }
   max-width: 82%;
   max-height: 100%;
   /* Liseré gris posé autour de la coupe circulaire : 8 drop-shadows
-     en étoile = stroke net de ~2.5px sur le pourtour. */
+     en étoile = stroke franc de ~6px sur le pourtour. */
   filter:
-    drop-shadow( 2.5px 0 0 #b9bcb8)
-    drop-shadow(-2.5px 0 0 #b9bcb8)
-    drop-shadow(0  2.5px 0 #b9bcb8)
-    drop-shadow(0 -2.5px 0 #b9bcb8)
-    drop-shadow( 1.8px  1.8px 0 #b9bcb8)
-    drop-shadow(-1.8px  1.8px 0 #b9bcb8)
-    drop-shadow( 1.8px -1.8px 0 #b9bcb8)
-    drop-shadow(-1.8px -1.8px 0 #b9bcb8);
+    drop-shadow( 6px 0 0 #b9bcb8)
+    drop-shadow(-6px 0 0 #b9bcb8)
+    drop-shadow(0  6px 0 #b9bcb8)
+    drop-shadow(0 -6px 0 #b9bcb8)
+    drop-shadow( 4.2px  4.2px 0 #b9bcb8)
+    drop-shadow(-4.2px  4.2px 0 #b9bcb8)
+    drop-shadow( 4.2px -4.2px 0 #b9bcb8)
+    drop-shadow(-4.2px -4.2px 0 #b9bcb8);
 }
 
 .feature__copy {
