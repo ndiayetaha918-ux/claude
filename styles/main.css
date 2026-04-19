@@ -388,7 +388,7 @@ section { position: relative; padding: clamp(90px, 14vh, 160px) var(--gutter); }
   height: calc((100% - 2 * clamp(32px, 5vw, 68px)) * 0.84 + 16px);
   aspect-ratio: 1 / 1;
   border-radius: 50%;
-  background: #b9bcb8;
+  background: #afafaf;
   box-shadow: 0 1px 0 rgba(255,255,255,.35) inset;
   pointer-events: none;
   z-index: 1;
@@ -967,6 +967,13 @@ section { position: relative; padding: clamp(90px, 14vh, 160px) var(--gutter); }
 [data-section]:not(.hero).is-visible > :nth-child(2) { transition-delay: 120ms; }
 [data-section]:not(.hero).is-visible > :nth-child(3) { transition-delay: 240ms; }
 [data-section]:not(.hero).is-visible > :nth-child(4) { transition-delay: 360ms; }
+
+/* L'emblème ISS n'anime pas — un sceau institutionnel ne "pop" pas. */
+[data-section] > .feature__stage--iss {
+  opacity: 1 !important;
+  transform: none !important;
+  transition: none !important;
+}
 
 /* Reveal — niveau items (grilles & listes internes) */
 [data-section] .work,
