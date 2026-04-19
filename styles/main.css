@@ -900,6 +900,39 @@ section { position: relative; padding: clamp(90px, 14vh, 160px) var(--gutter); }
   .cases__viewport { aspect-ratio: 4 / 5; }
 }
 
+/* Note explicative sous le slider */
+.cases__note {
+  max-width: 780px;
+  margin: clamp(30px, 4vw, 52px) auto 0;
+  padding: clamp(22px, 3vw, 32px) clamp(24px, 3.5vw, 38px);
+  border-left: 2px solid var(--rule-strong);
+  background: transparent;
+  display: block;
+}
+.cases__note .rail {
+  display: block;
+  margin-bottom: 10px;
+  color: var(--fg-dim);
+}
+.cases__note p {
+  margin: 0;
+  font-family: var(--serif);
+  font-weight: 400;
+  font-style: normal;
+  font-size: clamp(16px, 1.2vw, 19px);
+  line-height: 1.55;
+  color: var(--fg-soft);
+}
+.cases__note p em {
+  font-family: var(--italic);
+  font-style: italic;
+  color: var(--fg);
+}
+.cases__note p strong {
+  font-weight: 600;
+  color: var(--fg);
+}
+
 .stack {
   position: relative;
   margin: clamp(50px, 6vw, 90px) auto 0;
@@ -1168,6 +1201,13 @@ section { position: relative; padding: clamp(90px, 14vh, 160px) var(--gutter); }
 .hero > :nth-child(3) { animation-delay: .40s; }
 .hero > :nth-child(4) { animation-delay: .54s; }
 .hero > :nth-child(5) { animation-delay: .68s; }
+
+/* Le sceau TAct Hand du hero ne s'anime pas : une marque est posée, pas "pop-up". */
+.hero__mark {
+  animation: none !important;
+  opacity: 1 !important;
+  transform: none !important;
+}
 
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; }
