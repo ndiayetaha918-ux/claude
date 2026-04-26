@@ -4,36 +4,38 @@
    ========================================================================== */
 
 :root {
-  /* PALETTE : warm-cinematic (post-pivot)
-     ink ▸ noir café, légèrement vineux
-     paper ▸ crème plus chaude, moins jaune
-     ember ▸ accent chaud principal (remplace l'ancien cognac)
-  */
+  /* PALETTE — Wheat / Espresso / Terracotta / Teal
+     Pivot bold cinematic. Ink dérivé d'un Espresso assombri pour
+     garder du contraste sur le texte ; paper = Wheat directement.
+     Terracotta = accent chaud principal (était ember).
+     Teal = secondary accent (frais, contraste). */
 
   /* Dark (ink) */
-  --ink:        #15101A;       /* noir vineux profond */
-  --ink-2:      #221829;
-  --ink-deep:   #0A0710;
-  --on-ink:     #F1E7D0;       /* crème chaude */
-  --on-ink-soft:rgba(241, 231, 208, 0.74);
-  --on-ink-dim: rgba(241, 231, 208, 0.50);
-  --rule-ink:   rgba(241, 231, 208, 0.12);
-  --rule-ink-2: rgba(241, 231, 208, 0.22);
+  --ink:        #2C1414;       /* Espresso assombri */
+  --ink-2:      #3D1E1E;
+  --ink-deep:   #1A0808;
+  --on-ink:     #F5DFBB;       /* Wheat */
+  --on-ink-soft:rgba(245, 223, 187, 0.74);
+  --on-ink-dim: rgba(245, 223, 187, 0.50);
+  --rule-ink:   rgba(245, 223, 187, 0.13);
+  --rule-ink-2: rgba(245, 223, 187, 0.24);
 
   /* Light (paper) */
-  --paper:      #F1E7D0;       /* crème chaude */
-  --paper-2:    #E5DABF;
-  --paper-deep: #D9CDAE;
-  --on-paper:   #15101A;
-  --on-paper-soft:rgba(21, 16, 26, 0.74);
-  --on-paper-dim:rgba(21, 16, 26, 0.50);
-  --rule-paper: rgba(21, 16, 26, 0.14);
-  --rule-paper-2: rgba(21, 16, 26, 0.24);
+  --paper:      #F5DFBB;       /* Wheat */
+  --paper-2:    #ECD0A1;
+  --paper-deep: #E2C58C;
+  --on-paper:   #2C1414;
+  --on-paper-soft:rgba(44, 20, 20, 0.74);
+  --on-paper-dim:rgba(44, 20, 20, 0.50);
+  --rule-paper: rgba(44, 20, 20, 0.16);
+  --rule-paper-2: rgba(44, 20, 20, 0.28);
 
-  /* Accent : ember (chaud, saturé) — utilisé pour les stats, le gradient, les highlights */
-  --accent:     #D9824F;
-  --ember:      #D9824F;
-  --ember-deep: #8B4A2A;
+  /* Accents */
+  --accent:       #F2542D;     /* Fiery Terracotta — accent principal */
+  --ember:        #F2542D;     /* alias historique pour ne rien casser */
+  --ember-deep:   #B83518;
+  --teal:         #11686A;     /* Stormy Teal — accent froid secondaire */
+  --teal-bright:  #0E9594;     /* Dark Cyan — variante plus vive */
 
   /* Fonts */
   --sans:    'Inter', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
@@ -238,24 +240,26 @@ strong {
   display: flex; flex-direction: column; align-items: flex-start;
   justify-content: center;
   overflow: hidden;
-  /* Gradient warm-cinematic dérivé de la palette : halo ember haut-droite,
-     ember-deep en bas-gauche, fond noir vineux. */
+  /* Gradient dérivé direct de la palette uploadée :
+     halo Terracotta haut-gauche, halo Stormy Teal bas-droite,
+     fond Espresso assombri. Reproduit l'ambiance de la planche couleur. */
   background:
     radial-gradient(
-      80% 60% at 78% 0%,
-      rgba(217, 130, 79, 0.28) 0%,
-      rgba(217, 130, 79, 0.10) 32%,
-      transparent 62%
+      90% 70% at 18% 0%,
+      rgba(242, 84, 45, 0.42) 0%,
+      rgba(242, 84, 45, 0.12) 32%,
+      transparent 65%
     ),
     radial-gradient(
-      55% 50% at 8% 95%,
-      rgba(139, 74, 42, 0.22) 0%,
-      transparent 70%
+      80% 70% at 92% 105%,
+      rgba(17, 104, 106, 0.45) 0%,
+      rgba(17, 104, 106, 0.12) 35%,
+      transparent 68%
     ),
     linear-gradient(
       180deg,
-      #2A1E35 0%,
-      var(--ink) 50%,
+      #4A1F1F 0%,
+      var(--ink) 55%,
       var(--ink-deep) 100%
     );
 }
@@ -336,7 +340,7 @@ strong {
   font-size: clamp(38px, 5vw, 64px);
   line-height: 0.95;
   letter-spacing: -0.025em;
-  color: var(--ember);
+  color: var(--accent);
   display: inline-flex;
   align-items: baseline;
   gap: 2px;
@@ -346,7 +350,7 @@ strong {
   font-style: normal;
   font-size: 0.62em;
   font-weight: 400;
-  color: rgba(217, 130, 79, 0.72);
+  color: rgba(242, 84, 45, 0.78);
   margin-left: 2px;
 }
 .stat__label {
@@ -1032,16 +1036,6 @@ section { position: relative; padding: clamp(90px, 14vh, 160px) var(--gutter); }
   object-fit: cover;
   display: block;
   background: var(--ink-deep);
-}
-.av-clip figcaption {
-  padding: 14px 18px 16px;
-  font-family: var(--sans);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: var(--fg-dim);
-  border-top: 1px solid var(--rule);
 }
 
 .stack {
