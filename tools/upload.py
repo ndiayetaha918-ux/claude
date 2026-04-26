@@ -22,11 +22,12 @@ ROOT = Path(__file__).resolve().parent.parent
 ASSETS = ROOT / "assets"
 
 ALLOWED_FOLDERS = {
-    "assets":               ASSETS,
-    "assets/realisations":  ASSETS / "realisations",
-    "assets/editions":      ASSETS / "editions",
-    "assets/slides":        ASSETS / "slides",
-    "assets/cases":         ASSETS / "cases",
+    "assets":                ASSETS,
+    "assets/realisations":   ASSETS / "realisations",
+    "assets/editions":       ASSETS / "editions",
+    "assets/slides":         ASSETS / "slides",
+    "assets/cases":          ASSETS / "cases",
+    "assets/audiovisuel":    ASSETS / "audiovisuel",
 }
 
 SAFE_NAME = re.compile(r"[^A-Za-z0-9._-]+")
@@ -103,6 +104,7 @@ PAGE = """<!doctype html>
           <option value="assets/editions">assets/editions/ (éditions, kakemonos)</option>
           <option value="assets/slides">assets/slides/ (slides / présentations)</option>
           <option value="assets/cases">assets/cases/ (cas d'usage — slider)</option>
+          <option value="assets/audiovisuel">assets/audiovisuel/ (services montage)</option>
         </select>
       </label>
       <label class="field">

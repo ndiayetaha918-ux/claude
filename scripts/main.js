@@ -207,4 +207,47 @@
 
     render();
   }
+
+  /* ---------- Compteurs hero : chiffres qui montent ---------- */
+  const counters = document.querySelectorAll('[data-counter]');
+  if (counters.length) {
+    const animateCount = (el) => {
+      const target = parseInt(el.dataset.counter, 10);
+      if (!Number.isFinite(target)) return;
+      if (prefersReduced) {
+        el.textContent = target.toLocaleString('fr-FR');
+        return;
+      }
+      const duration = 1800;
+      const startTime = performance.now();
+      const tick = (now) => {
+        const t = Math.min(1, (now - startTime) / duration);
+        const eased = 1 - Math.pow(1 - t, 3); /* ease-out cubic */
+        const value = Math.round(target * eased);
+        el.textContent = value.toLocaleString('fr-FR');
+        if (t < 1) requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    };
+
+    /* Petite tempo pour laisser le hero se poser avant que les chiffres montent */
+    const launch = (el) => {
+      const delay = parseInt(el.dataset.counterDelay || '700', 10);
+      setTimeout(() => animateCount(el), delay);
+    };
+
+    if ('IntersectionObserver' in window) {
+      const io3 = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            launch(entry.target);
+            io3.unobserve(entry.target);
+          }
+        });
+      }, { threshold: 0.4 });
+      counters.forEach((c) => io3.observe(c));
+    } else {
+      counters.forEach((c) => animateCount(c));
+    }
+  }
 })();

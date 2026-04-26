@@ -26,6 +26,9 @@
 
   /* Accent : cognac discret, utilisé très rarement */
   --accent:     #B07848;
+  /* Ember : accent chaud, plus saturé — sert au gradient hero & aux stats */
+  --ember:      #D9824F;
+  --ember-deep: #8B4A2A;
 
   /* Fonts */
   --sans:    'Inter', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
@@ -230,13 +233,25 @@ strong {
   display: flex; flex-direction: column; align-items: flex-start;
   justify-content: center;
   overflow: hidden;
-  /* Dégradé d'encre subtil : halo tiède au centre, ténèbres en bas.
-     Pas de couleur nouvelle — juste de la profondeur. */
+  /* Dégradé bicouche : halo ember tiède en haut-droite (la palette qui
+     respire), encre profonde dessous. Le hero respire du chaud, le reste
+     du site garde sa gravité institutionnelle. */
   background:
     radial-gradient(
-      120% 90% at 50% 20%,
+      80% 60% at 78% 0%,
+      rgba(217, 130, 79, 0.22) 0%,
+      rgba(217, 130, 79, 0.08) 32%,
+      transparent 62%
+    ),
+    radial-gradient(
+      55% 50% at 8% 95%,
+      rgba(139, 74, 42, 0.18) 0%,
+      transparent 70%
+    ),
+    linear-gradient(
+      180deg,
       #1a1b28 0%,
-      var(--ink) 55%,
+      var(--ink) 50%,
       var(--ink-deep) 100%
     );
 }
@@ -296,6 +311,53 @@ strong {
   margin: 0 0 40px;
 }
 .hero__lede em { font-size: 1.08em; color: var(--fg); }
+
+/* Repères chiffrés du hero */
+.hero__stats {
+  list-style: none;
+  margin: clamp(28px, 4vw, 44px) 0 clamp(8px, 1vw, 16px);
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: clamp(28px, 5vw, 70px);
+}
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.stat__num {
+  font-family: var(--serif);
+  font-weight: 600;
+  font-size: clamp(38px, 5vw, 64px);
+  line-height: 0.95;
+  letter-spacing: -0.025em;
+  color: var(--ember);
+  display: inline-flex;
+  align-items: baseline;
+  gap: 2px;
+}
+.stat__num em {
+  font-family: var(--italic);
+  font-style: normal;
+  font-size: 0.62em;
+  font-weight: 400;
+  color: rgba(217, 130, 79, 0.72);
+  margin-left: 2px;
+}
+.stat__label {
+  font-family: var(--sans);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--fg-dim);
+  line-height: 1.55;
+}
+@media (max-width: 540px) {
+  .hero__stats { gap: 32px; }
+  .stat__num { font-size: 42px; }
+}
 
 .hero__cta {
   display: inline-flex; align-items: center; gap: 14px;
@@ -933,6 +995,100 @@ section { position: relative; padding: clamp(90px, 14vh, 160px) var(--gutter); }
   color: var(--fg);
 }
 
+/* ==========================================================================
+   AV — services audiovisuels & montage
+   ========================================================================== */
+.av { max-width: var(--maxw); margin: 0 auto; }
+.av__lede {
+  max-width: 640px;
+  margin: 22px 0 0;
+  font-family: var(--sans);
+  font-weight: 600;
+  font-size: clamp(15px, 1.1vw, 17px);
+  line-height: 1.6;
+  color: var(--fg-soft);
+}
+.av__lede em {
+  font-family: var(--italic);
+  font-style: italic;
+  font-weight: 400;
+  font-size: 1.08em;
+  color: var(--ember);
+}
+
+.av__grid {
+  margin: clamp(50px, 6vw, 90px) auto 0;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: clamp(20px, 2.5vw, 36px);
+}
+@media (max-width: 760px) {
+  .av__grid { grid-template-columns: 1fr; }
+}
+
+.av-card {
+  position: relative;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid var(--rule);
+  background: var(--ink-deep);
+  transition:
+    transform .5s var(--ease-out),
+    border-color .4s var(--ease),
+    box-shadow .5s var(--ease);
+}
+.av-card:hover {
+  transform: translateY(-6px);
+  border-color: var(--rule-strong);
+  box-shadow:
+    0 30px 60px rgba(0, 0, 0, 0.40),
+    0 10px 22px rgba(0, 0, 0, 0.22);
+}
+.av-card__stage {
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  background:
+    linear-gradient(135deg, rgba(217,130,79,.10), rgba(15,16,24,0)) ,
+    var(--ink-deep);
+  border-bottom: 1px solid var(--rule);
+}
+.av-card__stage img {
+  width: 100%; height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform .8s var(--ease-out), filter .5s var(--ease);
+}
+.av-card:hover .av-card__stage img {
+  transform: scale(1.04);
+  filter: saturate(1.05);
+}
+.av-card__body {
+  padding: clamp(20px, 2.5vw, 32px) clamp(22px, 2.8vw, 34px) clamp(24px, 3vw, 36px);
+}
+.av-card__body .rail {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--ember);
+}
+.av-card__body strong {
+  display: block;
+  font-family: var(--serif);
+  font-weight: 600;
+  font-size: clamp(22px, 2.2vw, 32px);
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  color: var(--fg);
+  margin-bottom: 10px;
+}
+.av-card__body p {
+  margin: 0;
+  font-family: var(--sans);
+  font-weight: 600;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--fg-soft);
+}
+
 .stack {
   position: relative;
   margin: clamp(50px, 6vw, 90px) auto 0;
@@ -1148,7 +1304,8 @@ section { position: relative; padding: clamp(90px, 14vh, 160px) var(--gutter); }
 [data-section] .stack__item,
 [data-section] .stamps li,
 [data-section] .contact__link,
-[data-section] .dual__item {
+[data-section] .dual__item,
+[data-section] .av-card {
   opacity: 0;
   transform: translateY(18px);
   transition: opacity .7s var(--ease-out), transform .7s var(--ease-out);
@@ -1158,10 +1315,15 @@ section { position: relative; padding: clamp(90px, 14vh, 160px) var(--gutter); }
 [data-section].is-visible .stack__item,
 [data-section].is-visible .stamps li,
 [data-section].is-visible .contact__link,
-[data-section].is-visible .dual__item {
+[data-section].is-visible .dual__item,
+[data-section].is-visible .av-card {
   opacity: 1;
   transform: none;
 }
+.av__grid .av-card:nth-child(1) { transition-delay: 120ms; }
+.av__grid .av-card:nth-child(2) { transition-delay: 220ms; }
+.av__grid .av-card:nth-child(3) { transition-delay: 320ms; }
+.av__grid .av-card:nth-child(4) { transition-delay: 420ms; }
 .works__grid .work:nth-child(1) { transition-delay: 120ms; }
 .works__grid .work:nth-child(2) { transition-delay: 200ms; }
 .works__grid .work:nth-child(3) { transition-delay: 280ms; }
@@ -1218,5 +1380,6 @@ section { position: relative; padding: clamp(90px, 14vh, 160px) var(--gutter); }
   [data-section] .stack__item,
   [data-section] .stamps li,
   [data-section] .contact__link,
-  [data-section] .dual__item { opacity: 1 !important; transform: none !important; }
+  [data-section] .dual__item,
+  [data-section] .av-card { opacity: 1 !important; transform: none !important; }
 }
