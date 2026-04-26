@@ -4,29 +4,34 @@
    ========================================================================== */
 
 :root {
+  /* PALETTE : warm-cinematic (post-pivot)
+     ink ▸ noir café, légèrement vineux
+     paper ▸ crème plus chaude, moins jaune
+     ember ▸ accent chaud principal (remplace l'ancien cognac)
+  */
+
   /* Dark (ink) */
-  --ink:        #0F1018;       /* nuit profonde, nuance très légèrement violine */
-  --ink-2:      #151622;
-  --ink-deep:   #08080F;
-  --on-ink:     #F4EDDC;       /* ivoire chaud */
-  --on-ink-soft:rgba(244, 237, 220, 0.74);
-  --on-ink-dim: rgba(244, 237, 220, 0.50);
-  --rule-ink:   rgba(244, 237, 220, 0.12);
-  --rule-ink-2: rgba(244, 237, 220, 0.22);
+  --ink:        #15101A;       /* noir vineux profond */
+  --ink-2:      #221829;
+  --ink-deep:   #0A0710;
+  --on-ink:     #F1E7D0;       /* crème chaude */
+  --on-ink-soft:rgba(241, 231, 208, 0.74);
+  --on-ink-dim: rgba(241, 231, 208, 0.50);
+  --rule-ink:   rgba(241, 231, 208, 0.12);
+  --rule-ink-2: rgba(241, 231, 208, 0.22);
 
   /* Light (paper) */
-  --paper:      #F4EDDC;       /* ivoire chaud */
-  --paper-2:    #EAE1CB;
-  --paper-deep: #E0D5B9;
-  --on-paper:   #0F1018;
-  --on-paper-soft:rgba(15, 16, 24, 0.72);
-  --on-paper-dim:rgba(15, 16, 24, 0.48);
-  --rule-paper: rgba(15, 16, 24, 0.14);
-  --rule-paper-2: rgba(15, 16, 24, 0.24);
+  --paper:      #F1E7D0;       /* crème chaude */
+  --paper-2:    #E5DABF;
+  --paper-deep: #D9CDAE;
+  --on-paper:   #15101A;
+  --on-paper-soft:rgba(21, 16, 26, 0.74);
+  --on-paper-dim:rgba(21, 16, 26, 0.50);
+  --rule-paper: rgba(21, 16, 26, 0.14);
+  --rule-paper-2: rgba(21, 16, 26, 0.24);
 
-  /* Accent : cognac discret, utilisé très rarement */
-  --accent:     #B07848;
-  /* Ember : accent chaud, plus saturé — sert au gradient hero & aux stats */
+  /* Accent : ember (chaud, saturé) — utilisé pour les stats, le gradient, les highlights */
+  --accent:     #D9824F;
   --ember:      #D9824F;
   --ember-deep: #8B4A2A;
 
@@ -233,24 +238,23 @@ strong {
   display: flex; flex-direction: column; align-items: flex-start;
   justify-content: center;
   overflow: hidden;
-  /* Dégradé bicouche : halo ember tiède en haut-droite (la palette qui
-     respire), encre profonde dessous. Le hero respire du chaud, le reste
-     du site garde sa gravité institutionnelle. */
+  /* Gradient warm-cinematic dérivé de la palette : halo ember haut-droite,
+     ember-deep en bas-gauche, fond noir vineux. */
   background:
     radial-gradient(
       80% 60% at 78% 0%,
-      rgba(217, 130, 79, 0.22) 0%,
-      rgba(217, 130, 79, 0.08) 32%,
+      rgba(217, 130, 79, 0.28) 0%,
+      rgba(217, 130, 79, 0.10) 32%,
       transparent 62%
     ),
     radial-gradient(
       55% 50% at 8% 95%,
-      rgba(139, 74, 42, 0.18) 0%,
+      rgba(139, 74, 42, 0.22) 0%,
       transparent 70%
     ),
     linear-gradient(
       180deg,
-      #1a1b28 0%,
+      #2A1E35 0%,
       var(--ink) 50%,
       var(--ink-deep) 100%
     );
@@ -996,97 +1000,48 @@ section { position: relative; padding: clamp(90px, 14vh, 160px) var(--gutter); }
 }
 
 /* ==========================================================================
-   AV — services audiovisuels & montage
+   AV — grille de vidéos en autoplay, minimal
    ========================================================================== */
 .av { max-width: var(--maxw); margin: 0 auto; }
-.av__lede {
-  max-width: 640px;
-  margin: 22px 0 0;
-  font-family: var(--sans);
-  font-weight: 600;
-  font-size: clamp(15px, 1.1vw, 17px);
-  line-height: 1.6;
-  color: var(--fg-soft);
-}
-.av__lede em {
-  font-family: var(--italic);
-  font-style: italic;
-  font-weight: 400;
-  font-size: 1.08em;
-  color: var(--ember);
-}
 
 .av__grid {
   margin: clamp(50px, 6vw, 90px) auto 0;
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: clamp(20px, 2.5vw, 36px);
+  gap: clamp(18px, 2.4vw, 32px);
 }
 @media (max-width: 760px) {
   .av__grid { grid-template-columns: 1fr; }
 }
 
-.av-card {
-  position: relative;
-  border-radius: 16px;
+.av-clip {
+  margin: 0;
+  border-radius: 14px;
   overflow: hidden;
   border: 1px solid var(--rule);
   background: var(--ink-deep);
-  transition:
-    transform .5s var(--ease-out),
-    border-color .4s var(--ease),
-    box-shadow .5s var(--ease);
+  transition: transform .5s var(--ease-out), border-color .3s var(--ease);
 }
-.av-card:hover {
-  transform: translateY(-6px);
+.av-clip:hover {
+  transform: translateY(-4px);
   border-color: var(--rule-strong);
-  box-shadow:
-    0 30px 60px rgba(0, 0, 0, 0.40),
-    0 10px 22px rgba(0, 0, 0, 0.22);
 }
-.av-card__stage {
-  aspect-ratio: 16 / 10;
-  overflow: hidden;
-  background:
-    linear-gradient(135deg, rgba(217,130,79,.10), rgba(15,16,24,0)) ,
-    var(--ink-deep);
-  border-bottom: 1px solid var(--rule);
-}
-.av-card__stage img {
-  width: 100%; height: 100%;
+.av-clip video {
+  width: 100%;
+  aspect-ratio: 16 / 9;
   object-fit: cover;
   display: block;
-  transition: transform .8s var(--ease-out), filter .5s var(--ease);
+  background: var(--ink-deep);
 }
-.av-card:hover .av-card__stage img {
-  transform: scale(1.04);
-  filter: saturate(1.05);
-}
-.av-card__body {
-  padding: clamp(20px, 2.5vw, 32px) clamp(22px, 2.8vw, 34px) clamp(24px, 3vw, 36px);
-}
-.av-card__body .rail {
-  display: block;
-  margin-bottom: 8px;
-  color: var(--ember);
-}
-.av-card__body strong {
-  display: block;
-  font-family: var(--serif);
-  font-weight: 600;
-  font-size: clamp(22px, 2.2vw, 32px);
-  line-height: 1.1;
-  letter-spacing: -0.02em;
-  color: var(--fg);
-  margin-bottom: 10px;
-}
-.av-card__body p {
-  margin: 0;
+.av-clip figcaption {
+  padding: 14px 18px 16px;
   font-family: var(--sans);
-  font-weight: 600;
-  font-size: 14px;
-  line-height: 1.6;
-  color: var(--fg-soft);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--fg-dim);
+  border-top: 1px solid var(--rule);
 }
 
 .stack {
@@ -1305,7 +1260,7 @@ section { position: relative; padding: clamp(90px, 14vh, 160px) var(--gutter); }
 [data-section] .stamps li,
 [data-section] .contact__link,
 [data-section] .dual__item,
-[data-section] .av-card {
+[data-section] .av-clip {
   opacity: 0;
   transform: translateY(18px);
   transition: opacity .7s var(--ease-out), transform .7s var(--ease-out);
@@ -1316,14 +1271,14 @@ section { position: relative; padding: clamp(90px, 14vh, 160px) var(--gutter); }
 [data-section].is-visible .stamps li,
 [data-section].is-visible .contact__link,
 [data-section].is-visible .dual__item,
-[data-section].is-visible .av-card {
+[data-section].is-visible .av-clip {
   opacity: 1;
   transform: none;
 }
-.av__grid .av-card:nth-child(1) { transition-delay: 120ms; }
-.av__grid .av-card:nth-child(2) { transition-delay: 220ms; }
-.av__grid .av-card:nth-child(3) { transition-delay: 320ms; }
-.av__grid .av-card:nth-child(4) { transition-delay: 420ms; }
+.av__grid .av-clip:nth-child(1) { transition-delay: 120ms; }
+.av__grid .av-clip:nth-child(2) { transition-delay: 220ms; }
+.av__grid .av-clip:nth-child(3) { transition-delay: 320ms; }
+.av__grid .av-clip:nth-child(4) { transition-delay: 420ms; }
 .works__grid .work:nth-child(1) { transition-delay: 120ms; }
 .works__grid .work:nth-child(2) { transition-delay: 200ms; }
 .works__grid .work:nth-child(3) { transition-delay: 280ms; }
@@ -1381,5 +1336,5 @@ section { position: relative; padding: clamp(90px, 14vh, 160px) var(--gutter); }
   [data-section] .stamps li,
   [data-section] .contact__link,
   [data-section] .dual__item,
-  [data-section] .av-card { opacity: 1 !important; transform: none !important; }
+  [data-section] .av-clip { opacity: 1 !important; transform: none !important; }
 }
