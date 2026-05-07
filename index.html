@@ -4,133 +4,131 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description" content="Drafter — Draft de joueurs de foot entre amis. Snake draft, formations, budget, gamble." />
+  <meta name="theme-color" content="#0a0e0c">
   <title>Drafter — Draft de joueurs de foot</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600;700&family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles/main.css" />
 </head>
 <body>
-  <!-- Watercolor SVG filters -->
-  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
-    <defs>
-      <filter id="watercolor" x="-10%" y="-10%" width="120%" height="120%">
-        <feTurbulence type="fractalNoise" baseFrequency="0.012 0.018" numOctaves="2" seed="3" />
-        <feDisplacementMap in="SourceGraphic" scale="6" />
-      </filter>
-      <filter id="paint" x="-15%" y="-15%" width="130%" height="130%">
-        <feTurbulence type="fractalNoise" baseFrequency="0.7" numOctaves="2" seed="5" />
-        <feDisplacementMap in="SourceGraphic" scale="2.5" />
-      </filter>
-      <filter id="grain">
-        <feTurbulence type="fractalNoise" baseFrequency="1.2" numOctaves="2" stitchTiles="stitch" />
-        <feColorMatrix values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.07 0" />
-      </filter>
-    </defs>
-  </svg>
-
-  <!-- Watercolor blobs background -->
-  <div class="bg-blobs" aria-hidden="true">
-    <div class="blob blob-coral"></div>
-    <div class="blob blob-mint"></div>
-    <div class="blob blob-lilac"></div>
-    <div class="blob blob-sun"></div>
-  </div>
-  <div class="grain" aria-hidden="true"></div>
 
   <header class="topbar">
     <a href="#" class="logo" id="logoHome">
       <span class="logo-mark">D</span>
-      <span class="logo-text">Drafter</span>
+      <span class="logo-text">DRAFTER</span>
     </a>
-    <div class="topbar-tagline">Le draft de foot entre amis</div>
+    <div class="topbar-tagline">/ snake draft · 7600+ joueurs · gamble final</div>
   </header>
 
   <main id="app">
     <!-- ============= SCREEN 1 — SETUP ============= -->
     <section class="screen screen-setup active" id="screen-setup">
+
+      <!-- HERO with polaroid scroller -->
       <div class="hero">
-        <h1 class="hero-title">
-          <span class="watercolor-text">Drafter</span> ton équipe<br>
-          de rêve.
-        </h1>
-        <p class="hero-sub">
-          Choisis ta formation, ton budget, et pioche les joueurs<br>
-          tour par tour. Le snake n'a pas dit son dernier mot.
-        </p>
+        <div class="hero-stage" id="heroStage" aria-hidden="true">
+          <!-- Rows injected by JS -->
+        </div>
+        <div class="hero-card">
+          <div class="hero-card-inner">
+            <div class="hero-eyebrow">LIVE · Saison 25/26</div>
+            <h1 class="hero-title">
+              Construis ton<br>
+              <span class="strike">XI</span> de <span class="accent">rêve.</span>
+            </h1>
+            <p class="hero-sub">
+              Snake draft 2-4 joueurs, budget réglable, postes stricts,<br>
+              filtres championnats, et un gamble final pour cramer la table.
+            </p>
+            <div class="hero-cta">
+              <button class="btn btn-primary btn-lg" onclick="document.getElementById('setupSection').scrollIntoView({behavior:'smooth'})">
+                Lancer le draft
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <div class="card setup-card">
-        <h2 class="card-title">Configuration de la partie</h2>
+      <div class="setup-section" id="setupSection">
+        <div class="setup-card">
+          <h2 class="card-title"><span class="num">01</span>Configuration</h2>
+          <p class="card-sub">Règle ta partie : nombre de joueurs, budget, championnats, timer.</p>
 
-        <div class="setup-grid">
-          <div class="setup-field">
-            <label>Nombre de joueurs</label>
-            <div class="seg" id="segPlayers">
-              <button data-val="2">2</button>
-              <button data-val="3">3</button>
-              <button data-val="4" class="active">4</button>
+          <div class="setup-grid">
+            <div class="setup-field">
+              <label>Nombre de joueurs</label>
+              <div class="seg" id="segPlayers">
+                <button data-val="2">2</button>
+                <button data-val="3">3</button>
+                <button data-val="4" class="active">4</button>
+              </div>
+            </div>
+
+            <div class="setup-field">
+              <label>Temps par pick</label>
+              <div class="seg" id="segTimer">
+                <button data-val="30">30s</button>
+                <button data-val="45" class="active">45s</button>
+                <button data-val="60">60s</button>
+                <button data-val="90">90s</button>
+              </div>
+            </div>
+
+            <div class="setup-field setup-field-wide">
+              <label>Budget par joueur</label>
+              <div class="slider-wrap">
+                <input type="range" id="budgetSlider" min="10" max="1000" value="500" step="10" />
+                <div class="slider-value"><span id="budgetVal">500</span><span class="unit">M€</span></div>
+              </div>
+            </div>
+
+            <div class="setup-field setup-field-wide">
+              <label>Championnats autorisés (au moins 1)</label>
+              <div class="chip-multi" id="leagueChips"></div>
+            </div>
+
+            <div class="setup-field setup-field-wide">
+              <label>Bonus gamble final</label>
+              <div class="seg" id="segGamble">
+                <button data-val="1" class="active">Activé — pile ou face le dernier round</button>
+                <button data-val="0">Désactivé</button>
+              </div>
             </div>
           </div>
 
-          <div class="setup-field">
-            <label>Budget par joueur (M€)</label>
-            <div class="seg" id="segBudget">
-              <button data-val="500">500</button>
-              <button data-val="750" class="active">750</button>
-              <button data-val="1000">1000</button>
-              <button data-val="1500">1500</button>
-            </div>
-          </div>
+          <h3 class="setup-subtitle">Joueurs &amp; Formations</h3>
+          <div id="participantsList" class="participants-list"></div>
 
-          <div class="setup-field">
-            <label>Temps par pick (s)</label>
-            <div class="seg" id="segTimer">
-              <button data-val="30">30</button>
-              <button data-val="45" class="active">45</button>
-              <button data-val="60">60</button>
-              <button data-val="90">90</button>
-            </div>
-          </div>
-
-          <div class="setup-field setup-field-wide">
-            <label>Gamble final</label>
-            <div class="seg" id="segGamble">
-              <button data-val="1" class="active">Oui — pile ou face le dernier round</button>
-              <button data-val="0">Non</button>
-            </div>
+          <div class="setup-actions">
+            <button class="btn btn-primary btn-lg" id="startGame">
+              <span>Lancer le draft</span>
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>
+            </button>
           </div>
         </div>
 
-        <h3 class="setup-subtitle">Joueurs &amp; formations</h3>
-        <div id="participantsList" class="participants-list"></div>
-
-        <div class="setup-actions">
-          <button class="btn btn-primary btn-lg" id="startGame">
-            <span>Lancer le draft</span>
-            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>
-          </button>
-        </div>
+        <p class="dataset-note" id="datasetNote">Base agrégée 7600+ joueurs · données 2018-2023 vieillies à mai 2026 · valeurs estimées</p>
       </div>
 
       <div class="features">
         <div class="feature">
-          <div class="feat-num">01</div>
+          <div class="feat-num">/ 01</div>
           <h4>Snake draft</h4>
           <p>L'ordre s'inverse à chaque tour — équilibré pour tous.</p>
         </div>
         <div class="feature">
-          <div class="feat-num">02</div>
+          <div class="feat-num">/ 02</div>
           <h4>Postes stricts</h4>
-          <p>Les joueurs ne jouent qu'à leurs postes Transfermarkt réels.</p>
+          <p>Les joueurs ne jouent qu'à leurs vrais postes Transfermarkt.</p>
         </div>
         <div class="feature">
-          <div class="feat-num">03</div>
+          <div class="feat-num">/ 03</div>
           <h4>Filtres cumulables</h4>
-          <p>Âge, championnat, club actuel ou passé — combine tout.</p>
+          <p>Âge, championnat, club actuel ou passé.</p>
         </div>
         <div class="feature">
-          <div class="feat-num">04</div>
+          <div class="feat-num">/ 04</div>
           <h4>Le gamble</h4>
           <p>Dernier pick : 50% de voler, 50% de te faire voler.</p>
         </div>
@@ -141,7 +139,7 @@
     <section class="screen screen-draft" id="screen-draft">
       <div class="draft-header">
         <div class="turn-card">
-          <div class="turn-label">Au tour de</div>
+          <div class="turn-label">/ Au tour de</div>
           <div class="turn-name" id="turnName">—</div>
           <div class="turn-meta">
             <span id="turnRound">Round 1 / 11</span>
@@ -159,7 +157,7 @@
         </div>
 
         <div class="order-card">
-          <div class="turn-label">Ordre du tour</div>
+          <div class="turn-label">/ Ordre du tour</div>
           <div class="order-list" id="orderList"></div>
         </div>
       </div>
@@ -168,11 +166,11 @@
         <aside class="filters">
           <div class="filters-head">
             <h3>Filtres</h3>
-            <button class="link-btn" id="resetFilters">Réinitialiser</button>
+            <button class="link-btn" id="resetFilters">Reset</button>
           </div>
 
           <div class="search-box">
-            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
             <input type="text" id="searchInput" placeholder="Rechercher un joueur..." />
           </div>
 
@@ -210,7 +208,7 @@
           <div class="filter-group filter-toggle">
             <label class="check">
               <input type="checkbox" id="onlyEligible" checked />
-              <span>Postes encore libres uniquement</span>
+              <span>Postes encore libres</span>
             </label>
             <label class="check">
               <input type="checkbox" id="onlyAffordable" />
@@ -232,7 +230,7 @@
               <span class="budget-of">/ <span id="budgetTot">—</span> M€</span>
             </div>
             <div class="budget-bar"><div class="budget-bar-fill" id="budgetBar"></div></div>
-            <div class="picks-left"><span id="picksLeft">11</span> pick(s) restant(s)</div>
+            <div class="picks-left"><span id="picksLeft">11</span> PICK(S) RESTANT(S)</div>
           </div>
           <div class="pitch-wrap">
             <div class="pitch" id="myPitch"></div>
@@ -245,13 +243,18 @@
 
     <!-- ============= SCREEN 3 — FINAL ============= -->
     <section class="screen screen-final" id="screen-final">
-      <div class="hero">
-        <h1 class="hero-title"><span class="watercolor-text">Draft terminé.</span></h1>
-        <p class="hero-sub" id="finalSub">Voici les équipes constituées.</p>
+      <div class="hero" style="padding: 60px 20px 40px">
+        <div class="hero-card" style="position: static">
+          <div class="hero-card-inner" style="margin: 0 auto">
+            <div class="hero-eyebrow">/ DRAFT TERMINÉ</div>
+            <h1 class="hero-title">Showtime.</h1>
+            <p class="hero-sub" id="finalSub">Voici les équipes constituées.</p>
+          </div>
+        </div>
       </div>
       <div class="final-grid" id="finalGrid"></div>
       <div class="setup-actions" style="justify-content:center">
-        <button class="btn btn-ghost" id="restartBtn">Nouvelle partie</button>
+        <button class="btn btn-ghost btn-lg" id="restartBtn">Nouvelle partie</button>
       </div>
     </section>
   </main>
@@ -288,14 +291,14 @@
       </p>
       <div class="modal-actions">
         <button class="btn btn-ghost" id="skipGamble">Passer</button>
-        <button class="btn btn-primary" id="rollGamble">Lancer le dé</button>
+        <button class="btn btn-orange" id="rollGamble">Lancer le dé</button>
       </div>
       <div id="gambleResult"></div>
     </div>
   </div>
 
   <div class="modal" id="modalToast" aria-hidden="true">
-    <div class="modal-card modal-toast">
+    <div class="modal-card">
       <h3 id="toastTitle">—</h3>
       <p id="toastBody" class="muted"></p>
       <div class="modal-actions">

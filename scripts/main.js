@@ -8,44 +8,45 @@
   const SLOT_RULES = window.SLOT_RULES;
   const FORMATIONS = window.FORMATIONS;
 
-  // ---------- Palette d'avatars ----------
-  const TEAM_GRADIENTS = [
-    'linear-gradient(135deg, #ff6b5b, #ffb56b)',
-    'linear-gradient(135deg, #6bd8a4, #2fa977)',
-    'linear-gradient(135deg, #a98cff, #6c5ce7)',
-    'linear-gradient(135deg, #ffcf5e, #ff8a6b)',
+  // ---------- Couleurs des participants & gradients par poste ----------
+  const TEAM_COLORS = [
+    { grad: 'linear-gradient(135deg,#ff6b3d,#ffb56b)', solid: '#ff6b3d' },
+    { grad: 'linear-gradient(135deg,#00ff95,#00b86c)', solid: '#00ff95' },
+    { grad: 'linear-gradient(135deg,#a98cff,#6c5ce7)', solid: '#a98cff' },
+    { grad: 'linear-gradient(135deg,#ffc94e,#ff8a3d)', solid: '#ffc94e' },
   ];
-  const POS_GRADIENTS = {
-    GK: 'linear-gradient(135deg,#ffd86b,#ff9f4d)',
-    CB: 'linear-gradient(135deg,#7be0b9,#1f7a52)',
-    LB: 'linear-gradient(135deg,#7be0b9,#2fa977)',
-    RB: 'linear-gradient(135deg,#7be0b9,#2fa977)',
-    DM: 'linear-gradient(135deg,#a98cff,#6c5ce7)',
-    CM: 'linear-gradient(135deg,#a98cff,#7a5da2)',
-    AM: 'linear-gradient(135deg,#d8c8ff,#a98cff)',
-    LM: 'linear-gradient(135deg,#ffb098,#ff6b5b)',
-    RM: 'linear-gradient(135deg,#ffb098,#ff6b5b)',
-    LW: 'linear-gradient(135deg,#ff8a6b,#ff6b5b)',
-    RW: 'linear-gradient(135deg,#ff8a6b,#ff6b5b)',
-    SS: 'linear-gradient(135deg,#ffcf5e,#ff6b5b)',
-    CF: 'linear-gradient(135deg,#ffcf5e,#e85a4b)',
-    ST: 'linear-gradient(135deg,#ffcf5e,#e85a4b)',
-  };
 
+  // Gradient déterministe par joueur (basé sur hash du nom)
+  const CARD_GRADIENTS = [
+    'linear-gradient(160deg,#1a8a4f 0%,#0d3d22 100%)',
+    'linear-gradient(160deg,#0f6e8a 0%,#0a2f3a 100%)',
+    'linear-gradient(160deg,#8a3d1f 0%,#3a1810 100%)',
+    'linear-gradient(160deg,#6c2d8a 0%,#2d1538 100%)',
+    'linear-gradient(160deg,#8a6b1f 0%,#3a2810 100%)',
+    'linear-gradient(160deg,#1f4a8a 0%,#101e3a 100%)',
+    'linear-gradient(160deg,#8a1f55 0%,#3a0f25 100%)',
+    'linear-gradient(160deg,#3d8a1f 0%,#1a3a10 100%)',
+    'linear-gradient(160deg,#1f8a8a 0%,#0f3a3a 100%)',
+    'linear-gradient(160deg,#5a5a5a 0%,#1f1f1f 100%)',
+  ];
+  function hashStr(s) {
+    let h = 0;
+    for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+    return Math.abs(h);
+  }
+  function gradientFor(player) {
+    return CARD_GRADIENTS[hashStr(player.id) % CARD_GRADIENTS.length];
+  }
   const initials = (name) =>
     name.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('');
-
-  const avatarGradient = (player) => {
-    const primary = player.positions[0];
-    return POS_GRADIENTS[primary] || POS_GRADIENTS.CM;
-  };
 
   // ---------- État global ----------
   const state = {
     nbPlayers: 4,
-    budget: 750,
+    budget: 500,
     timerSec: 45,
     gamble: true,
+    leagues: new Set(),  // Championnats activés
     participants: [],
     order: [],
     round: 1,
@@ -78,9 +79,48 @@
   };
 
   // ============================================================
+  // HERO POLAROID SCROLLER
+  // ============================================================
+  function buildHero() {
+    const stage = $('#heroStage');
+    if (!stage) return;
+    // Top players (by value), prendre 80 pour 4 rows × 20
+    const top = PLAYERS.slice(0, 80);
+    const rows = 4;
+    const perRow = 20;
+    for (let r = 0; r < rows; r++) {
+      const row = el('div', {
+        class: 'hero-row' + (r % 2 ? ' reverse' : '') + (r === 1 ? ' fast' : '') + (r === 2 ? ' slow' : ''),
+      });
+      const startIdx = (r * perRow) % top.length;
+      // On duplique la liste pour le défilement infini
+      for (let dup = 0; dup < 2; dup++) {
+        for (let i = 0; i < perRow; i++) {
+          const p = top[(startIdx + i) % top.length];
+          if (!p) continue;
+          const tilt = (((hashStr(p.id) % 9) - 4) / 1.3).toFixed(2) + 'deg';
+          const polaroid = el('div', { class: 'polaroid', style: `--tilt:${tilt}` });
+          const img = el('div', {
+            class: 'polaroid-img',
+            style: `background:${gradientFor(p)}`,
+          }, initials(p.name));
+          polaroid.appendChild(img);
+          polaroid.appendChild(el('div', { class: 'polaroid-name' }, p.name.toUpperCase()));
+          polaroid.appendChild(el('div', { class: 'polaroid-meta' }, p.value + ' M€'));
+          row.appendChild(polaroid);
+        }
+      }
+      stage.appendChild(row);
+    }
+  }
+
+  // ============================================================
   // SETUP
   // ============================================================
-  function bindSegments() {
+  const ALL_LEAGUES = Array.from(new Set(PLAYERS.map(p => p.league))).sort();
+
+  function bindSetup() {
+    // Segmented buttons
     function bindSeg(id, key, type) {
       $(id).addEventListener('click', (e) => {
         const btn = e.target.closest('button');
@@ -95,9 +135,45 @@
       });
     }
     bindSeg('#segPlayers', 'nbPlayers', 'number');
-    bindSeg('#segBudget',  'budget',    'number');
     bindSeg('#segTimer',   'timerSec',  'number');
     bindSeg('#segGamble',  'gamble',    'bool');
+
+    // Budget slider
+    const slider = $('#budgetSlider');
+    const setSliderProgress = () => {
+      const min = +slider.min, max = +slider.max, val = +slider.value;
+      slider.style.setProperty('--p', ((val - min) / (max - min) * 100) + '%');
+      $('#budgetVal').textContent = val;
+      state.budget = val;
+    };
+    slider.addEventListener('input', setSliderProgress);
+    setSliderProgress();
+
+    // League chips multi-select
+    const chipsWrap = $('#leagueChips');
+    state.leagues = new Set(ALL_LEAGUES); // tous activés par défaut
+    // bouton "Tous"
+    const allChip = el('button', { class: 'chip', type: 'button' }, 'TOUS');
+    allChip.addEventListener('click', () => {
+      const allOn = chipsWrap.querySelectorAll('button[data-league]').length === state.leagues.size;
+      if (allOn) {
+        state.leagues.clear();
+        chipsWrap.querySelectorAll('button[data-league]').forEach(b => b.classList.remove('active'));
+      } else {
+        ALL_LEAGUES.forEach(l => state.leagues.add(l));
+        chipsWrap.querySelectorAll('button[data-league]').forEach(b => b.classList.add('active'));
+      }
+    });
+    chipsWrap.appendChild(allChip);
+    ALL_LEAGUES.forEach(l => {
+      const count = PLAYERS.filter(p => p.league === l).length;
+      const chip = el('button', { class: 'chip active', 'data-league': l, type: 'button', title: count + ' joueurs' }, l);
+      chip.addEventListener('click', () => {
+        if (state.leagues.has(l)) { state.leagues.delete(l); chip.classList.remove('active'); }
+        else { state.leagues.add(l); chip.classList.add('active'); }
+      });
+      chipsWrap.appendChild(chip);
+    });
   }
 
   function renderParticipants() {
@@ -105,7 +181,7 @@
     list.innerHTML = '';
     const defaults = ['Alex', 'Jordan', 'Sam', 'Charlie'];
     for (let i = 0; i < state.nbPlayers; i++) {
-      const grad = TEAM_GRADIENTS[i];
+      const grad = TEAM_COLORS[i].grad;
       const row = el('div', { class: 'participant' },
         el('div', { class: 'participant-avatar', style: `background:${grad}` }, `J${i+1}`),
         el('input', { type: 'text', value: defaults[i], 'data-pidx': i, placeholder: 'Pseudo' }),
@@ -127,6 +203,11 @@
   // INIT GAME
   // ============================================================
   function startGame() {
+    if (state.leagues.size === 0) {
+      toast('Aucun championnat sélectionné', 'Active au moins un championnat dans la configuration.');
+      return;
+    }
+
     const inputs = $$('#participantsList input');
     const selects = $$('#participantsList select');
     state.participants = [];
@@ -141,7 +222,7 @@
         id: 'p' + i,
         name,
         formation,
-        gradient: TEAM_GRADIENTS[i],
+        color: TEAM_COLORS[i],
         slots,
         spent: 0,
       });
@@ -189,7 +270,7 @@
     const cur = state.currentParticipant;
     if (!cur) return;
     $('#turnName').textContent = cur.name;
-    $('#turnRound').textContent = `Round ${state.round} / 11`;
+    $('#turnRound').textContent = `Round ${Math.min(state.round, 11)} / 11`;
     $('#turnPickIndex').textContent = `Pick ${state.pickIndex}`;
 
     const olist = $('#orderList');
@@ -202,14 +283,14 @@
     });
     state.skipped.forEach(s => {
       const p = state.participants.find(pp => pp.id === s.participantId);
-      olist.appendChild(el('span', { class: 'order-pill skipped', title: 'Doit piocher plus tard' }, p.name + ' (à rattraper)'));
+      olist.appendChild(el('span', { class: 'order-pill skipped', title: 'Doit piocher plus tard' }, p.name + ' (rattrapage)'));
     });
   }
 
   function renderMyTeam() {
     const cur = state.currentParticipant;
     if (!cur) return;
-    $('#myTeamTitle').textContent = `Équipe de ${cur.name}`;
+    $('#myTeamTitle').textContent = cur.name;
     const remaining = state.budget - cur.spent;
     $('#budgetRem').textContent = remaining.toFixed(0);
     $('#budgetTot').textContent = state.budget;
@@ -221,13 +302,19 @@
     renderPitch(cur, $('#myPitch'));
   }
 
+  const playerById = (() => {
+    const map = new Map();
+    PLAYERS.forEach(p => map.set(p.id, p));
+    return (id) => map.get(id);
+  })();
+
   function renderPitch(participant, mountEl) {
     const F = FORMATIONS[participant.formation];
     mountEl.innerHTML = '';
     mountEl.appendChild(el('div', { class: 'pitch-circle' }));
     F.slots.forEach(slot => {
       const filledId = participant.slots[slot.id];
-      const filledP = filledId ? PLAYERS.find(p => p.id === filledId) : null;
+      const filledP = filledId ? playerById(filledId) : null;
       const slotEl = el('div', {
         class: 'slot' + (filledP ? ' filled' : ''),
         style: `left:${slot.x}%; top:${slot.y}%`,
@@ -237,7 +324,7 @@
       if (filledP) {
         bubble.appendChild(el('div', {
           class: 'slot-photo',
-          style: `background:${avatarGradient(filledP)}`,
+          style: `background:${gradientFor(filledP)}`,
         }, initials(filledP.name)));
       } else {
         bubble.appendChild(el('span', {}, slot.type));
@@ -280,39 +367,44 @@
     onlyEligible: true,
     onlyAffordable: false,
   };
+  let renderToken = 0;
 
   function initFiltersUI() {
-    const leagues = Array.from(new Set(PLAYERS.map(p => p.league))).sort();
+    // Champ "championnat" du draft : restreint à ceux activés au setup
+    const allowedLeagues = Array.from(state.leagues).sort();
     const leagueSel = $('#leagueSelect');
-    leagueSel.innerHTML = '<option value="">Tous championnats</option>' +
-      leagues.map(l => `<option>${l}</option>`).join('');
+    leagueSel.innerHTML = '<option value="">Tous</option>' +
+      allowedLeagues.map(l => `<option>${l}</option>`).join('');
 
+    // Clubs
+    const allowedPlayers = PLAYERS.filter(p => state.leagues.has(p.league));
     const clubsSet = new Set();
-    PLAYERS.forEach(p => {
+    allowedPlayers.forEach(p => {
       clubsSet.add(p.club);
       (p.former || []).forEach(c => clubsSet.add(c));
     });
     const clubs = Array.from(clubsSet).sort();
     const clubSel = $('#clubSelect');
-    clubSel.innerHTML = '<option value="">Tous clubs</option>' +
+    clubSel.innerHTML = '<option value="">Tous</option>' +
       clubs.map(c => `<option>${c}</option>`).join('');
 
-    $('#searchInput').addEventListener('input', (e) => { activeFilters.search = e.target.value.toLowerCase(); renderPlayers(); });
-    leagueSel.addEventListener('change', (e) => { activeFilters.league = e.target.value; renderPlayers(); });
-    clubSel.addEventListener('change',   (e) => { activeFilters.club   = e.target.value; renderPlayers(); });
-    $('#posSelect').addEventListener('change', (e) => { activeFilters.pos = e.target.value; renderPlayers(); });
-    $('#onlyEligible').addEventListener('change', (e) => { activeFilters.onlyEligible = e.target.checked; renderPlayers(); });
-    $('#onlyAffordable').addEventListener('change', (e) => { activeFilters.onlyAffordable = e.target.checked; renderPlayers(); });
+    // bind events (idempotent — replace)
+    $('#searchInput').oninput = (e) => { activeFilters.search = e.target.value.toLowerCase(); renderPlayers(); };
+    leagueSel.onchange = (e) => { activeFilters.league = e.target.value; renderPlayers(); };
+    clubSel.onchange   = (e) => { activeFilters.club   = e.target.value; renderPlayers(); };
+    $('#posSelect').onchange = (e) => { activeFilters.pos = e.target.value; renderPlayers(); };
+    $('#onlyEligible').onchange = (e) => { activeFilters.onlyEligible = e.target.checked; renderPlayers(); };
+    $('#onlyAffordable').onchange = (e) => { activeFilters.onlyAffordable = e.target.checked; renderPlayers(); };
 
-    $('#ageChips').addEventListener('click', (e) => {
+    $('#ageChips').onclick = (e) => {
       const btn = e.target.closest('.chip'); if (!btn) return;
       $$('#ageChips .chip').forEach(c => c.classList.remove('active'));
       btn.classList.add('active');
       activeFilters.age = btn.dataset.age;
       renderPlayers();
-    });
+    };
 
-    $('#resetFilters').addEventListener('click', () => {
+    $('#resetFilters').onclick = () => {
       activeFilters = { search: '', age: 'all', league: '', club: '', pos: '', onlyEligible: true, onlyAffordable: false };
       $('#searchInput').value = '';
       leagueSel.value = ''; clubSel.value = ''; $('#posSelect').value = '';
@@ -320,7 +412,7 @@
       $$('#ageChips .chip').forEach(c => c.classList.remove('active'));
       $$('#ageChips .chip')[0].classList.add('active');
       renderPlayers();
-    });
+    };
   }
 
   function openSlotsForParticipant(p) {
@@ -336,6 +428,7 @@
   function applyFilters() {
     const cur = state.currentParticipant;
     return PLAYERS.filter(p => {
+      if (!state.leagues.has(p.league)) return false;
       if (state.takenIds.has(p.id)) return false;
       if (activeFilters.search && !p.name.toLowerCase().includes(activeFilters.search)) return false;
       if (activeFilters.age === 'u21' && p.age >= 21) return false;
@@ -357,46 +450,71 @@
     const cur = state.currentParticipant;
     const list = applyFilters();
     list.sort((a, b) => b.value - a.value);
+    const MAX = 300;
+    const visible = list.slice(0, MAX);
+
     const grid = $('#playersGrid');
     grid.innerHTML = '';
-    $('#playersStats').textContent = `${list.length} joueur(s) disponible(s)`;
+    const more = list.length > MAX ? ` (TOP ${MAX} AFFICHÉ — AFFINE LES FILTRES)` : '';
+    $('#playersStats').textContent = `${list.length} JOUEUR(S) DISPONIBLE(S)${more}`;
 
-    list.slice(0, 80).forEach(p => {
-      const eligible = !cur || eligibleSlotsFor(p, cur).length > 0;
-      const affordable = !cur || p.value <= state.budget - cur.spent;
-      const blocked = !eligible || !affordable;
-      const card = el('div', {
-        class: 'player-card' + (blocked ? ' ineligible' : ''),
-        title: !eligible ? 'Aucun poste libre pour ce joueur' : (!affordable ? 'Hors budget' : 'Cliquer pour drafter'),
-      });
-      card.addEventListener('click', () => openConfirmPick(p));
-
-      const top = el('div', { class: 'pc-top' });
-      top.appendChild(el('div', { class: 'avatar', style: `background:${avatarGradient(p)}` }, initials(p.name)));
-      const info = el('div', {});
-      info.appendChild(el('div', { class: 'pc-name' }, p.name));
-      info.appendChild(el('div', { class: 'pc-club' }, p.club));
-      top.appendChild(info);
-      card.appendChild(top);
-
-      const meta = el('div', { class: 'pc-meta' });
-      p.positions.forEach(pos => {
-        const matches = cur && eligibleSlotsFor(p, cur).some(s => SLOT_RULES[s.type].includes(pos));
-        meta.appendChild(el('span', { class: 'pos-tag' + (matches ? ' match' : '') }, pos));
-      });
-      card.appendChild(meta);
-
-      const foot = el('div', { class: 'pc-foot' });
-      foot.appendChild(el('span', { class: 'pc-age' }, p.age + ' ans · ' + p.league));
-      foot.appendChild(el('span', { class: 'pc-value' }, p.value + ' M€'));
-      card.appendChild(foot);
-
-      grid.appendChild(card);
-    });
+    // Affichage incrémental
+    const PAGE = 60;
+    const myToken = ++renderToken;
+    let i = 0;
+    function chunk() {
+      if (myToken !== renderToken) return;
+      const frag = document.createDocumentFragment();
+      const end = Math.min(i + PAGE, visible.length);
+      for (; i < end; i++) frag.appendChild(buildPlayerCard(visible[i], cur));
+      grid.appendChild(frag);
+      if (i < visible.length) requestAnimationFrame(chunk);
+    }
+    chunk();
 
     if (list.length === 0) {
       grid.appendChild(el('div', { class: 'muted', style: 'padding:20px' }, 'Aucun joueur ne correspond aux filtres.'));
     }
+  }
+
+  function buildPlayerCard(p, cur) {
+    const eligible = !cur || eligibleSlotsFor(p, cur).length > 0;
+    const affordable = !cur || p.value <= state.budget - cur.spent;
+    const blocked = !eligible || !affordable;
+
+    const card = el('div', {
+      class: 'player-card' + (blocked ? ' ineligible' : ''),
+      title: !eligible ? 'Aucun poste libre' : (!affordable ? 'Hors budget' : 'Cliquer pour drafter'),
+    });
+    card.addEventListener('click', () => openConfirmPick(p));
+
+    // Photo area (gradient + initiales, pas de photo réelle pour le bulk dataset)
+    const photo = el('div', {
+      class: 'pc-photo',
+      style: `background:${gradientFor(p)}`,
+    }, initials(p.name));
+
+    // Position badges
+    const badges = el('div', { class: 'pos-badges' });
+    p.positions.forEach(pos => {
+      const matches = cur && eligibleSlotsFor(p, cur).some(s => SLOT_RULES[s.type].includes(pos));
+      badges.appendChild(el('span', { class: 'pos-badge' + (matches ? ' match' : '') }, pos));
+    });
+    photo.appendChild(badges);
+
+    // Age badge
+    photo.appendChild(el('span', { class: 'age-badge' }, p.age + ' ans'));
+
+    card.appendChild(photo);
+
+    // Body
+    const body = el('div', { class: 'pc-body' });
+    body.appendChild(el('div', { class: 'pc-name', title: p.name }, p.name));
+    body.appendChild(el('div', { class: 'pc-value' }, p.value + ' M€'));
+    body.appendChild(el('div', { class: 'pc-club', title: p.club + ' · ' + p.league }, p.club + ' · ' + p.league));
+    card.appendChild(body);
+
+    return card;
   }
 
   // ============================================================
@@ -407,7 +525,7 @@
     const eligible = eligibleSlotsFor(player, cur);
 
     if (eligible.length === 0) {
-      return toast('Mauvais poste', `${player.name} (${player.positions.join('/')}) ne correspond à aucun slot libre dans ta formation.`);
+      return toast('Mauvais poste', `${player.name} (${player.positions.join('/')}) ne correspond à aucun slot libre.`);
     }
     if (player.value > state.budget - cur.spent) {
       return toast('Budget dépassé', `Il te reste ${(state.budget - cur.spent).toFixed(0)} M€ et ${player.name} en vaut ${player.value} M€.`);
@@ -423,7 +541,7 @@
       eligible.forEach(slot => {
         const opt = el('div', { class: 'slot-opt' },
           el('strong', {}, slot.type),
-          el('span', {}, 'Slot ' + slot.id.toUpperCase()));
+          el('span', {}, 'SLOT ' + slot.id.toUpperCase()));
         opt.addEventListener('click', () => {
           state.pendingPick = { player, slot };
           closeModal('#modalSlot');
@@ -442,7 +560,7 @@
     const body = $('#confirmBody');
     body.innerHTML = '';
     const summary = el('div', { class: 'confirm-summary' },
-      el('div', { class: 'avatar', style: `background:${avatarGradient(player)}` }, initials(player.name)),
+      el('div', { class: 'conf-photo', style: `background:${gradientFor(player)}` }, initials(player.name)),
       el('div', {},
         el('div', { class: 'name' }, player.name),
         el('div', { class: 'sub' }, `${player.club} · ${player.age} ans · ${player.value} M€`)),
@@ -474,7 +592,7 @@
     const totalPicks = state.nbPlayers * 11;
 
     if (state.pickIndex > totalPicks) {
-      // Tous les picks normaux sont faits. On rattrape les joueurs skip d'abord.
+      // Rattrapage des joueurs skip
       while (state.skipped.length > 0) {
         const next = state.skipped.shift();
         const part = state.participants.find(p => p.id === next.participantId);
@@ -485,7 +603,6 @@
           return;
         }
       }
-      // Puis on propose le gamble au dernier picker (s'il reste activé)
       if (state.gamble && !state.gambleUsed) {
         offerGamble();
         return;
@@ -518,9 +635,9 @@
     const inCatchUp = state.pickIndex > totalPicks;
     if (!inCatchUp) {
       state.skipped.push({ participantId: state.currentParticipant.id });
-      toast('Temps écoulé', `${state.currentParticipant.name} pioche plus tard. Tour suivant !`);
+      toast('Temps écoulé', `${state.currentParticipant.name} pioche plus tard.`);
     } else {
-      toast('Temps écoulé', `${state.currentParticipant.name} a manqué son rattrapage. On continue !`);
+      toast('Temps écoulé', `${state.currentParticipant.name} a manqué son rattrapage.`);
     }
     advanceTurn();
   }
@@ -562,6 +679,8 @@
     pauseTimer();
     renderAll();
     $('#gambleResult').innerHTML = '';
+    $('#rollGamble').disabled = false;
+    $('#skipGamble').disabled = false;
     openModal('#modalGamble');
   }
 
@@ -574,7 +693,6 @@
     const win = Math.random() < 0.5;
     const result = $('#gambleResult');
     result.innerHTML = '<div class="dice-spin">🎲</div>';
-
     $('#rollGamble').disabled = true;
     $('#skipGamble').disabled = true;
 
@@ -590,7 +708,7 @@
           opp.spent -= stealable.player.value;
           cur.slots[stealable.targetSlot.id] = stealable.player.id;
           cur.spent += stealable.player.value;
-          msg = `<span class="gamble-win">Pile ! Tu voles <strong>${stealable.player.name}</strong> à ${opp.name}.</span>`;
+          msg = `<span class="gamble-win">PILE ! Tu voles <strong>${stealable.player.name}</strong> à ${opp.name}.</span>`;
         }
       } else {
         const stealable = pickStealableFrom(cur, opp);
@@ -602,7 +720,7 @@
           cur.spent -= stealable.player.value;
           opp.slots[stealable.targetSlot.id] = stealable.player.id;
           opp.spent += stealable.player.value;
-          msg = `<span class="gamble-lose">Face. ${opp.name} te vole <strong>${stealable.player.name}</strong>.</span>`;
+          msg = `<span class="gamble-lose">FACE. ${opp.name} te vole <strong>${stealable.player.name}</strong>.</span>`;
         }
       }
       result.innerHTML = msg + '<div style="margin-top:18px"><button class="btn btn-primary" id="endGamble">Voir les équipes</button></div>';
@@ -612,7 +730,7 @@
   }
 
   function pickStealableFrom(donor, receiver) {
-    const candidates = Object.values(donor.slots).filter(Boolean).map(id => PLAYERS.find(p => p.id === id));
+    const candidates = Object.values(donor.slots).filter(Boolean).map(id => playerById(id));
     candidates.sort((a, b) => b.value - a.value);
     for (const player of candidates) {
       const openSlots = openSlotsForParticipant(receiver);
@@ -639,7 +757,7 @@
       const card = el('div', { class: 'final-card' });
       const filled = Object.values(p.slots).filter(Boolean).length;
       card.appendChild(el('div', { class: 'head' },
-        el('div', { class: 'avatar', style: `background:${p.gradient}` }, initials(p.name)),
+        el('div', { class: 'final-avatar', style: `background:${p.color.grad}` }, initials(p.name)),
         el('div', {},
           el('h3', {}, p.name),
           el('div', { class: 'meta' }, `${FORMATIONS[p.formation].label} · ${filled}/11 · ${p.spent.toFixed(0)} / ${state.budget} M€`)),
@@ -690,7 +808,12 @@
   // INIT
   // ============================================================
   function init() {
-    bindSegments();
+    // Mettre à jour la note dataset avec le nombre exact
+    const note = $('#datasetNote');
+    if (note) note.textContent = `Base agrégée ${PLAYERS.length} joueurs · données Transfermarkt 2018-2023 vieillies à mai 2026 · valeurs estimées`;
+
+    buildHero();
+    bindSetup();
     renderParticipants();
     bindModals();
     $('#startGame').addEventListener('click', startGame);
