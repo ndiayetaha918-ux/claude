@@ -103,7 +103,17 @@
           const img = el('div', {
             class: 'polaroid-img',
             style: `background:${gradientFor(p)}`,
-          }, initials(p.name));
+          });
+          const photoUrl = window.photoUrl && window.photoUrl(p);
+          if (photoUrl) {
+            const im = new Image();
+            im.src = photoUrl; im.alt = p.name; im.loading = 'lazy';
+            im.className = 'polaroid-img-photo';
+            im.onload = () => { if (im.naturalWidth > 1) img.classList.add('has-img'); };
+            im.onerror = () => { im.remove(); };
+            img.appendChild(im);
+          }
+          img.appendChild(el('span', { class: 'polaroid-img-fallback' }, initials(p.name)));
           polaroid.appendChild(img);
           polaroid.appendChild(el('div', { class: 'polaroid-name' }, p.name.toUpperCase()));
           polaroid.appendChild(el('div', { class: 'polaroid-meta' }, p.value + ' M€'));
@@ -488,11 +498,23 @@
     });
     card.addEventListener('click', () => openConfirmPick(p));
 
-    // Photo area (gradient + initiales, pas de photo réelle pour le bulk dataset)
+    // Photo area : tentative photo Transfermarkt, fallback gradient + initiales
     const photo = el('div', {
       class: 'pc-photo',
       style: `background:${gradientFor(p)}`,
-    }, initials(p.name));
+    });
+    const photoUrl = window.photoUrl && window.photoUrl(p);
+    if (photoUrl) {
+      const img = new Image();
+      img.src = photoUrl;
+      img.alt = p.name;
+      img.loading = 'lazy';
+      img.className = 'pc-photo-img';
+      img.onload = () => { if (img.naturalWidth > 1) photo.classList.add('has-img'); };
+      img.onerror = () => { img.remove(); };
+      photo.appendChild(img);
+    }
+    photo.appendChild(el('span', { class: 'pc-photo-initials' }, initials(p.name)));
 
     // Position badges
     const badges = el('div', { class: 'pos-badges' });
