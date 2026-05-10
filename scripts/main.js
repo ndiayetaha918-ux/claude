@@ -345,17 +345,29 @@
     const wrap = $('#opponentsList');
     if (!wrap) return;
     wrap.innerHTML = '';
-    state.participants.forEach(p => {
-      const isMe = p.id === state.currentParticipant?.id;
-      const card = el('div', { class: 'opp-card' + (isMe ? ' is-current' : '') });
-      card.appendChild(el('div', { class: 'opp-avatar', style: `background:${p.color.grad}` }, initials(p.name)));
+    // En local : tous sauf le current. En online : tous sauf moi.
+    const others = state.mode === 'online'
+      ? state.participants.filter(p => !p.isMe)
+      : state.participants.filter(p => p.id !== state.currentParticipant?.id);
+    others.forEach(p => {
+      const isCurrent = state.currentParticipant && p.id === state.currentParticipant.id;
+      const card = el('div', { class: 'opp-card-pitch' + (isCurrent ? ' is-current' : '') });
       const filled = Object.values(p.slots).filter(Boolean).length;
-      const info = el('div', {});
+      // Header
+      const head = el('div', { class: 'opp-head' });
+      head.appendChild(el('div', { class: 'opp-avatar', style: `background:${p.color.grad}` }, initials(p.name)));
+      const info = el('div', { class: 'opp-info' });
       info.appendChild(el('div', { class: 'opp-name' }, p.name));
       info.appendChild(el('div', { class: 'opp-meta' },
         `${FORMATIONS[p.formation].label} · ${filled}/11 · ${p.spent.toFixed(0)} M€`));
-      card.appendChild(info);
+      head.appendChild(info);
+      card.appendChild(head);
+      // Mini pitch
+      const pitch = el('div', { class: 'pitch pitch-mini' });
+      const wrapPitch = el('div', { class: 'pitch-wrap' }, pitch);
+      card.appendChild(wrapPitch);
       wrap.appendChild(card);
+      renderPitch(p, pitch, { interactive: false, mini: true });
     });
   }
 
@@ -546,22 +558,63 @@
     const more = list.length > MAX ? ` (TOP ${MAX} AFFICHÉ)` : '';
     $('#pickerStats').textContent = `${list.length} JOUEUR(S) ÉLIGIBLE(S) AU POSTE ${pickerState.slot.type}${more}`;
 
-    const PAGE = 50;
+    const PAGE = 60;
     const myToken = ++renderToken;
     let i = 0;
     function chunk() {
       if (myToken !== renderToken) return;
       const frag = document.createDocumentFragment();
       const end = Math.min(i + PAGE, visible.length);
-      for (; i < end; i++) frag.appendChild(buildPlayerCard(visible[i], cur));
+      for (; i < end; i++) frag.appendChild(buildPlayerRow(visible[i], cur));
       grid.appendChild(frag);
       if (i < visible.length) requestAnimationFrame(chunk);
     }
     chunk();
 
     if (list.length === 0) {
-      grid.appendChild(el('div', { class: 'muted', style: 'padding:20px;grid-column:1/-1' }, 'Aucun joueur ne correspond — assouplis les filtres.'));
+      grid.appendChild(el('div', { class: 'muted', style: 'padding:20px;text-align:center' }, 'Aucun joueur ne correspond — assouplis les filtres.'));
     }
+  }
+
+  // Construit une ligne compacte pour la liste du picker
+  function buildPlayerRow(p, cur) {
+    const slot = pickerState.slot;
+    const eligible = !slot || (slot.id !== '_shortlist'
+      ? SLOT_RULES[slot.type].some(pos => p.positions.includes(pos))
+      : true);
+    const me = state.mode === 'online' ? state.participants.find(x => x.isMe) : cur;
+    const affordable = !me || p.value <= state.budget - me.spent;
+    const blocked = !eligible || !affordable;
+
+    const row = el('div', {
+      class: 'player-row' + (blocked ? ' ineligible' : ''),
+      title: !eligible ? 'Mauvais poste pour ce slot' : (!affordable ? 'Hors budget' : 'Cliquer pour drafter'),
+    });
+    row.addEventListener('click', () => openConfirmPick(p));
+
+    // Photo
+    const photo = el('div', { class: 'pr-photo', style: `background:${gradientFor(p)}` });
+    attachPhoto(photo, p, '');
+    photo.appendChild(el('span', {}, initials(p.name)));
+    row.appendChild(photo);
+
+    // Info
+    const info = el('div', { class: 'pr-info' });
+    info.appendChild(el('div', { class: 'pr-name' }, p.name));
+    const meta = el('div', { class: 'pr-meta' });
+    p.positions.forEach(pos => {
+      const matches = slot && slot.id !== '_shortlist' && SLOT_RULES[slot.type].includes(pos);
+      meta.appendChild(el('span', { class: 'pos' + (matches ? ' match' : '') }, pos));
+    });
+    meta.appendChild(el('span', { class: 'age' }, p.age + ' ans'));
+    meta.appendChild(el('span', { class: 'club' }, '· ' + p.club));
+    info.appendChild(meta);
+    row.appendChild(info);
+
+    // Price
+    row.appendChild(el('div', { class: 'pr-price' }, p.value + ' M€'));
+
+    return row;
   }
 
   function bindPicker() {
@@ -644,7 +697,17 @@
       );
     } else {
       cur = state.currentParticipant;
-      eligible = eligibleSlotsFor(player, cur);
+      // Si le picker a été ouvert pour un slot précis (clic sur le terrain),
+      // on assigne DIRECTEMENT à ce slot (pas de re-question)
+      if (pickerState.slot && pickerState.slot.id && pickerState.slot.id !== '_shortlist') {
+        const slotDef = pickerState.slot;
+        eligible = [slotDef].filter(s =>
+          SLOT_RULES[s.type].some(pos => player.positions.includes(pos)) &&
+          !cur.slots[s.id]
+        );
+      } else {
+        eligible = eligibleSlotsFor(player, cur);
+      }
     }
 
     if (eligible.length === 0) {
@@ -703,7 +766,6 @@
 
     if (state.mode === 'online') {
       onlinePerformPick(slot.id, player.id);
-      // Retirer de la shortlist si présent
       removeFromShortlist(player.id);
       return;
     }
@@ -713,7 +775,47 @@
     cur.spent += player.value;
     state.takenIds.add(player.id);
     pauseTimer();
-    advanceTurn();
+
+    // Reveal animation puis advance
+    showPickReveal(player, cur, () => advanceTurn());
+  }
+
+  // Animation reveal : 2,5s avec photo grosse + nom + prix + drafteur
+  function showPickReveal(player, participant, done) {
+    const overlay = el('div', { class: 'pick-reveal-overlay' });
+    const card = el('div', { class: 'pick-reveal-card' });
+    card.appendChild(el('div', { class: 'pick-reveal-eyebrow' }, '/ DRAFTÉ'));
+    const photo = el('div', { class: 'pick-reveal-photo', style: `background:${gradientFor(player)}` });
+    attachPhoto(photo, player, '');
+    photo.appendChild(el('span', {}, initials(player.name)));
+    card.appendChild(photo);
+    card.appendChild(el('div', { class: 'pick-reveal-name' }, player.name));
+    card.appendChild(el('div', { class: 'pick-reveal-meta' },
+      `${player.positions.join(' · ')} · ${player.age} ANS · ${player.club}`));
+    card.appendChild(el('div', { class: 'pick-reveal-price' }, player.value + ' M€'));
+    if (participant) {
+      const by = el('div', { class: 'pick-reveal-by' });
+      by.innerHTML = 'PIOCHÉ PAR <strong>' + participant.name + '</strong>';
+      card.appendChild(by);
+    }
+    const prog = el('div', { class: 'pick-reveal-progress' });
+    prog.appendChild(el('div', { class: 'pick-reveal-progress-fill' }));
+    card.appendChild(prog);
+    overlay.appendChild(card);
+    document.body.appendChild(overlay);
+    // Force reflow puis show
+    overlay.getBoundingClientRect();
+    requestAnimationFrame(() => overlay.classList.add('show'));
+    // Tap to skip
+    let dismissed = false;
+    function dismiss() {
+      if (dismissed) return;
+      dismissed = true;
+      overlay.classList.remove('show');
+      setTimeout(() => { overlay.remove(); if (done) done(); }, 280);
+    }
+    overlay.addEventListener('click', dismiss);
+    setTimeout(dismiss, 2500);
   }
 
   // ============================================================
