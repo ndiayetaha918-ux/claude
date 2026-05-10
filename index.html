@@ -51,9 +51,69 @@
       </div>
 
       <div class="setup-section" id="setupSection">
+
+        <!-- Mode toggle -->
+        <div class="mode-tabs" id="modeTabs">
+          <button class="mode-tab active" data-mode="local">
+            <span class="mode-tag">/ MODE</span>
+            <span class="mode-name">Local</span>
+            <span class="mode-desc">2 à 4 joueurs sur le même appareil</span>
+          </button>
+          <button class="mode-tab" data-mode="online">
+            <span class="mode-tag">/ MODE</span>
+            <span class="mode-name">En ligne</span>
+            <span class="mode-desc">Salons partagés, chacun sur son écran</span>
+          </button>
+        </div>
+
+        <!-- Online lobby -->
+        <div class="setup-card lobby-card" id="lobbyCard" style="display:none">
+          <h2 class="card-title"><span class="num">/online/</span>Salon</h2>
+          <p class="card-sub" id="lobbyState">Crée un salon et partage le code, ou rejoins celui d'un pote.</p>
+
+          <div class="lobby-grid" id="lobbyForm">
+            <div class="setup-field">
+              <label>Ton pseudo</label>
+              <input type="text" id="onlineName" class="line-input" maxlength="18" placeholder="Pseudo" />
+            </div>
+            <div class="setup-field">
+              <label>Code du salon</label>
+              <input type="text" id="onlineRoom" class="line-input" maxlength="14" placeholder="ex: foot-friday" />
+            </div>
+            <div class="setup-field">
+              <label>Ta formation</label>
+              <select id="onlineFormation" class="select"></select>
+            </div>
+            <div class="lobby-actions">
+              <button class="btn btn-ghost" id="btnJoin">Rejoindre</button>
+              <button class="btn btn-primary" id="btnCreate">Créer le salon</button>
+            </div>
+          </div>
+
+          <div class="lobby-room" id="lobbyRoom" style="display:none">
+            <div class="lobby-room-head">
+              <div>
+                <div class="turn-label">/ Salon</div>
+                <h3 id="lobbyRoomName">—</h3>
+              </div>
+              <button class="btn btn-ghost" id="btnCopyCode">Copier le code</button>
+            </div>
+            <div class="lobby-players" id="lobbyPlayers"></div>
+            <div class="lobby-host-actions" id="lobbyHostActions" style="display:none">
+              <p class="muted">Tu es l'hôte. Configure les règles dans le panneau de configuration ci-dessous, puis lance la partie quand tout le monde est prêt.</p>
+              <button class="btn btn-primary btn-lg" id="btnStartOnline" disabled>
+                <span>Lancer la draft</span>
+              </button>
+            </div>
+            <div class="lobby-guest-msg" id="lobbyGuestMsg" style="display:none">
+              <p class="muted">Tu es connecté. En attente du lancement par l'hôte…</p>
+            </div>
+          </div>
+        </div>
+
         <div class="setup-card">
           <h2 class="card-title"><span class="num">01</span>Configuration</h2>
-          <p class="card-sub">Règle ta partie : nombre de joueurs, budget, championnats, timer.</p>
+          <p class="card-sub" id="configCardSub">Règle ta partie : nombre de joueurs, budget, championnats, timer.</p>
 
           <div class="setup-grid">
             <div class="setup-field">
@@ -107,7 +167,7 @@
             </div>
           </div>
 
-          <h3 class="setup-subtitle">Joueurs &amp; Formations</h3>
+          <h3 class="setup-subtitle" id="participantsTitle">Joueurs &amp; Formations</h3>
           <div id="participantsList" class="participants-list"></div>
 
           <div class="setup-actions">
@@ -188,6 +248,19 @@
         <section class="pitch-stage" id="pitchStage">
           <div class="pitch-hint" id="pitchHint">/ Clique sur un poste pour piocher un joueur</div>
           <div class="pitch pitch-large" id="myPitch"></div>
+
+          <div class="shortlist-block" id="shortlistBlock" style="display:none">
+            <div class="shortlist-head">
+              <h4>SHORT LIST</h4>
+              <button class="btn btn-ghost shortlist-add" id="shortlistAdd">
+                <span>+</span>
+                <span>Ajouter un joueur</span>
+              </button>
+            </div>
+            <div class="shortlist-grid" id="shortlistGrid">
+              <div class="shortlist-empty">Aucun joueur dans ta short list. Clique sur « + Ajouter » pour piocher des joueurs à drag-and-drop sur ton terrain.</div>
+            </div>
+          </div>
         </section>
 
         <aside class="opponents">
@@ -302,7 +375,9 @@
     </div>
   </div>
 
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
   <script src="scripts/players.js"></script>
+  <script src="scripts/online.js"></script>
   <script src="scripts/main.js"></script>
 </body>
 </html>

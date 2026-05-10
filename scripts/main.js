@@ -68,6 +68,8 @@
 
   // ---------- État global ----------
   const state = {
+    mode: 'local',       // 'local' | 'online'
+    online: { joined: false, isHost: false, myId: null, roomCode: null, shortlist: [] },
     nbPlayers: 4,
     budget: 500,
     timerSec: 45,
@@ -376,6 +378,7 @@
         class: 'slot' + (filledP ? ' filled' : ''),
         style: `left:${slot.x}%; top:${slot.y}%`,
         title: filledP ? `${filledP.name} (${filledP.positions.join('/')})` : slot.type,
+        'data-sid': slot.id,
       });
       const bubble = el('div', { class: 'slot-bubble' });
       if (filledP) {
@@ -462,6 +465,8 @@
 
   function openPicker(slot) {
     pickerState.slot = slot;
+    pickerState.target = 'slot';
+    pickerState.acceptedPositionsOverride = null;
     pickerState.search = '';
     pickerState.age = 'all';
     pickerState.league = '';
@@ -503,10 +508,16 @@
   }
 
   function pickerCandidates() {
-    const cur = state.currentParticipant;
+    // En online, le "drafteur" pour l'affordability est toujours MOI
+    const cur = state.mode === 'online'
+      ? state.participants.find(p => p.isMe)
+      : state.currentParticipant;
     const slot = pickerState.slot;
     if (!slot) return [];
-    const accepted = SLOT_RULES[slot.type];
+    // Override accepted positions (used by shortlist picker = tous les postes ouverts)
+    let accepted = pickerState.acceptedPositionsOverride
+      ? Array.from(pickerState.acceptedPositionsOverride)
+      : SLOT_RULES[slot.type] || [];
     return PLAYERS.filter(p => {
       // ===== Critères de la draft (verrouillés au setup) =====
       if (!state.leagues.has(p.league)) return false;
@@ -622,8 +633,28 @@
   // CONFIRM PICK
   // ============================================================
   function openConfirmPick(player) {
-    const cur = state.currentParticipant;
-    const eligible = eligibleSlotsFor(player, cur);
+    // Shortlist picker : on ajoute juste, pas de confirm
+    if (pickerState.target === 'shortlist') {
+      addToShortlist(player);
+      // Pas de fermeture du picker — on peut en ajouter plusieurs
+      renderPicker();
+      return;
+    }
+
+    // En online, le slot a été choisi explicitement (cliqué) → utiliser ce slot
+    let cur, eligible;
+    if (state.mode === 'online') {
+      cur = state.participants.find(p => p.isMe);
+      // Slot fixe (le picker a été ouvert pour CE slot)
+      const slotDef = pickerState.slot;
+      eligible = [slotDef].filter(s =>
+        SLOT_RULES[s.type].some(pos => player.positions.includes(pos)) &&
+        !cur.slots[s.id]
+      );
+    } else {
+      cur = state.currentParticipant;
+      eligible = eligibleSlotsFor(player, cur);
+    }
 
     if (eligible.length === 0) {
       return toast('Mauvais poste', `${player.name} (${player.positions.join('/')}) ne correspond à aucun slot libre.`);
@@ -675,12 +706,21 @@
 
   function applyPendingPick() {
     const { player, slot } = state.pendingPick;
+    state.pendingPick = null;
+    closeModal('#modalConfirm');
+    closeModal('#modalPicker');
+
+    if (state.mode === 'online') {
+      onlinePerformPick(slot.id, player.id);
+      // Retirer de la shortlist si présent
+      removeFromShortlist(player.id);
+      return;
+    }
+
     const cur = state.currentParticipant;
     cur.slots[slot.id] = player.id;
     cur.spent += player.value;
     state.takenIds.add(player.id);
-    state.pendingPick = null;
-    closeModal('#modalConfirm');
     pauseTimer();
     advanceTurn();
   }
@@ -906,6 +946,550 @@
   }
 
   // ============================================================
+  // ONLINE MODE — tabs + lobby
+  // ============================================================
+  function bindModeTabs() {
+    const tabs = $$('#modeTabs .mode-tab');
+    tabs.forEach(t => t.addEventListener('click', () => {
+      tabs.forEach(x => x.classList.remove('active'));
+      t.classList.add('active');
+      state.mode = t.dataset.mode;
+      const isOnline = state.mode === 'online';
+      $('#lobbyCard').style.display = isOnline ? 'block' : 'none';
+      // En online, on enlève les inputs participants (chacun rejoint via son écran)
+      $('#participantsTitle').style.display = isOnline ? 'none' : 'block';
+      $('#participantsList').style.display = isOnline ? 'none' : 'grid';
+      $('#configCardSub').textContent = isOnline
+        ? 'Règle les paramètres de la draft. Lance la partie quand tout le monde a rejoint le salon.'
+        : 'Règle ta partie : nombre de joueurs, budget, championnats, timer.';
+      $('#startGame').textContent = isOnline ? 'Mode online — utilise le bouton du salon' : 'Lancer le draft';
+      $('#startGame').disabled = isOnline;
+    }));
+  }
+
+  function populateOnlineFormations() {
+    const sel = $('#onlineFormation');
+    if (!sel) return;
+    sel.innerHTML = '';
+    Object.keys(FORMATIONS).forEach((f, idx) => {
+      const opt = el('option', { value: f }, FORMATIONS[f].label);
+      if (idx === 0) opt.setAttribute('selected', '');
+      sel.appendChild(opt);
+    });
+  }
+
+  function bindLobby() {
+    const btnCreate = $('#btnCreate');
+    const btnJoin = $('#btnJoin');
+    const btnCopy = $('#btnCopyCode');
+    const btnStart = $('#btnStartOnline');
+
+    btnCreate.addEventListener('click', () => onlineEnterRoom('host'));
+    btnJoin.addEventListener('click', () => onlineEnterRoom('guest'));
+    btnCopy.addEventListener('click', () => {
+      const code = state.online.roomCode || '';
+      try { navigator.clipboard.writeText(code); btnCopy.textContent = 'Code copié !'; setTimeout(() => btnCopy.textContent = 'Copier le code', 1500); } catch (_) {}
+    });
+    btnStart.addEventListener('click', startGameOnlineHost);
+  }
+
+  function onlineEnterRoom(role) {
+    if (typeof Peer === 'undefined') {
+      return toast('PeerJS indisponible', 'Vérifie ta connexion. Le mode online nécessite que peerjs.com soit accessible.');
+    }
+    const name = ($('#onlineName').value || '').trim().slice(0, 18) || 'Joueur';
+    const room = ($('#onlineRoom').value || '').trim();
+    const formation = $('#onlineFormation').value || '4-3-3';
+    if (!room) return toast('Code manquant', 'Choisis un code de salon (ex : "foot-friday").');
+    const me = { name, formation };
+
+    $('#btnCreate').disabled = true;
+    $('#btnJoin').disabled = true;
+    $('#lobbyState').textContent = role === 'host' ? 'Création du salon...' : 'Connexion à l\'hôte...';
+
+    const promise = role === 'host' ? Online.createRoom(room, me) : Online.joinRoom(room, me);
+    promise.then(({ id, roomCode }) => {
+      state.online.joined = true;
+      state.online.isHost = (role === 'host');
+      state.online.myId = id;
+      state.online.roomCode = roomCode;
+
+      $('#lobbyForm').style.display = 'none';
+      $('#lobbyRoom').style.display = 'flex';
+      $('#lobbyRoomName').textContent = roomCode;
+      $('#lobbyHostActions').style.display = role === 'host' ? 'flex' : 'none';
+      $('#lobbyGuestMsg').style.display = role === 'guest' ? 'block' : 'none';
+      $('#lobbyState').textContent = role === 'host'
+        ? 'Salon créé. Partage le code à tes potes.'
+        : 'Connecté ! En attente du lancement par l\'hôte.';
+
+      ensureOnlineStatus(true);
+      // Si host : ajouter soi-même à participants pour le rendu lobby
+      if (role === 'host') {
+        renderLobbyPlayers(Online.state.participants);
+        updateStartButton();
+      }
+    }).catch((err) => {
+      console.error(err);
+      $('#btnCreate').disabled = false;
+      $('#btnJoin').disabled = false;
+      $('#lobbyState').textContent = 'Erreur : ' + (err && err.message || 'connexion impossible');
+      const isTaken = (err && err.type === 'unavailable-id');
+      if (isTaken) toast('Salon déjà existant', 'Quelqu\'un héberge déjà ce salon. Choisis un autre code, ou rejoins-le avec "Rejoindre".');
+    });
+
+    Online.on('state', (st) => {
+      // Hôte ou guest reçoit l'état
+      if (state.online.joined && st.phase === 'lobby') {
+        renderLobbyPlayers(st.participants);
+        updateStartButton(st.participants.length);
+      }
+      if (state.online.joined && st.phase === 'draft') {
+        // L'hôte vient de lancer
+        if (!isOnGameScreen()) enterOnlineDraft(st);
+        else applyOnlineState(st);
+      }
+      if (st && st.phase === 'final') {
+        finishOnline(st);
+      }
+    });
+
+    Online.on('error', (e) => {
+      console.warn('Online error:', e);
+      ensureOnlineStatus(false);
+    });
+
+    Online.on('message', ({ from, msg }) => {
+      if (state.online.isHost) onlineHostHandleMessage(from, msg);
+    });
+  }
+
+  function renderLobbyPlayers(parts) {
+    const wrap = $('#lobbyPlayers');
+    wrap.innerHTML = '';
+    parts.forEach((p, i) => {
+      const grad = TEAM_COLORS[i % 4].grad;
+      const card = el('div', { class: 'lobby-player-card' + (p.isHost ? ' host' : '') });
+      card.appendChild(el('div', { class: 'avatar-mini', style: `background:${grad}` }, initials(p.name)));
+      const info = el('div', {});
+      info.appendChild(el('div', { class: 'name' }, p.name));
+      info.appendChild(el('div', { class: 'meta' }, FORMATIONS[p.formation]?.label || p.formation));
+      if (p.isHost) info.appendChild(el('div', { class: 'badge' }, '/ HÔTE'));
+      card.appendChild(info);
+      wrap.appendChild(card);
+    });
+  }
+
+  function updateStartButton(count) {
+    const btn = $('#btnStartOnline');
+    if (!btn) return;
+    const c = count || (Online.state ? Online.state.participants.length : 1);
+    btn.disabled = c < 2;
+    btn.textContent = c < 2 ? 'En attente d\'au moins 1 invité…' : `Lancer la draft (${c} joueurs)`;
+  }
+
+  function startGameOnlineHost() {
+    if (!Online || !Online.state) return;
+    if (state.leagues.size === 0) return toast('Aucun championnat', 'Active au moins un championnat dans la configuration.');
+    const settings = {
+      budget: state.budget,
+      timerSec: state.timerSec,
+      gamble: state.gamble,
+      leagues: Array.from(state.leagues),
+      ageRule: state.ageRule,
+    };
+    // Init host state for draft
+    const parts = Online.state.participants.slice();
+    const order = shuffleIndexes(parts.length);
+    Online.state.phase = 'draft';
+    Online.state.settings = settings;
+    Online.state.order = order;
+    Online.state.round = 1;
+    Online.state.pickIndex = 1;
+    Online.state.takenIds = [];
+    Online.state.skipped = [];
+    Online.state.gambleUsed = false;
+    Online.state.currentParticipant = parts[order[0]].id;
+    Online.broadcastState();
+  }
+
+  function isOnGameScreen() {
+    return document.querySelector('#screen-draft.active') !== null;
+  }
+
+  function enterOnlineDraft(st) {
+    // Construit le contexte local depuis l'état host
+    state.budget = st.settings.budget;
+    state.timerSec = st.settings.timerSec;
+    state.gamble = st.settings.gamble;
+    state.leagues = new Set(st.settings.leagues);
+    state.ageRule = st.settings.ageRule;
+
+    state.participants = st.participants.map((p, i) => ({
+      id: p.id, name: p.name, formation: p.formation,
+      color: TEAM_COLORS[i % 4],
+      slots: st.slots[p.id] || blankSlots(p.formation),
+      spent: st.spent[p.id] || 0,
+      isMe: p.id === state.online.myId,
+    }));
+    state.order = st.order;
+    state.round = st.round;
+    state.pickIndex = st.pickIndex;
+    state.takenIds = new Set(st.takenIds);
+    state.skipped = st.skipped.slice();
+    state.gambleUsed = st.gambleUsed;
+    state.currentParticipant = state.participants.find(p => p.id === st.currentParticipant) || state.participants[0];
+
+    // Le "courant" pour le picker = TOUJOURS moi-même (en online on draft son XI)
+    showScreen('draft');
+    $('#shortlistBlock').style.display = 'block';
+
+    renderHeaderOnline();
+    renderMyTeamForMeOnline();
+    renderOpponentsOnline();
+    if (state.currentParticipant.id === state.online.myId) startTimer();
+  }
+
+  function applyOnlineState(st) {
+    // Mise à jour live pendant la draft
+    state.participants.forEach(p => {
+      p.slots = st.slots[p.id] || p.slots;
+      p.spent = st.spent[p.id] || 0;
+    });
+    state.order = st.order;
+    state.round = st.round;
+    state.pickIndex = st.pickIndex;
+    state.takenIds = new Set(st.takenIds);
+    state.skipped = st.skipped.slice();
+    state.gambleUsed = st.gambleUsed;
+    state.currentParticipant = state.participants.find(p => p.id === st.currentParticipant);
+
+    renderHeaderOnline();
+    renderMyTeamForMeOnline();
+    renderOpponentsOnline();
+    renderShortlist();
+
+    if (state.currentParticipant && state.currentParticipant.id === state.online.myId) {
+      startTimer();
+    } else {
+      pauseTimer();
+    }
+  }
+
+  function renderHeaderOnline() {
+    const cur = state.currentParticipant;
+    if (!cur) return;
+    $('#turnName').textContent = cur.id === state.online.myId ? 'À toi !' : cur.name;
+    $('#turnRound').textContent = `Round ${Math.min(state.round, 11)} / 11`;
+    $('#turnPickIndex').textContent = `Pick ${state.pickIndex}`;
+    const olist = $('#orderList');
+    olist.innerHTML = '';
+    state.order.forEach(idx => {
+      const p = state.participants[idx];
+      const cls = ['order-pill'];
+      if (p.id === cur.id) cls.push('current');
+      olist.appendChild(el('span', { class: cls.join(' ') }, p.name));
+    });
+  }
+
+  function renderMyTeamForMeOnline() {
+    // Toujours afficher le terrain de l'utilisateur courant (moi)
+    const me = state.participants.find(p => p.isMe);
+    if (!me) return;
+    $('#myTeamTitle').textContent = me.name + ' (toi)';
+    const remaining = state.budget - me.spent;
+    $('#budgetRem').textContent = remaining.toFixed(0);
+    $('#budgetTot').textContent = state.budget;
+    $('#budgetBar').style.width = Math.max(0, (remaining / state.budget) * 100) + '%';
+    const filled = Object.values(me.slots).filter(Boolean).length;
+    $('#picksLeft').textContent = 11 - filled;
+    renderPitch(me, $('#myPitch'), { interactive: state.currentParticipant && state.currentParticipant.id === state.online.myId });
+    const cur = state.currentParticipant;
+    const isMine = cur && cur.id === state.online.myId;
+    $('#pitchHint').textContent = isMine
+      ? '/ À toi de piocher — clique sur un poste'
+      : '/ ' + cur.name + ' est en train de piocher…';
+  }
+
+  function renderOpponentsOnline() {
+    const wrap = $('#opponentsList');
+    wrap.innerHTML = '';
+    state.participants.filter(p => !p.isMe).forEach(p => {
+      const isCurrent = state.currentParticipant && state.currentParticipant.id === p.id;
+      const card = el('div', { class: 'opp-card' + (isCurrent ? ' is-current' : '') });
+      card.appendChild(el('div', { class: 'opp-avatar', style: `background:${p.color.grad}` }, initials(p.name)));
+      const filled = Object.values(p.slots).filter(Boolean).length;
+      const info = el('div', {});
+      info.appendChild(el('div', { class: 'opp-name' }, p.name));
+      info.appendChild(el('div', { class: 'opp-meta' },
+        `${FORMATIONS[p.formation].label} · ${filled}/11 · ${p.spent.toFixed(0)} M€${isCurrent ? ' · pioche…' : ''}`));
+      card.appendChild(info);
+      wrap.appendChild(card);
+    });
+  }
+
+  // Côté hôte : valider/appliquer un pick reçu d'un guest
+  function onlineHostHandleMessage(fromId, msg) {
+    const st = Online.state;
+    if (!st || st.phase !== 'draft') return;
+    if (st.currentParticipant !== fromId) return; // pas son tour
+    const part = st.participants.find(p => p.id === fromId);
+    if (!part) return;
+    if (msg.type === 'pick') {
+      const player = PLAYERS.find(p => p.id === msg.playerId);
+      if (!player) return;
+      const slots = st.slots[fromId];
+      if (!slots || slots[msg.slotId]) return;
+      const slot = (FORMATIONS[part.formation].slots || []).find(s => s.id === msg.slotId);
+      if (!slot) return;
+      // Critères de la draft
+      const accepted = SLOT_RULES[slot.type];
+      if (!player.positions.some(pos => accepted.includes(pos))) return;
+      if (st.takenIds.includes(player.id)) return;
+      const remaining = st.settings.budget - (st.spent[fromId] || 0);
+      if (player.value > remaining) return;
+      // Apply
+      slots[msg.slotId] = player.id;
+      st.spent[fromId] = (st.spent[fromId] || 0) + player.value;
+      st.takenIds.push(player.id);
+      hostAdvance();
+      Online.broadcastState();
+    } else if (msg.type === 'skip') {
+      hostAdvance(true);
+      Online.broadcastState();
+    }
+  }
+
+  function hostAdvance(skipped) {
+    const st = Online.state;
+    if (skipped) st.skipped.push({ participantId: st.currentParticipant });
+    st.pickIndex += 1;
+    const total = st.participants.length * 11;
+    if (st.pickIndex > total) {
+      while (st.skipped.length > 0) {
+        const next = st.skipped.shift();
+        const part = st.participants.find(p => p.id === next.participantId);
+        const slots = st.slots[next.participantId];
+        const open = Object.entries(slots).filter(([, v]) => !v);
+        if (open.length > 0) {
+          st.currentParticipant = next.participantId;
+          return;
+        }
+      }
+      st.phase = 'final';
+      return;
+    }
+    const pickInRound = ((st.pickIndex - 1) % st.participants.length) + 1;
+    if (pickInRound === 1) {
+      st.round += 1;
+      st.order = st.order.slice().reverse();
+    }
+    const partIdx = st.order[pickInRound - 1];
+    st.currentParticipant = st.participants[partIdx].id;
+  }
+
+  // Côté local (host inclus) : appeler l'action de pick en mode online
+  function onlinePerformPick(slotId, playerId) {
+    if (state.online.isHost) {
+      onlineHostHandleMessage(state.online.myId, { type: 'pick', slotId, playerId });
+    } else {
+      Online.sendPick(slotId, playerId);
+    }
+  }
+
+  // ============================================================
+  // SHORTLIST (online only)
+  // ============================================================
+  function bindShortlist() {
+    const addBtn = $('#shortlistAdd');
+    if (addBtn) addBtn.addEventListener('click', () => openShortlistPicker());
+  }
+
+  function openShortlistPicker() {
+    // Picker en mode "ajouter à la shortlist" plutôt que "drafter"
+    pickerState.target = 'shortlist';
+    // Slot factice : tous les postes acceptés (selon ma formation + critères)
+    const me = state.participants.find(p => p.isMe);
+    if (!me) return;
+    const myOpenSlots = openSlotsForParticipant(me);
+    // On ouvre un picker spécial qui montre les joueurs éligibles à n'importe quel slot ouvert
+    const acceptedPositions = new Set();
+    myOpenSlots.forEach(s => SLOT_RULES[s.type].forEach(p => acceptedPositions.add(p)));
+    pickerState.acceptedPositionsOverride = acceptedPositions;
+    pickerState.slot = { type: 'TOUS', id: '_shortlist' };
+    pickerState.search = ''; pickerState.age = 'all'; pickerState.league = ''; pickerState.club = '';
+    pickerState.affordable = true;
+
+    $('#pickerEyebrow').textContent = '/ AJOUTER À LA SHORT LIST';
+    $('#pickerTitle').textContent = 'Ajouter un joueur à ta short list';
+
+    $('#pickerSearch').value = '';
+    $$('#pickerAge .chip').forEach(c => c.classList.remove('active'));
+    $$('#pickerAge .chip')[0].classList.add('active');
+    $('#pickerAffordable').checked = true;
+
+    // Leagues/clubs from candidates
+    const candidates = PLAYERS.filter(p =>
+      state.leagues.has(p.league) &&
+      !state.takenIds.has(p.id) &&
+      !state.online.shortlist.find(s => s.id === p.id) &&
+      p.positions.some(pos => acceptedPositions.has(pos))
+    );
+    const leagues = Array.from(new Set(candidates.map(p => p.league))).sort();
+    $('#pickerLeague').innerHTML = '<option value="">Tous championnats</option>' +
+      leagues.map(l => `<option>${l}</option>`).join('');
+    const clubsSet = new Set();
+    candidates.forEach(p => { clubsSet.add(p.club); (p.former || []).forEach(c => clubsSet.add(c)); });
+    const clubs = Array.from(clubsSet).sort();
+    $('#pickerClub').innerHTML = '<option value="">Tous clubs</option>' +
+      clubs.map(c => `<option>${c}</option>`).join('');
+
+    openModal('#modalPicker');
+    setTimeout(() => $('#pickerSearch').focus(), 60);
+    renderPicker();
+  }
+
+  function addToShortlist(player) {
+    if (state.online.shortlist.find(p => p.id === player.id)) return;
+    state.online.shortlist.push(player);
+    renderShortlist();
+  }
+  function removeFromShortlist(playerId) {
+    state.online.shortlist = state.online.shortlist.filter(p => p.id !== playerId);
+    renderShortlist();
+  }
+
+  function renderShortlist() {
+    const grid = $('#shortlistGrid');
+    if (!grid) return;
+    grid.innerHTML = '';
+    if (state.online.shortlist.length === 0) {
+      grid.appendChild(el('div', { class: 'shortlist-empty' },
+        'Aucun joueur dans ta short list. Clique sur « + Ajouter » pour drag-and-drop sur ton terrain.'));
+      return;
+    }
+    state.online.shortlist.forEach(p => {
+      const card = el('div', { class: 'shortlist-card', draggable: 'true', 'data-pid': p.id });
+      const remove = el('span', { class: 'remove', title: 'Retirer' }, '×');
+      remove.addEventListener('click', (e) => { e.stopPropagation(); removeFromShortlist(p.id); });
+      card.appendChild(remove);
+      const photo = el('div', { class: 'photo', style: `background:${gradientFor(p)}` });
+      attachPhoto(photo, p, '');
+      photo.appendChild(el('span', {}, initials(p.name)));
+      card.appendChild(photo);
+      const body = el('div', { class: 'body' });
+      body.appendChild(el('div', { class: 'name' }, p.name));
+      body.appendChild(el('div', { class: 'value' }, p.value + ' M€ · ' + p.positions.join('/')));
+      card.appendChild(body);
+      // Drag start
+      card.addEventListener('dragstart', (e) => {
+        e.dataTransfer.setData('text/plain', p.id);
+        e.dataTransfer.effectAllowed = 'move';
+        card.classList.add('dragging');
+        // Highlight slots éligibles
+        markEligibleSlots(p);
+      });
+      card.addEventListener('dragend', () => {
+        card.classList.remove('dragging');
+        clearEligibleMarks();
+      });
+      grid.appendChild(card);
+    });
+    // Permettre drop sur les slots
+    setupSlotDropZones();
+  }
+
+  function markEligibleSlots(player) {
+    const me = state.participants.find(p => p.isMe);
+    if (!me) return;
+    const slots = $$('#myPitch .slot');
+    slots.forEach(el => {
+      const slotId = el.dataset.sid;
+      if (!slotId) return;
+      const slotDef = FORMATIONS[me.formation].slots.find(s => s.id === slotId);
+      if (!slotDef || me.slots[slotId]) return;
+      const accepted = SLOT_RULES[slotDef.type];
+      if (player.positions.some(pos => accepted.includes(pos))) {
+        const remaining = state.budget - me.spent;
+        if (player.value <= remaining) el.classList.add('drop-active');
+      }
+    });
+  }
+  function clearEligibleMarks() {
+    $$('#myPitch .slot.drop-active').forEach(el => el.classList.remove('drop-active'));
+  }
+
+  function setupSlotDropZones() {
+    const slots = $$('#myPitch .slot');
+    slots.forEach(slotEl => {
+      slotEl.addEventListener('dragover', (e) => {
+        if (slotEl.classList.contains('drop-active')) {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = 'move';
+        }
+      });
+      slotEl.addEventListener('drop', (e) => {
+        e.preventDefault();
+        const pid = e.dataTransfer.getData('text/plain');
+        const player = PLAYERS.find(p => p.id === pid);
+        const slotId = slotEl.dataset.sid;
+        if (!player || !slotId) return;
+        if (state.mode === 'online') {
+          onlinePerformPick(slotId, pid);
+          // Retirer de la shortlist locale
+          removeFromShortlist(pid);
+        }
+      });
+    });
+  }
+
+  function finishOnline(st) {
+    pauseTimer();
+    showScreen('final');
+    const grid = $('#finalGrid');
+    grid.innerHTML = '';
+    st.participants.forEach((p, i) => {
+      const card = el('div', { class: 'final-card' });
+      const filled = Object.values(st.slots[p.id] || {}).filter(Boolean).length;
+      card.appendChild(el('div', { class: 'head' },
+        el('div', { class: 'final-avatar', style: `background:${TEAM_COLORS[i % 4].grad}` }, initials(p.name)),
+        el('div', {},
+          el('h3', {}, p.name),
+          el('div', { class: 'meta' }, `${FORMATIONS[p.formation].label} · ${filled}/11 · ${(st.spent[p.id] || 0).toFixed(0)} / ${st.settings.budget} M€`)),
+      ));
+      const wrap = el('div', { class: 'pitch-wrap' });
+      const pitch = el('div', { class: 'pitch' });
+      wrap.appendChild(pitch);
+      card.appendChild(wrap);
+      grid.appendChild(card);
+      // Render pitch from state
+      const fakeParticipant = { formation: p.formation, slots: st.slots[p.id] || {} };
+      renderPitch(fakeParticipant, pitch, {});
+    });
+    $('#finalSub').textContent = `${st.participants.length} équipes constituées · salon ${state.online.roomCode}`;
+  }
+
+  function ensureOnlineStatus(connected) {
+    let pill = document.querySelector('.online-status');
+    if (!pill) {
+      pill = el('div', { class: 'online-status' }, 'EN LIGNE');
+      document.body.appendChild(pill);
+    }
+    pill.classList.toggle('disconnected', !connected);
+    pill.textContent = connected
+      ? 'EN LIGNE · ' + (state.online.roomCode || '')
+      : 'DÉCONNECTÉ';
+  }
+
+  function blankSlots(formation) {
+    const F = FORMATIONS[formation];
+    if (!F) return {};
+    const o = {};
+    F.slots.forEach(s => o[s.id] = null);
+    return o;
+  }
+
+  // ============================================================
   // INIT
   // ============================================================
   function init() {
@@ -914,9 +1498,13 @@
 
     buildHero();
     bindSetup();
+    bindModeTabs();
+    bindLobby();
+    populateOnlineFormations();
     renderParticipants();
     bindModals();
     bindPicker();
+    bindShortlist();
     $('#startGame').addEventListener('click', startGame);
     $('#restartBtn').addEventListener('click', restart);
     $('#logoHome').addEventListener('click', (e) => { e.preventDefault(); restart(); });
