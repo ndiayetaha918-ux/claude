@@ -50,7 +50,6 @@
     im.alt = player.name;
     im.loading = 'lazy';
     im.referrerPolicy = 'no-referrer';
-    im.crossOrigin = 'anonymous';
     im.className = imgClass;
     let triedFallback = false;
     im.onload = () => { if (im.naturalWidth > 1) container.classList.add('has-img'); };
@@ -386,15 +385,7 @@
           class: 'slot-photo',
           style: `background:${gradientFor(filledP)}`,
         });
-        const url = window.photoUrl && window.photoUrl(filledP);
-        if (url) {
-          const im = new Image();
-          im.src = url; im.alt = filledP.name; im.loading = 'lazy';
-          im.className = 'slot-photo-img';
-          im.onload = () => { if (im.naturalWidth > 1) ph.classList.add('has-img'); };
-          im.onerror = () => im.remove();
-          ph.appendChild(im);
-        }
+        attachPhoto(ph, filledP, 'slot-photo-img');
         ph.appendChild(el('span', { class: 'slot-photo-fb' }, initials(filledP.name)));
         bubble.appendChild(ph);
       } else {
