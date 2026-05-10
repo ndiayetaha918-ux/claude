@@ -40,6 +40,32 @@
   const initials = (name) =>
     name.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('');
 
+  // ---------- Photo attach helper avec cascade d'URLs ----------
+  // Tente photoUrl(p) → photoUrlFallback(p) → fallback gradient + initiales
+  function attachPhoto(container, player, imgClass) {
+    const url1 = window.photoUrl && window.photoUrl(player);
+    const url2 = window.photoUrlFallback && window.photoUrlFallback(player);
+    if (!url1 && !url2) return;
+    const im = new Image();
+    im.alt = player.name;
+    im.loading = 'lazy';
+    im.referrerPolicy = 'no-referrer';
+    im.crossOrigin = 'anonymous';
+    im.className = imgClass;
+    let triedFallback = false;
+    im.onload = () => { if (im.naturalWidth > 1) container.classList.add('has-img'); };
+    im.onerror = () => {
+      if (!triedFallback && url2 && url2 !== url1) {
+        triedFallback = true;
+        im.src = url2;
+      } else {
+        im.remove();
+      }
+    };
+    im.src = url1 || url2;
+    container.appendChild(im);
+  }
+
   // ---------- État global ----------
   const state = {
     nbPlayers: 4,
@@ -47,6 +73,7 @@
     timerSec: 45,
     gamble: true,
     leagues: new Set(),  // Championnats activés
+    ageRule: 'all',      // 'all' | 'u21' | 'u25' | 'o30'
     participants: [],
     order: [],
     round: 1,
@@ -104,15 +131,7 @@
             class: 'polaroid-img',
             style: `background:${gradientFor(p)}`,
           });
-          const photoUrl = window.photoUrl && window.photoUrl(p);
-          if (photoUrl) {
-            const im = new Image();
-            im.src = photoUrl; im.alt = p.name; im.loading = 'lazy';
-            im.className = 'polaroid-img-photo';
-            im.onload = () => { if (im.naturalWidth > 1) img.classList.add('has-img'); };
-            im.onerror = () => { im.remove(); };
-            img.appendChild(im);
-          }
+          attachPhoto(img, p, 'polaroid-img-photo');
           img.appendChild(el('span', { class: 'polaroid-img-fallback' }, initials(p.name)));
           polaroid.appendChild(img);
           polaroid.appendChild(el('div', { class: 'polaroid-name' }, p.name.toUpperCase()));
@@ -140,6 +159,7 @@
         let val = btn.dataset.val;
         if (type === 'number') val = Number(val);
         else if (type === 'bool') val = val === '1';
+        // 'string' → laisser tel quel
         state[key] = val;
         if (id === '#segPlayers') renderParticipants();
       });
@@ -147,6 +167,7 @@
     bindSeg('#segPlayers', 'nbPlayers', 'number');
     bindSeg('#segTimer',   'timerSec',  'number');
     bindSeg('#segGamble',  'gamble',    'bool');
+    bindSeg('#segAge',     'ageRule',   'string');
 
     // Budget slider
     const slider = $('#budgetSlider');
@@ -245,7 +266,6 @@
     state.gambleUsed = false;
 
     showScreen('draft');
-    initFiltersUI();
     state.currentParticipant = state.participants[state.order[0]];
     renderAll();
     startTimer();
@@ -272,8 +292,7 @@
   function renderAll() {
     renderHeader();
     renderMyTeam();
-    renderAllPitches();
-    renderPlayers();
+    renderOpponents();
   }
 
   function renderHeader() {
@@ -309,7 +328,34 @@
     const filled = Object.values(cur.slots).filter(Boolean).length;
     $('#picksLeft').textContent = 11 - filled;
 
-    renderPitch(cur, $('#myPitch'));
+    renderPitch(cur, $('#myPitch'), { interactive: true });
+
+    // Pitch hint
+    const hint = $('#pitchHint');
+    if (hint) {
+      const remPicks = 11 - filled;
+      hint.textContent = remPicks === 0
+        ? '/ Tous tes postes sont remplis'
+        : '/ Clique sur un poste pour piocher un joueur (' + remPicks + ' restant·s)';
+    }
+  }
+
+  function renderOpponents() {
+    const wrap = $('#opponentsList');
+    if (!wrap) return;
+    wrap.innerHTML = '';
+    state.participants.forEach(p => {
+      const isMe = p.id === state.currentParticipant?.id;
+      const card = el('div', { class: 'opp-card' + (isMe ? ' is-current' : '') });
+      card.appendChild(el('div', { class: 'opp-avatar', style: `background:${p.color.grad}` }, initials(p.name)));
+      const filled = Object.values(p.slots).filter(Boolean).length;
+      const info = el('div', {});
+      info.appendChild(el('div', { class: 'opp-name' }, p.name));
+      info.appendChild(el('div', { class: 'opp-meta' },
+        `${FORMATIONS[p.formation].label} · ${filled}/11 · ${p.spent.toFixed(0)} M€`));
+      card.appendChild(info);
+      wrap.appendChild(card);
+    });
   }
 
   const playerById = (() => {
@@ -318,7 +364,8 @@
     return (id) => map.get(id);
   })();
 
-  function renderPitch(participant, mountEl) {
+  function renderPitch(participant, mountEl, opts) {
+    opts = opts || {};
     const F = FORMATIONS[participant.formation];
     mountEl.innerHTML = '';
     mountEl.appendChild(el('div', { class: 'pitch-circle' }));
@@ -332,16 +379,33 @@
       });
       const bubble = el('div', { class: 'slot-bubble' });
       if (filledP) {
-        bubble.appendChild(el('div', {
+        const ph = el('div', {
           class: 'slot-photo',
           style: `background:${gradientFor(filledP)}`,
-        }, initials(filledP.name)));
+        });
+        const url = window.photoUrl && window.photoUrl(filledP);
+        if (url) {
+          const im = new Image();
+          im.src = url; im.alt = filledP.name; im.loading = 'lazy';
+          im.className = 'slot-photo-img';
+          im.onload = () => { if (im.naturalWidth > 1) ph.classList.add('has-img'); };
+          im.onerror = () => im.remove();
+          ph.appendChild(im);
+        }
+        ph.appendChild(el('span', { class: 'slot-photo-fb' }, initials(filledP.name)));
+        bubble.appendChild(ph);
       } else {
         bubble.appendChild(el('span', {}, slot.type));
       }
       slotEl.appendChild(bubble);
       slotEl.appendChild(el('div', { class: 'slot-name' },
-        filledP ? filledP.name.split(' ').slice(-1)[0] : slot.type));
+        filledP
+          ? filledP.name.split(' ').slice(-1)[0].toUpperCase() + ' · ' + filledP.value + 'M'
+          : slot.type));
+      // Click → ouvrir picker pour ce slot (uniquement si interactif et vide)
+      if (opts.interactive && !filledP) {
+        bubble.addEventListener('click', () => openPicker(slot));
+      }
       mountEl.appendChild(slotEl);
     });
   }
@@ -366,64 +430,17 @@
   }
 
   // ============================================================
-  // PLAYER GRID & FILTERS
+  // PICKER (slot-based)
   // ============================================================
-  let activeFilters = {
+  let pickerState = {
+    slot: null,
     search: '',
     age: 'all',
     league: '',
     club: '',
-    pos: '',
-    onlyEligible: true,
-    onlyAffordable: false,
+    affordable: true,
   };
   let renderToken = 0;
-
-  function initFiltersUI() {
-    // Champ "championnat" du draft : restreint à ceux activés au setup
-    const allowedLeagues = Array.from(state.leagues).sort();
-    const leagueSel = $('#leagueSelect');
-    leagueSel.innerHTML = '<option value="">Tous</option>' +
-      allowedLeagues.map(l => `<option>${l}</option>`).join('');
-
-    // Clubs
-    const allowedPlayers = PLAYERS.filter(p => state.leagues.has(p.league));
-    const clubsSet = new Set();
-    allowedPlayers.forEach(p => {
-      clubsSet.add(p.club);
-      (p.former || []).forEach(c => clubsSet.add(c));
-    });
-    const clubs = Array.from(clubsSet).sort();
-    const clubSel = $('#clubSelect');
-    clubSel.innerHTML = '<option value="">Tous</option>' +
-      clubs.map(c => `<option>${c}</option>`).join('');
-
-    // bind events (idempotent — replace)
-    $('#searchInput').oninput = (e) => { activeFilters.search = e.target.value.toLowerCase(); renderPlayers(); };
-    leagueSel.onchange = (e) => { activeFilters.league = e.target.value; renderPlayers(); };
-    clubSel.onchange   = (e) => { activeFilters.club   = e.target.value; renderPlayers(); };
-    $('#posSelect').onchange = (e) => { activeFilters.pos = e.target.value; renderPlayers(); };
-    $('#onlyEligible').onchange = (e) => { activeFilters.onlyEligible = e.target.checked; renderPlayers(); };
-    $('#onlyAffordable').onchange = (e) => { activeFilters.onlyAffordable = e.target.checked; renderPlayers(); };
-
-    $('#ageChips').onclick = (e) => {
-      const btn = e.target.closest('.chip'); if (!btn) return;
-      $$('#ageChips .chip').forEach(c => c.classList.remove('active'));
-      btn.classList.add('active');
-      activeFilters.age = btn.dataset.age;
-      renderPlayers();
-    };
-
-    $('#resetFilters').onclick = () => {
-      activeFilters = { search: '', age: 'all', league: '', club: '', pos: '', onlyEligible: true, onlyAffordable: false };
-      $('#searchInput').value = '';
-      leagueSel.value = ''; clubSel.value = ''; $('#posSelect').value = '';
-      $('#onlyEligible').checked = true; $('#onlyAffordable').checked = false;
-      $$('#ageChips .chip').forEach(c => c.classList.remove('active'));
-      $$('#ageChips .chip')[0].classList.add('active');
-      renderPlayers();
-    };
-  }
 
   function openSlotsForParticipant(p) {
     return FORMATIONS[p.formation].slots.filter(s => !p.slots[s.id]);
@@ -435,41 +452,99 @@
     );
   }
 
-  function applyFilters() {
+  // Postes longs FR pour titre du picker
+  const POS_LABEL_FR = {
+    GK: 'Gardien', CB: 'Défenseur central', LB: 'Latéral gauche', RB: 'Latéral droit',
+    DM: 'Milieu défensif', CM: 'Milieu central', AM: 'Milieu offensif',
+    LW: 'Ailier gauche', RW: 'Ailier droit', SS: 'Second attaquant',
+    CF: 'Avant-centre', ST: 'Buteur',
+  };
+
+  function openPicker(slot) {
+    pickerState.slot = slot;
+    pickerState.search = '';
+    pickerState.age = 'all';
+    pickerState.league = '';
+    pickerState.club = '';
+    pickerState.affordable = true;
+
     const cur = state.currentParticipant;
+    const filled = Object.values(cur.slots).filter(Boolean).length;
+    $('#pickerEyebrow').textContent = `/ POSTE ${slot.type} · ${filled} / 11 picks faits`;
+    $('#pickerTitle').textContent = `Choisir un ${POS_LABEL_FR[slot.type] || slot.type}`;
+
+    // Reset UI
+    $('#pickerSearch').value = '';
+    $$('#pickerAge .chip').forEach(c => c.classList.remove('active'));
+    $$('#pickerAge .chip')[0].classList.add('active');
+    $('#pickerAffordable').checked = true;
+
+    // League/Club selects scoped to allowed leagues + accepted positions
+    const accepted = SLOT_RULES[slot.type];
+    const candidates = PLAYERS.filter(p =>
+      state.leagues.has(p.league) &&
+      !state.takenIds.has(p.id) &&
+      p.positions.some(pos => accepted.includes(pos))
+    );
+    const leagues = Array.from(new Set(candidates.map(p => p.league))).sort();
+    $('#pickerLeague').innerHTML = '<option value="">Tous championnats</option>' +
+      leagues.map(l => `<option>${l}</option>`).join('');
+    $('#pickerLeague').value = '';
+    const clubsSet = new Set();
+    candidates.forEach(p => { clubsSet.add(p.club); (p.former || []).forEach(c => clubsSet.add(c)); });
+    const clubs = Array.from(clubsSet).sort();
+    $('#pickerClub').innerHTML = '<option value="">Tous clubs</option>' +
+      clubs.map(c => `<option>${c}</option>`).join('');
+    $('#pickerClub').value = '';
+
+    openModal('#modalPicker');
+    setTimeout(() => $('#pickerSearch').focus(), 60);
+    renderPicker();
+  }
+
+  function pickerCandidates() {
+    const cur = state.currentParticipant;
+    const slot = pickerState.slot;
+    if (!slot) return [];
+    const accepted = SLOT_RULES[slot.type];
     return PLAYERS.filter(p => {
+      // ===== Critères de la draft (verrouillés au setup) =====
       if (!state.leagues.has(p.league)) return false;
+      if (state.ageRule === 'u21' && p.age >= 21) return false;
+      if (state.ageRule === 'u25' && p.age >= 25) return false;
+      if (state.ageRule === 'o30' && p.age < 30) return false;
       if (state.takenIds.has(p.id)) return false;
-      if (activeFilters.search && !p.name.toLowerCase().includes(activeFilters.search)) return false;
-      if (activeFilters.age === 'u21' && p.age >= 21) return false;
-      if (activeFilters.age === 'u25' && p.age >= 25) return false;
-      if (activeFilters.age === 'o30' && p.age < 30) return false;
-      if (activeFilters.league && p.league !== activeFilters.league) return false;
-      if (activeFilters.club) {
-        const inClub = p.club === activeFilters.club || (p.former || []).includes(activeFilters.club);
+      // ===== Slot eligibility =====
+      if (!p.positions.some(pos => accepted.includes(pos))) return false;
+      // ===== Filtres affinés du picker =====
+      if (pickerState.search && !p.name.toLowerCase().includes(pickerState.search)) return false;
+      // (chip âge dans le picker affine encore par-dessus le critère draft)
+      if (pickerState.age === 'u21' && p.age >= 21) return false;
+      if (pickerState.age === 'u25' && p.age >= 25) return false;
+      if (pickerState.age === 'o30' && p.age < 30) return false;
+      if (pickerState.league && p.league !== pickerState.league) return false;
+      if (pickerState.club) {
+        const inClub = p.club === pickerState.club || (p.former || []).includes(pickerState.club);
         if (!inClub) return false;
       }
-      if (activeFilters.pos && !p.positions.includes(activeFilters.pos)) return false;
-      if (activeFilters.onlyEligible && cur && eligibleSlotsFor(p, cur).length === 0) return false;
-      if (activeFilters.onlyAffordable && cur && p.value > state.budget - cur.spent) return false;
+      if (pickerState.affordable && p.value > state.budget - cur.spent) return false;
       return true;
     });
   }
 
-  function renderPlayers() {
+  function renderPicker() {
     const cur = state.currentParticipant;
-    const list = applyFilters();
+    const list = pickerCandidates();
     list.sort((a, b) => b.value - a.value);
-    const MAX = 300;
+    const MAX = 200;
     const visible = list.slice(0, MAX);
 
-    const grid = $('#playersGrid');
+    const grid = $('#pickerGrid');
     grid.innerHTML = '';
-    const more = list.length > MAX ? ` (TOP ${MAX} AFFICHÉ — AFFINE LES FILTRES)` : '';
-    $('#playersStats').textContent = `${list.length} JOUEUR(S) DISPONIBLE(S)${more}`;
+    const more = list.length > MAX ? ` (TOP ${MAX} AFFICHÉ)` : '';
+    $('#pickerStats').textContent = `${list.length} JOUEUR(S) ÉLIGIBLE(S) AU POSTE ${pickerState.slot.type}${more}`;
 
-    // Affichage incrémental
-    const PAGE = 60;
+    const PAGE = 50;
     const myToken = ++renderToken;
     let i = 0;
     function chunk() {
@@ -483,8 +558,22 @@
     chunk();
 
     if (list.length === 0) {
-      grid.appendChild(el('div', { class: 'muted', style: 'padding:20px' }, 'Aucun joueur ne correspond aux filtres.'));
+      grid.appendChild(el('div', { class: 'muted', style: 'padding:20px;grid-column:1/-1' }, 'Aucun joueur ne correspond — assouplis les filtres.'));
     }
+  }
+
+  function bindPicker() {
+    $('#pickerSearch').oninput = (e) => { pickerState.search = e.target.value.toLowerCase(); renderPicker(); };
+    $('#pickerLeague').onchange = (e) => { pickerState.league = e.target.value; renderPicker(); };
+    $('#pickerClub').onchange = (e) => { pickerState.club = e.target.value; renderPicker(); };
+    $('#pickerAffordable').onchange = (e) => { pickerState.affordable = e.target.checked; renderPicker(); };
+    $('#pickerAge').onclick = (e) => {
+      const btn = e.target.closest('.chip'); if (!btn) return;
+      $$('#pickerAge .chip').forEach(c => c.classList.remove('active'));
+      btn.classList.add('active');
+      pickerState.age = btn.dataset.age;
+      renderPicker();
+    };
   }
 
   function buildPlayerCard(p, cur) {
@@ -498,22 +587,12 @@
     });
     card.addEventListener('click', () => openConfirmPick(p));
 
-    // Photo area : tentative photo Transfermarkt, fallback gradient + initiales
+    // Photo : Sofascore → Fotmob → Transfermarkt → fallback gradient + initiales
     const photo = el('div', {
       class: 'pc-photo',
       style: `background:${gradientFor(p)}`,
     });
-    const photoUrl = window.photoUrl && window.photoUrl(p);
-    if (photoUrl) {
-      const img = new Image();
-      img.src = photoUrl;
-      img.alt = p.name;
-      img.loading = 'lazy';
-      img.className = 'pc-photo-img';
-      img.onload = () => { if (img.naturalWidth > 1) photo.classList.add('has-img'); };
-      img.onerror = () => { img.remove(); };
-      photo.appendChild(img);
-    }
+    attachPhoto(photo, p, 'pc-photo-img');
     photo.appendChild(el('span', { class: 'pc-photo-initials' }, initials(p.name)));
 
     // Position badges
@@ -830,14 +909,14 @@
   // INIT
   // ============================================================
   function init() {
-    // Mettre à jour la note dataset avec le nombre exact
     const note = $('#datasetNote');
-    if (note) note.textContent = `Base agrégée ${PLAYERS.length} joueurs · données Transfermarkt 2018-2023 vieillies à mai 2026 · valeurs estimées`;
+    if (note) note.textContent = `${PLAYERS.length} joueurs · données Transfermarkt saison 2025-26 · valeurs marchandes en temps réel`;
 
     buildHero();
     bindSetup();
     renderParticipants();
     bindModals();
+    bindPicker();
     $('#startGame').addEventListener('click', startGame);
     $('#restartBtn').addEventListener('click', restart);
     $('#logoHome').addEventListener('click', (e) => { e.preventDefault(); restart(); });

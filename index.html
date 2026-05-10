@@ -76,10 +76,20 @@
             </div>
 
             <div class="setup-field setup-field-wide">
-              <label>Budget par joueur</label>
+              <label>Budget total par équipe</label>
               <div class="slider-wrap">
                 <input type="range" id="budgetSlider" min="10" max="1000" value="500" step="10" />
                 <div class="slider-value"><span id="budgetVal">500</span><span class="unit">M€</span></div>
+              </div>
+            </div>
+
+            <div class="setup-field setup-field-wide">
+              <label>Restriction d'âge</label>
+              <div class="seg" id="segAge">
+                <button data-val="all" class="active">Tous âges</button>
+                <button data-val="u21">U21</button>
+                <button data-val="u25">U25</button>
+                <button data-val="o30">30 ans et +</button>
               </div>
             </div>
 
@@ -163,66 +173,7 @@
       </div>
 
       <div class="draft-body">
-        <aside class="filters">
-          <div class="filters-head">
-            <h3>Filtres</h3>
-            <button class="link-btn" id="resetFilters">Reset</button>
-          </div>
-
-          <div class="search-box">
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
-            <input type="text" id="searchInput" placeholder="Rechercher un joueur..." />
-          </div>
-
-          <div class="filter-group">
-            <label>Âge</label>
-            <div class="chip-group" id="ageChips">
-              <button data-age="all" class="chip active">Tous</button>
-              <button data-age="u21" class="chip">U21</button>
-              <button data-age="u25" class="chip">U25</button>
-              <button data-age="o30" class="chip">30+</button>
-            </div>
-          </div>
-
-          <div class="filter-group">
-            <label>Championnat</label>
-            <select id="leagueSelect" class="select"></select>
-          </div>
-
-          <div class="filter-group">
-            <label>Club (actuel ou passé)</label>
-            <select id="clubSelect" class="select"></select>
-          </div>
-
-          <div class="filter-group">
-            <label>Poste</label>
-            <select id="posSelect" class="select">
-              <option value="">Tous postes</option>
-              <option>GK</option><option>CB</option><option>LB</option><option>RB</option>
-              <option>DM</option><option>CM</option><option>AM</option>
-              <option>LW</option><option>RW</option>
-              <option>SS</option><option>CF</option><option>ST</option>
-            </select>
-          </div>
-
-          <div class="filter-group filter-toggle">
-            <label class="check">
-              <input type="checkbox" id="onlyEligible" checked />
-              <span>Postes encore libres</span>
-            </label>
-            <label class="check">
-              <input type="checkbox" id="onlyAffordable" />
-              <span>Dans mon budget</span>
-            </label>
-          </div>
-        </aside>
-
-        <section class="players-area">
-          <div class="players-stats" id="playersStats"></div>
-          <div class="players-grid" id="playersGrid"></div>
-        </section>
-
-        <aside class="my-team">
+        <aside class="my-team my-team-left">
           <div class="my-team-head">
             <h3 id="myTeamTitle">Mon équipe</h3>
             <div class="budget-line">
@@ -232,13 +183,20 @@
             <div class="budget-bar"><div class="budget-bar-fill" id="budgetBar"></div></div>
             <div class="picks-left"><span id="picksLeft">11</span> PICK(S) RESTANT(S)</div>
           </div>
-          <div class="pitch-wrap">
-            <div class="pitch" id="myPitch"></div>
-          </div>
+        </aside>
+
+        <section class="pitch-stage" id="pitchStage">
+          <div class="pitch-hint" id="pitchHint">/ Clique sur un poste pour piocher un joueur</div>
+          <div class="pitch pitch-large" id="myPitch"></div>
+        </section>
+
+        <aside class="opponents">
+          <h3 class="opponents-title">/ Adversaires</h3>
+          <div class="opponents-list" id="opponentsList"></div>
         </aside>
       </div>
 
-      <div class="all-pitches" id="allPitches"></div>
+      <div class="all-pitches" id="allPitches" style="display:none"></div>
     </section>
 
     <!-- ============= SCREEN 3 — FINAL ============= -->
@@ -260,6 +218,43 @@
   </main>
 
   <!-- ============= MODALS ============= -->
+  <!-- Picker for a slot -->
+  <div class="modal modal-picker" id="modalPicker" aria-hidden="true">
+    <div class="modal-card picker-card">
+      <div class="picker-head">
+        <div>
+          <div class="turn-label" id="pickerEyebrow">/ POSTE GK · 0 / 11 picks faits</div>
+          <h3 id="pickerTitle">Choisir un Gardien</h3>
+        </div>
+        <button class="picker-close" data-close aria-label="Fermer">×</button>
+      </div>
+
+      <div class="picker-toolbar">
+        <div class="search-box">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+          <input type="text" id="pickerSearch" placeholder="Rechercher un joueur..." autocomplete="off" />
+        </div>
+        <div class="picker-filters">
+          <div class="chip-group" id="pickerAge">
+            <button data-age="all" class="chip active">Tous</button>
+            <button data-age="u21" class="chip">U21</button>
+            <button data-age="u25" class="chip">U25</button>
+            <button data-age="o30" class="chip">30+</button>
+          </div>
+          <select id="pickerLeague" class="select"></select>
+          <select id="pickerClub" class="select"></select>
+          <label class="check check-affordable">
+            <input type="checkbox" id="pickerAffordable" checked />
+            <span>Dans mon budget</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="picker-stats" id="pickerStats"></div>
+      <div class="picker-grid" id="pickerGrid"></div>
+    </div>
+  </div>
+
   <div class="modal" id="modalConfirm" aria-hidden="true">
     <div class="modal-card">
       <h3 id="confirmTitle">Confirmer le pick ?</h3>
