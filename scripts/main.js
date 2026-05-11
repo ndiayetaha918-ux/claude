@@ -160,6 +160,14 @@
   // ============================================================
   const ALL_LEAGUES = Array.from(new Set(PLAYERS.map(p => p.league))).sort();
 
+  // Top 5 leagues activés par défaut (UX clearer que tout activé)
+  const TOP5_LEAGUES = ['Premier League', 'La Liga', 'Bundesliga', 'Serie A', 'Ligue 1'];
+
+  function updateLeagueCounter() {
+    const lbl = $('#leagueCounter');
+    if (lbl) lbl.textContent = state.leagues.size + ' / ' + ALL_LEAGUES.length + ' championnats actifs';
+  }
+
   function bindSetup() {
     // Segmented buttons
     function bindSeg(id, key, type) {
@@ -192,31 +200,58 @@
     slider.addEventListener('input', setSliderProgress);
     setSliderProgress();
 
-    // League chips multi-select
+    // League chips multi-select : Top 5 ON par défaut (clearer)
     const chipsWrap = $('#leagueChips');
-    state.leagues = new Set(ALL_LEAGUES); // tous activés par défaut
-    // bouton "Tous"
-    const allChip = el('button', { class: 'chip', type: 'button' }, 'TOUS');
-    allChip.addEventListener('click', () => {
-      const allOn = chipsWrap.querySelectorAll('button[data-league]').length === state.leagues.size;
-      if (allOn) {
-        state.leagues.clear();
-        chipsWrap.querySelectorAll('button[data-league]').forEach(b => b.classList.remove('active'));
-      } else {
-        ALL_LEAGUES.forEach(l => state.leagues.add(l));
-        chipsWrap.querySelectorAll('button[data-league]').forEach(b => b.classList.add('active'));
-      }
+    state.leagues = new Set(TOP5_LEAGUES);
+
+    // Preset buttons
+    const top5Chip = el('button', { class: 'chip chip-preset', type: 'button', title: 'Top 5 européens' }, '★ TOP 5');
+    top5Chip.addEventListener('click', () => {
+      state.leagues = new Set(TOP5_LEAGUES);
+      refreshChipStates();
     });
+    const allChip = el('button', { class: 'chip chip-preset', type: 'button', title: 'Tous les championnats' }, '⊞ TOUS');
+    allChip.addEventListener('click', () => {
+      state.leagues = new Set(ALL_LEAGUES);
+      refreshChipStates();
+    });
+    const noneChip = el('button', { class: 'chip chip-preset', type: 'button', title: 'Aucun (choisis manuellement)' }, '✗ AUCUN');
+    noneChip.addEventListener('click', () => {
+      state.leagues.clear();
+      refreshChipStates();
+    });
+    chipsWrap.appendChild(top5Chip);
     chipsWrap.appendChild(allChip);
+    chipsWrap.appendChild(noneChip);
+
+    // Chips individuels
     ALL_LEAGUES.forEach(l => {
       const count = PLAYERS.filter(p => p.league === l).length;
-      const chip = el('button', { class: 'chip active', 'data-league': l, type: 'button', title: count + ' joueurs' }, l);
+      const cls = 'chip chip-league' + (state.leagues.has(l) ? ' active' : '');
+      const chip = el('button', { class: cls, 'data-league': l, type: 'button', title: count + ' joueurs' });
+      chip.appendChild(el('span', { class: 'chip-name' }, l));
+      chip.appendChild(el('span', { class: 'chip-count' }, '' + count));
       chip.addEventListener('click', () => {
-        if (state.leagues.has(l)) { state.leagues.delete(l); chip.classList.remove('active'); }
-        else { state.leagues.add(l); chip.classList.add('active'); }
+        if (state.leagues.has(l)) {
+          state.leagues.delete(l);
+          chip.classList.remove('active');
+        } else {
+          state.leagues.add(l);
+          chip.classList.add('active');
+        }
+        updateLeagueCounter();
       });
       chipsWrap.appendChild(chip);
     });
+    updateLeagueCounter();
+
+    function refreshChipStates() {
+      chipsWrap.querySelectorAll('button[data-league]').forEach(b => {
+        if (state.leagues.has(b.dataset.league)) b.classList.add('active');
+        else b.classList.remove('active');
+      });
+      updateLeagueCounter();
+    }
   }
 
   function renderParticipants() {

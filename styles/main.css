@@ -38,7 +38,7 @@
   --shadow-sm: 0 1px 3px rgba(0,0,0,0.5);
   --shadow-md: 0 8px 28px rgba(0,0,0,0.55), 0 2px 8px rgba(0,0,0,0.3);
   --shadow-lg: 0 24px 80px rgba(0,0,0,0.7), 0 4px 14px rgba(0,0,0,0.4);
-  --shadow-neon: 0 0 0 1px rgba(255,200,87,0.35), 0 0 20px rgba(255,200,87,0.18);
+  --shadow-neon: 0 0 0 1px rgba(255,200,87,0.25), 0 0 14px rgba(255,200,87,0.12);
 
   --r-sm: 10px;
   --r:    14px;
@@ -64,13 +64,12 @@
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  padding: 1.5px;
+  padding: 1px;
   background: radial-gradient(
-    280px circle at var(--mx, 50%) var(--my, 50%),
-    #ffd76b 0%,
-    #ff5c4d 25%,
-    rgba(255,92,77,0.4) 45%,
-    transparent 70%
+    220px circle at var(--mx, 50%) var(--my, 50%),
+    rgba(255,215,107,0.85) 0%,
+    rgba(255,92,77,0.5) 30%,
+    transparent 65%
   );
   -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
           mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
@@ -81,7 +80,7 @@
   pointer-events: none;
   z-index: 1;
 }
-.glow:hover::before { opacity: 1; }
+.glow:hover::before { opacity: 0.85; }
 /* Glow plus subtil sur les éléments tooltip-actifs */
 .glow.glow-soft::before {
   padding: 1px;
@@ -103,8 +102,8 @@ body {
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
   background-image:
-    radial-gradient(1200px 600px at 80% -200px, rgba(255,200,87,0.06), transparent 70%),
-    radial-gradient(900px 500px at -100px 50%, rgba(255,107,61,0.04), transparent 70%);
+    radial-gradient(1400px 700px at 85% -300px, rgba(255,200,87,0.035), transparent 70%),
+    radial-gradient(1000px 600px at -100px 50%, rgba(255,107,61,0.025), transparent 70%);
 }
 
 /* Stadium grass overlay (super subtle stripes) */
@@ -472,14 +471,64 @@ h1, h2, h3, h4 { margin: 0; font-weight: 800; letter-spacing: -0.02em; color: va
   display: inline-flex; align-items: center; gap: 6px;
   transition: all 0.18s;
 }
-.chip-multi .chip:hover { border-color: var(--neon); color: var(--ink); }
+.chip-multi .chip:hover { border-color: var(--line-2); color: var(--ink); }
 .chip-multi .chip.active {
   background: var(--neon);
   color: #1a0e00;
   border-color: var(--neon);
 }
-.chip-multi .chip.active::before {
-  content: "✓"; font-weight: 900;
+.chip-multi .chip.active::before { content: "✓"; font-weight: 900; }
+
+/* Presets row */
+.chip-multi-leagues .chip-preset {
+  font-family: var(--mono); font-size: 11px;
+  letter-spacing: 0.1em;
+  background: var(--surface-2);
+  border-color: var(--line-2);
+  color: var(--ink-soft);
+  text-transform: uppercase;
+}
+.chip-multi-leagues .chip-preset:hover { color: var(--neon); border-color: var(--neon); }
+.chip-multi-leagues .chip-preset::before { content: ""; }
+.chip-multi-leagues .chip-preset.active { background: var(--surface-2); color: var(--ink); border-color: var(--line-2); }
+
+/* League chip with name + count */
+.chip-multi-leagues .chip-league {
+  position: relative;
+  padding: 8px 12px;
+  border: 1.5px solid var(--line);
+  background: var(--bg);
+  opacity: 0.55;
+}
+.chip-multi-leagues .chip-league:not(.active) { color: var(--slate); }
+.chip-multi-leagues .chip-league::before { content: ""; display: none; }
+.chip-multi-leagues .chip-league .chip-name { font-weight: 700; }
+.chip-multi-leagues .chip-league .chip-count {
+  font-family: var(--mono); font-size: 9px;
+  background: rgba(0,0,0,0.3);
+  color: var(--slate);
+  padding: 2px 6px; border-radius: 999px;
+}
+.chip-multi-leagues .chip-league.active {
+  opacity: 1;
+  background: var(--neon);
+  color: #1a0e00;
+  border-color: var(--neon);
+  box-shadow: 0 4px 14px rgba(255,200,87,0.18);
+}
+.chip-multi-leagues .chip-league.active .chip-count {
+  background: rgba(0,0,0,0.18); color: #1a0e00;
+}
+.chip-multi-leagues .chip-league:hover:not(.active) {
+  opacity: 0.85; border-color: var(--line-2);
+}
+
+.league-counter {
+  font-family: var(--mono); font-size: 10px;
+  letter-spacing: 0.08em;
+  color: var(--neon);
+  margin-left: 8px;
+  text-transform: none;
 }
 
 /* Toggle */
