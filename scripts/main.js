@@ -1622,6 +1622,482 @@
     }, { passive: true });
   }
 
+  // ============================================================
+  // PHASE B — STADIUM (verdict + simulation)
+  // ============================================================
+  const stadiumState = {
+    scores: [],        // par participant
+    styles: [],        // par participant
+    matches: [],       // bracket
+    pendingStyleIdx: 0,
+  };
+
+  function goToStadium() {
+    // Calcul scoring pour chaque participant
+    stadiumState.scores = state.participants.map(p =>
+      window.Sim.computeTeamScore(p, FORMATIONS, SLOT_RULES, playerById));
+    stadiumState.styles = state.participants.map(() => null);
+    stadiumState.matches = [];
+    stadiumState.pendingStyleIdx = 0;
+
+    showScreen('stadium');
+    renderTeamScores();
+    renderTournament();
+
+    // Démarrer les modals de style (un par participant)
+    setTimeout(askNextStyle, 400);
+  }
+
+  function askNextStyle() {
+    const idx = stadiumState.pendingStyleIdx;
+    if (idx >= state.participants.length) return;
+    const part = state.participants[idx];
+    const STYLES = window.Sim.STYLES;
+    let chosen = null;
+    $('#styleEyebrow').textContent = `/ STYLE DE JEU · JOUEUR ${idx + 1} / ${state.participants.length}`;
+    $('#styleTitle').textContent = `${part.name}, comment fais-tu jouer ton équipe ?`;
+    $('#styleSub').textContent = 'Ton style influence la simulation. Chaque style en bat un autre (pierre-papier-ciseaux).';
+
+    const wrap = $('#styleOptions');
+    wrap.innerHTML = '';
+    Object.values(STYLES).forEach(s => {
+      const opt = el('button', { class: 'style-opt', type: 'button', 'data-key': s.key });
+      opt.appendChild(el('span', { class: 'icon' }, '/ ' + s.icon + ' ' + s.label.toUpperCase()));
+      opt.appendChild(el('h4', {}, s.label));
+      opt.appendChild(el('p', {}, s.desc));
+      if (s.counter) {
+        const counterStyle = STYLES[s.counter];
+        opt.appendChild(el('span', { class: 'counter' }, '↗ Contre : ' + counterStyle.label));
+      } else {
+        opt.appendChild(el('span', { class: 'counter' }, '↗ Neutre face aux autres'));
+      }
+      opt.addEventListener('click', () => {
+        $$('#styleOptions .style-opt').forEach(o => o.classList.remove('selected'));
+        opt.classList.add('selected');
+        chosen = s.key;
+        $('#styleConfirm').disabled = false;
+      });
+      wrap.appendChild(opt);
+    });
+
+    $('#styleConfirm').disabled = true;
+    $('#styleConfirm').onclick = () => {
+      if (!chosen) return;
+      stadiumState.styles[idx] = chosen;
+      closeModal('#modalStyle');
+      stadiumState.pendingStyleIdx++;
+      renderTeamScores();
+      if (stadiumState.pendingStyleIdx < state.participants.length) {
+        setTimeout(askNextStyle, 350);
+      } else {
+        // Tous les styles déclarés → préparer le bracket
+        buildBracketAndRender();
+      }
+    };
+
+    openModal('#modalStyle');
+  }
+
+  function buildBracketAndRender() {
+    stadiumState.matches = window.Sim.buildBracket(state.participants, stadiumState.scores)
+      .map(m => ({ ...m, played: false, result: null }));
+    renderTournament();
+  }
+
+  function renderTeamScores() {
+    const grid = $('#teamScoresGrid');
+    grid.innerHTML = '';
+    // Inject the gradient defs for the ring (once)
+    if (!document.getElementById('stadGradDefs')) {
+      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      svg.setAttribute('id', 'stadGradDefs');
+      svg.setAttribute('width', '0');
+      svg.setAttribute('height', '0');
+      svg.style.position = 'absolute';
+      svg.innerHTML = `<defs><linearGradient id="stadGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#ffd76b"/><stop offset="100%" stop-color="#ff5c4d"/></linearGradient></defs>`;
+      document.body.appendChild(svg);
+    }
+
+    state.participants.forEach((p, i) => {
+      const score = stadiumState.scores[i];
+      const style = stadiumState.styles[i];
+      const card = el('div', { class: 'team-score-card glow' });
+      // Header
+      const head = el('div', { class: 'team-score-head' },
+        el('div', { class: 'avatar', style: `background:${p.color.grad}` }, initials(p.name)),
+        el('div', {},
+          el('h3', {}, p.name),
+          el('div', { class: 'meta' }, `${FORMATIONS[p.formation].label} · ${score.filled}/11 · ${score.totalValue.toFixed(0)} M€`)),
+      );
+      card.appendChild(head);
+
+      // Overall ring + style badge
+      const overallPct = score.overall / 99;
+      const dashOffset = 314.16 * (1 - overallPct);
+      const ringWrap = el('div', { class: 'overall-ring-wrap' });
+      const ring = el('div', { class: 'overall-ring' });
+      ring.innerHTML = `<svg viewBox="0 0 110 110"><circle cx="55" cy="55" r="50" class="ring-bg"/><circle cx="55" cy="55" r="50" class="ring-fg" style="stroke-dashoffset:${dashOffset}"/></svg>
+        <div class="value"><span>${score.overall}</span><span>OVERALL</span></div>`;
+      ringWrap.appendChild(ring);
+      const styleBadge = style
+        ? el('div', { class: 'style-badge' }, window.Sim.STYLES[style].icon + ' ' + window.Sim.STYLES[style].label)
+        : el('div', { class: 'style-badge no-style' }, '/ STYLE ?');
+      const meta = el('div', {}, styleBadge);
+      ringWrap.appendChild(meta);
+      card.appendChild(ringWrap);
+
+      // Score bars
+      const bars = el('div', { class: 'score-bars' });
+      [['QUALITÉ', score.quality], ['CHIMIE', score.chemistry], ['ADÉQUATION', score.fit], ['ÉQUILIBRE D\'ÂGE', score.ageBalance]].forEach(([lbl, v]) => {
+        const bar = el('div', { class: 'score-bar' });
+        bar.appendChild(el('span', { class: 'label' }, lbl));
+        const barEl = el('div', { class: 'bar' });
+        const fill = el('div', { class: 'bar-fill', style: `width:${v}%` });
+        barEl.appendChild(fill);
+        bar.appendChild(barEl);
+        bar.appendChild(el('span', { class: 'num' }, String(v)));
+        bars.appendChild(bar);
+      });
+      card.appendChild(bars);
+
+      // Top 3 players
+      const topWrap = el('div', { class: 'top-players' });
+      score.topPlayers.forEach(tp => {
+        const tpEl = el('div', { class: 'top-player' });
+        const ph = el('div', { class: 'photo', style: `background:${gradientFor(tp)}` });
+        attachPhoto(ph, tp, '');
+        ph.appendChild(el('span', {}, initials(tp.name)));
+        tpEl.appendChild(ph);
+        tpEl.appendChild(el('div', { class: 'nm' }, tp.name));
+        tpEl.appendChild(el('div', { class: 'vl' }, tp.value + ' M€'));
+        topWrap.appendChild(tpEl);
+      });
+      card.appendChild(topWrap);
+
+      grid.appendChild(card);
+    });
+  }
+
+  function renderTournament() {
+    const wrap = $('#tournamentArea');
+    wrap.innerHTML = '';
+    const hasMatches = stadiumState.matches.length > 0;
+
+    const head = el('div', { class: 'tournament-header' });
+    head.appendChild(el('h3', {}, hasMatches ? 'Calendrier des matches' : 'En attente des styles…'));
+    if (hasMatches) {
+      const allPlayed = stadiumState.matches.every(m => m.played);
+      if (!allPlayed) {
+        const playAll = el('button', { class: 'btn btn-primary' }, 'Lancer toute la simulation');
+        playAll.addEventListener('click', playAllMatches);
+        head.appendChild(playAll);
+      }
+    }
+    wrap.appendChild(head);
+
+    if (!hasMatches) return;
+
+    const grid = el('div', { class: 'matches-grid' });
+    stadiumState.matches.forEach((m, idx) => {
+      grid.appendChild(buildMatchRow(m, idx));
+    });
+    wrap.appendChild(grid);
+
+    // Classement si tous joués
+    if (stadiumState.matches.every(m => m.played)) {
+      renderStandings(wrap);
+    }
+  }
+
+  function buildMatchRow(m, idx) {
+    const pa = state.participants[m.a], pb = state.participants[m.b];
+    const sa = stadiumState.scores[m.a], sb = stadiumState.scores[m.b];
+    const winA = m.played && m.result.goalsA > m.result.goalsB;
+    const winB = m.played && m.result.goalsA < m.result.goalsB;
+    const row = el('div', { class: 'match-row' + (m.played ? ' played' : '') + (winA ? ' win-a' : '') + (winB ? ' win-b' : '') });
+
+    // Team A
+    const aBox = el('div', { class: 'match-team match-team-a' });
+    aBox.appendChild(el('div', { class: 'avatar-tiny', style: `background:${pa.color.grad}` }, initials(pa.name)));
+    const aInfo = el('div', {});
+    aInfo.appendChild(el('div', { class: 'name' }, pa.name));
+    aInfo.appendChild(el('div', { class: 'sub' }, 'Overall ' + sa.overall));
+    aBox.appendChild(aInfo);
+    row.appendChild(aBox);
+
+    // Score
+    const scoreEl = el('div', { class: 'match-score' });
+    if (m.played) {
+      scoreEl.appendChild(el('span', {}, String(m.result.goalsA)));
+      scoreEl.appendChild(el('span', { class: 'pending' }, '–'));
+      scoreEl.appendChild(el('span', {}, String(m.result.goalsB)));
+    } else {
+      scoreEl.appendChild(el('span', { class: 'pending' }, 'vs'));
+    }
+    row.appendChild(scoreEl);
+
+    // Team B
+    const bBox = el('div', { class: 'match-team match-team-b' });
+    const bInfo = el('div', {});
+    bInfo.appendChild(el('div', { class: 'name' }, pb.name));
+    bInfo.appendChild(el('div', { class: 'sub' }, 'Overall ' + sb.overall));
+    bBox.appendChild(bInfo);
+    bBox.appendChild(el('div', { class: 'avatar-tiny', style: `background:${pb.color.grad}` }, initials(pb.name)));
+    row.appendChild(bBox);
+
+    // CTA
+    const cta = el('div', { class: 'match-cta' });
+    if (!m.played) {
+      const btn = el('button', { class: 'btn btn-ghost' }, 'Simuler ce match');
+      btn.addEventListener('click', () => playMatch(idx));
+      cta.appendChild(btn);
+    } else {
+      const btn = el('button', { class: 'btn btn-ghost' }, 'Revoir');
+      btn.addEventListener('click', () => replayMatch(idx));
+      cta.appendChild(btn);
+    }
+    row.appendChild(cta);
+
+    return row;
+  }
+
+  function renderStandings(parent) {
+    const standings = window.Sim.computeStandings(state.participants, stadiumState.matches);
+    const wrap = el('div', { class: 'standings' });
+    wrap.appendChild(el('h3', { class: 'standings-title' }, 'Classement final'));
+    const grid = el('div', { class: 'standings-grid' });
+    standings.forEach((s, i) => {
+      const row = el('div', { class: 'standing-row rank-' + (i + 1) });
+      row.appendChild(el('div', { class: 'rank' }, '#' + (i + 1)));
+      row.appendChild(el('div', { class: 'avatar-tiny', style: `background:${s.color.grad}` }, initials(s.name)));
+      row.appendChild(el('div', { class: 'name' }, s.name));
+      row.appendChild(el('div', { class: 'pts' }, s.pts + ' pts'));
+      row.appendChild(el('div', { class: 'gd' }, `${s.gf}–${s.ga}`));
+      grid.appendChild(row);
+    });
+    wrap.appendChild(grid);
+    parent.appendChild(wrap);
+  }
+
+  // ============================================================
+  // SIMULATION ANIMÉE
+  // ============================================================
+  function playMatch(matchIdx) {
+    const m = stadiumState.matches[matchIdx];
+    if (m.played) return replayMatch(matchIdx);
+
+    const partA = state.participants[m.a], partB = state.participants[m.b];
+    const scoreA = stadiumState.scores[m.a], scoreB = stadiumState.scores[m.b];
+    const styleA = stadiumState.styles[m.a], styleB = stadiumState.styles[m.b];
+
+    // Outcome
+    const outcome = window.Sim.simulateMatchOutcome(scoreA, scoreB, styleA, styleB);
+    const teamA = { ...partA, players: scoreA.players };
+    const teamB = { ...partB, players: scoreB.players };
+    const events = window.Sim.generateMatchSequence(teamA, teamB, scoreA, scoreB, styleA, styleB, outcome);
+
+    m.result = outcome;
+    m.events = events;
+    m.played = true;
+
+    playMatchAnimation(m, partA, partB);
+
+    // After playoff structure : for 4 players, après les 2 semis, ajouter la finale + 3e place
+    if (state.participants.length === 4 && stadiumState.matches.every(mm => mm.played) && stadiumState.matches.length === 2) {
+      // Ajouter finale + 3e place
+      const winners = stadiumState.matches.map(mm => mm.result.goalsA > mm.result.goalsB ? mm.a : mm.b);
+      const losers = stadiumState.matches.map(mm => mm.result.goalsA > mm.result.goalsB ? mm.b : mm.a);
+      stadiumState.matches.push({ a: losers[0], b: losers[1], type: '3rd', played: false, result: null });
+      stadiumState.matches.push({ a: winners[0], b: winners[1], type: 'final', played: false, result: null });
+    }
+  }
+
+  function replayMatch(matchIdx) {
+    const m = stadiumState.matches[matchIdx];
+    if (!m.played) return;
+    const partA = state.participants[m.a], partB = state.participants[m.b];
+    playMatchAnimation(m, partA, partB);
+  }
+
+  // Animation overlay : pawns + ball + events stream
+  let simAnim = { rafs: [], timeouts: [], skipping: false };
+
+  function clearSimAnim() {
+    simAnim.rafs.forEach(r => cancelAnimationFrame(r));
+    simAnim.timeouts.forEach(t => clearTimeout(t));
+    simAnim.rafs = []; simAnim.timeouts = [];
+  }
+
+  function playMatchAnimation(m, partA, partB) {
+    clearSimAnim();
+    simAnim.skipping = false;
+
+    // Setup head
+    $('#simNameA').textContent = partA.name;
+    $('#simNameB').textContent = partB.name;
+    $('#simMetaA').textContent = (stadiumState.styles[m.a] ? window.Sim.STYLES[stadiumState.styles[m.a]].label : 'Style ?') + ' · ' + FORMATIONS[partA.formation].label;
+    $('#simMetaB').textContent = (stadiumState.styles[m.b] ? window.Sim.STYLES[stadiumState.styles[m.b]].label : 'Style ?') + ' · ' + FORMATIONS[partB.formation].label;
+    $('#simAvA').style.background = partA.color.grad;
+    $('#simAvA').textContent = initials(partA.name);
+    $('#simAvB').style.background = partB.color.grad;
+    $('#simAvB').textContent = initials(partB.name);
+    $('#simScoreA').textContent = '0';
+    $('#simScoreB').textContent = '0';
+    $('#simMinute').textContent = "0'";
+    $('#simEvent').textContent = "Coup d'envoi";
+    $('#simEvents').innerHTML = '';
+
+    // Render pitch with pawns
+    const pitch = $('#simPitch');
+    pitch.innerHTML = '';
+    const W = 600, H = 400;
+    // Pitch markings
+    pitch.appendChild(svg('rect', { x: 4, y: 4, width: W-8, height: H-8, fill: 'none', stroke: 'rgba(255,255,255,0.35)', 'stroke-width': 2, rx: 6 }));
+    pitch.appendChild(svg('line', { x1: W/2, y1: 4, x2: W/2, y2: H-4, stroke: 'rgba(255,255,255,0.35)', 'stroke-width': 2 }));
+    pitch.appendChild(svg('circle', { cx: W/2, cy: H/2, r: 40, fill: 'none', stroke: 'rgba(255,255,255,0.35)', 'stroke-width': 2 }));
+    // Boxes
+    pitch.appendChild(svg('rect', { x: 4, y: H/2 - 60, width: 50, height: 120, fill: 'none', stroke: 'rgba(255,255,255,0.35)', 'stroke-width': 1.5 }));
+    pitch.appendChild(svg('rect', { x: W-54, y: H/2 - 60, width: 50, height: 120, fill: 'none', stroke: 'rgba(255,255,255,0.35)', 'stroke-width': 1.5 }));
+
+    // Pawns A (left side) and B (right side)
+    const positionsA = computePawnPositions(partA, 'A', W, H);
+    const positionsB = computePawnPositions(partB, 'B', W, H);
+    const pawnsA = [], pawnsB = [];
+    m.events && m.events.forEach && (m.events.players || []);
+    const playersA = m.events.find(e => e.type === 'kickoff') ? state.participants[m.a].slots : null;
+
+    // We render simpler: 11 dots per side from positions
+    positionsA.forEach((pos, i) => {
+      const c = svg('circle', { class: 'sim-pawn', cx: pos.x, cy: pos.y, r: 9, fill: partA.color.solid });
+      pitch.appendChild(c);
+      pawnsA.push({ el: c, baseX: pos.x, baseY: pos.y });
+    });
+    positionsB.forEach((pos, i) => {
+      const c = svg('circle', { class: 'sim-pawn', cx: pos.x, cy: pos.y, r: 9, fill: partB.color.solid });
+      pitch.appendChild(c);
+      pawnsB.push({ el: c, baseX: pos.x, baseY: pos.y });
+    });
+    const ball = svg('circle', { class: 'sim-ball', cx: W/2, cy: H/2, r: 5 });
+    pitch.appendChild(ball);
+
+    // Play events
+    openModal('#modalSim');
+    const events = m.events;
+    let score = { a: 0, b: 0 };
+    const stepDelay = 450;
+
+    events.forEach((ev, i) => {
+      const t = setTimeout(() => {
+        if (simAnim.skipping) return;
+        $('#simMinute').textContent = ev.minute + "'";
+        if (ev.type === 'kickoff') {
+          $('#simEvent').textContent = "Coup d'envoi !";
+          animateBallTo(ball, W/2, H/2);
+        } else if (ev.type === 'half') {
+          $('#simEvent').textContent = 'Mi-temps';
+          appendSimEvent(ev);
+        } else if (ev.type === 'end') {
+          $('#simEvent').textContent = 'Match terminé';
+          appendSimEvent(ev);
+          // Refresh tournament view
+          renderTournament();
+        } else if (ev.type === 'goal') {
+          score[ev.team === 'A' ? 'a' : 'b']++;
+          $('#simScoreA').textContent = score.a;
+          $('#simScoreB').textContent = score.b;
+          $('#simEvent').textContent = '⚽ BUT ' + (ev.team === 'A' ? partA.name : partB.name);
+          appendSimEvent(ev);
+          // Goal flash
+          const flash = el('div', { class: 'sim-goal-flash' });
+          $('.sim-pitch-wrap').appendChild(flash);
+          setTimeout(() => flash.remove(), 1200);
+          // Move ball to goal
+          const goalX = ev.team === 'A' ? W - 24 : 24;
+          const goalY = H / 2 + (Math.random() * 80 - 40);
+          animateBallTo(ball, goalX, goalY);
+        } else if (ev.type === 'pass') {
+          $('#simEvent').textContent = ev.text;
+          appendSimEvent(ev);
+          // Move ball to a random pawn of the team
+          const arr = ev.team === 'A' ? pawnsA : pawnsB;
+          const target = arr[Math.floor(Math.random() * arr.length)];
+          const tx = target.baseX + (Math.random() * 30 - 15);
+          const ty = target.baseY + (Math.random() * 30 - 15);
+          animateBallTo(ball, tx, ty);
+        }
+      }, i * stepDelay);
+      simAnim.timeouts.push(t);
+    });
+  }
+
+  function animateBallTo(ball, x, y) {
+    ball.setAttribute('cx', x);
+    ball.setAttribute('cy', y);
+  }
+
+  function appendSimEvent(ev) {
+    const log = $('#simEvents');
+    const line = el('div', { class: 'sim-event-line' + (ev.type === 'goal' ? ' goal' : '') });
+    line.appendChild(el('span', { class: 'ev-time' }, ev.minute + "'"));
+    line.appendChild(el('span', { class: 'ev-text' }, ev.text));
+    log.appendChild(line);
+    log.scrollTop = log.scrollHeight;
+  }
+
+  // SVG helper
+  function svg(tag, attrs) {
+    const ns = 'http://www.w3.org/2000/svg';
+    const node = document.createElementNS(ns, tag);
+    Object.entries(attrs || {}).forEach(([k, v]) => node.setAttribute(k, v));
+    return node;
+  }
+
+  function computePawnPositions(participant, side, W, H) {
+    // Convertir les coords de formation (% du pitch portrait) en coords pitch paysage simulation
+    // Notre pitch sim : 600x400 paysage. Côté A = gauche (0-50%), côté B = droite (50-100%)
+    const F = FORMATIONS[participant.formation];
+    const margin = 30;
+    return F.slots.map(slot => {
+      // slot.x: 0-100 (gauche-droite en mode portrait), slot.y: 0-100 (haut-bas)
+      // En sim paysage :
+      //   y_pitch (vertical en portrait → axe court) → x_sim (horizontal en paysage)
+      //   x_pitch (horizontal en portrait → axe long) → y_sim
+      // Pour le côté A (gauche) : y_pitch=92 (GK) → x_sim petit. y_pitch=14 (ST) → x_sim grand
+      // Pour le côté B (droite) : on miroir
+      const yNorm = 1 - (slot.y / 100); // 0 (GK) à 1 (ST)
+      const xNorm = slot.x / 100;
+      let x, y;
+      if (side === 'A') {
+        x = margin + yNorm * (W/2 - margin);
+        y = margin + xNorm * (H - margin * 2);
+      } else {
+        x = W - margin - yNorm * (W/2 - margin);
+        y = margin + (1 - xNorm) * (H - margin * 2);
+      }
+      return { x, y };
+    });
+  }
+
+  function playAllMatches() {
+    // Joue chaque match séquentiellement avec un délai
+    const playNext = (i) => {
+      if (i >= stadiumState.matches.length) return;
+      if (stadiumState.matches[i].played) return playNext(i + 1);
+      playMatch(i);
+      // Attendre la fin de l'animation avant de jouer le suivant
+      const events = stadiumState.matches[i].events;
+      const duration = events.length * 450 + 1000;
+      setTimeout(() => {
+        closeModal('#modalSim');
+        // Vérifier si on a ajouté de nouveaux matchs (finale en 4j)
+        renderTournament();
+        setTimeout(() => playNext(i + 1), 600);
+      }, duration);
+    };
+    playNext(0);
+  }
+
   function init() {
     const note = $('#datasetNote');
     if (note) note.textContent = `${PLAYERS.length} joueurs · données Transfermarkt saison 2025-26 · valeurs marchandes en temps réel`;
@@ -1638,6 +2114,14 @@
     bindSpotlight();
     $('#startGame').addEventListener('click', startGame);
     $('#restartBtn').addEventListener('click', restart);
+    $('#restartBtn2') && $('#restartBtn2').addEventListener('click', restart);
+    $('#toStadium') && $('#toStadium').addEventListener('click', goToStadium);
+    $('#simSkip') && $('#simSkip').addEventListener('click', () => {
+      simAnim.skipping = true;
+      clearSimAnim();
+      closeModal('#modalSim');
+      renderTournament();
+    });
     $('#logoHome').addEventListener('click', (e) => { e.preventDefault(); restart(); });
   }
 

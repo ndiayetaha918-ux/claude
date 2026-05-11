@@ -292,7 +292,7 @@
       <div class="all-pitches" id="allPitches" style="display:none"></div>
     </section>
 
-    <!-- ============= SCREEN 3 — FINAL ============= -->
+    <!-- ============= SCREEN 3 — FINAL (XI constitué) ============= -->
     <section class="screen screen-final" id="screen-final">
       <div class="hero" style="padding: 60px 20px 40px">
         <div class="hero-card" style="position: static">
@@ -304,8 +304,41 @@
         </div>
       </div>
       <div class="final-grid" id="finalGrid"></div>
-      <div class="setup-actions" style="justify-content:center">
+      <div class="setup-actions" style="justify-content:center; gap: 14px;">
         <button class="btn btn-ghost btn-lg" id="restartBtn">Nouvelle partie</button>
+        <button class="btn btn-primary btn-lg" id="toStadium">
+          <span>Au stade — Verdict &amp; Simulation</span>
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>
+        </button>
+      </div>
+    </section>
+
+    <!-- ============= SCREEN 4 — STADIUM (verdict + simulation) ============= -->
+    <section class="screen screen-stadium" id="screen-stadium">
+      <div class="hero" style="padding: 40px 20px 30px">
+        <div class="hero-card" style="position: static">
+          <div class="hero-card-inner" style="margin: 0 auto; max-width: 760px">
+            <div class="hero-eyebrow">/ ANALYSE TACTIQUE</div>
+            <h1 class="hero-title">Le verdict.</h1>
+            <p class="hero-sub" id="stadiumSub">Chaque équipe est notée sur qualité, chimie, adéquation tactique. Puis le tournoi.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Score cards par équipe -->
+      <div class="stadium-section">
+        <h2 class="section-title"><span class="num">01</span>Notes des équipes</h2>
+        <div class="team-scores-grid" id="teamScoresGrid"></div>
+      </div>
+
+      <!-- Tournoi -->
+      <div class="stadium-section">
+        <h2 class="section-title"><span class="num">02</span>Le tournoi</h2>
+        <div class="tournament-area" id="tournamentArea"></div>
+      </div>
+
+      <div class="setup-actions" style="justify-content:center; gap:14px;">
+        <button class="btn btn-ghost btn-lg" id="restartBtn2">Rejouer</button>
       </div>
     </section>
   </main>
@@ -385,6 +418,60 @@
     </div>
   </div>
 
+  <!-- Style de jeu modal -->
+  <div class="modal" id="modalStyle" aria-hidden="true">
+    <div class="modal-card modal-style">
+      <div class="style-head">
+        <div class="turn-label" id="styleEyebrow">/ STYLE DE JEU</div>
+        <h3 id="styleTitle">Comment fais-tu jouer ton équipe ?</h3>
+        <p class="muted" id="styleSub">Ton style détermine comment tu attaques et défends. Chaque style en bat un autre.</p>
+      </div>
+      <div class="style-options" id="styleOptions"></div>
+      <div class="modal-actions">
+        <button class="btn btn-primary" id="styleConfirm" disabled>Valider</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Simulation overlay (match en cours) -->
+  <div class="modal modal-sim" id="modalSim" aria-hidden="true">
+    <div class="sim-card">
+      <div class="sim-head">
+        <div class="sim-team sim-team-a">
+          <div class="sim-avatar" id="simAvA"></div>
+          <div>
+            <div class="sim-team-name" id="simNameA">—</div>
+            <div class="sim-team-meta" id="simMetaA">—</div>
+          </div>
+        </div>
+        <div class="sim-score">
+          <span id="simScoreA">0</span>
+          <span class="sim-sep">:</span>
+          <span id="simScoreB">0</span>
+        </div>
+        <div class="sim-team sim-team-b">
+          <div>
+            <div class="sim-team-name" id="simNameB">—</div>
+            <div class="sim-team-meta" id="simMetaB">—</div>
+          </div>
+          <div class="sim-avatar" id="simAvB"></div>
+        </div>
+      </div>
+      <div class="sim-clock">
+        <span id="simMinute">0'</span>
+        <span class="sim-divider">·</span>
+        <span id="simEvent">Coup d'envoi</span>
+      </div>
+      <div class="sim-pitch-wrap">
+        <svg class="sim-pitch" id="simPitch" viewBox="0 0 600 400" preserveAspectRatio="xMidYMid meet"></svg>
+      </div>
+      <div class="sim-events" id="simEvents"></div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" id="simSkip">Passer à la fin</button>
+      </div>
+    </div>
+  </div>
+
   <div class="modal" id="modalToast" aria-hidden="true">
     <div class="modal-card">
       <h3 id="toastTitle">—</h3>
@@ -398,6 +485,7 @@
   <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
   <script src="scripts/players.js"></script>
   <script src="scripts/online.js"></script>
+  <script src="scripts/sim.js"></script>
   <script src="scripts/main.js"></script>
 </body>
 </html>
