@@ -40,6 +40,17 @@
   const initials = (name) =>
     name.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('');
 
+  // Recherche insensible aux accents (Ødegaard, Konaté, Leão, Müller…)
+  function normSearch(s) {
+    if (!s) return '';
+    return s.toLowerCase()
+      .normalize('NFD')
+      .replace(/[̀-ͯ]/g, '')
+      .replace(/ø/g, 'o').replace(/Ø/g, 'o')
+      .replace(/æ/g, 'ae').replace(/œ/g, 'oe')
+      .replace(/ß/g, 'ss');
+  }
+
   // ---------- Photo attach helper avec cascade d'URLs ----------
   // Tente photoUrl(p) → photoUrlFallback(p) → fallback gradient + initiales
   function attachPhoto(container, player, imgClass) {
@@ -351,7 +362,7 @@
       : state.participants.filter(p => p.id !== state.currentParticipant?.id);
     others.forEach(p => {
       const isCurrent = state.currentParticipant && p.id === state.currentParticipant.id;
-      const card = el('div', { class: 'opp-card-pitch' + (isCurrent ? ' is-current' : '') });
+      const card = el('div', { class: 'opp-card-pitch glow' + (isCurrent ? ' is-current' : '') });
       const filled = Object.values(p.slots).filter(Boolean).length;
       // Header
       const head = el('div', { class: 'opp-head' });
@@ -531,7 +542,7 @@
       // ===== Slot eligibility =====
       if (!p.positions.some(pos => accepted.includes(pos))) return false;
       // ===== Filtres affinés du picker =====
-      if (pickerState.search && !p.name.toLowerCase().includes(pickerState.search)) return false;
+      if (pickerState.search && !normSearch(p.name).includes(pickerState.search)) return false;
       // (chip âge dans le picker affine encore par-dessus le critère draft)
       if (pickerState.age === 'u21' && p.age >= 21) return false;
       if (pickerState.age === 'u25' && p.age >= 25) return false;
@@ -587,7 +598,7 @@
     const blocked = !eligible || !affordable;
 
     const row = el('div', {
-      class: 'player-row' + (blocked ? ' ineligible' : ''),
+      class: 'player-row glow' + (blocked ? ' ineligible' : ''),
       title: !eligible ? 'Mauvais poste pour ce slot' : (!affordable ? 'Hors budget' : 'Cliquer pour drafter'),
     });
     row.addEventListener('click', () => openConfirmPick(p));
@@ -988,7 +999,7 @@
     const grid = $('#finalGrid');
     grid.innerHTML = '';
     state.participants.forEach(p => {
-      const card = el('div', { class: 'final-card' });
+      const card = el('div', { class: 'final-card glow' });
       const filled = Object.values(p.slots).filter(Boolean).length;
       card.appendChild(el('div', { class: 'head' },
         el('div', { class: 'final-avatar', style: `background:${p.color.grad}` }, initials(p.name)),
@@ -1100,6 +1111,8 @@
     $('#btnJoin').disabled = true;
     $('#lobbyState').textContent = role === 'host' ? 'Création du salon...' : 'Connexion à l\'hôte...';
 
+    // Reset listeners pour éviter doublons sur retry
+    Online.off();
     const promise = role === 'host' ? Online.createRoom(room, me) : Online.joinRoom(room, me);
     promise.then(({ id, roomCode }) => {
       state.online.joined = true;
@@ -1162,7 +1175,7 @@
     wrap.innerHTML = '';
     parts.forEach((p, i) => {
       const grad = TEAM_COLORS[i % 4].grad;
-      const card = el('div', { class: 'lobby-player-card' + (p.isHost ? ' host' : '') });
+      const card = el('div', { class: 'lobby-player-card glow' + (p.isHost ? ' host' : '') });
       card.appendChild(el('div', { class: 'avatar-mini', style: `background:${grad}` }, initials(p.name)));
       const info = el('div', {});
       info.appendChild(el('div', { class: 'name' }, p.name));
@@ -1585,6 +1598,30 @@
   // ============================================================
   // INIT
   // ============================================================
+  // Track mouse globally pour l'effet spotlight (gradient border qui suit le curseur)
+  function bindSpotlight() {
+    // Applique .glow aux éléments statiques au boot
+    $$('.setup-card, .mode-tab, .lobby-card, .feature').forEach(n => n.classList.add('glow'));
+
+    // Délégation pointermove : trouve la card hovered et set les CSS vars
+    let raf = null, lastTarget = null, lastE = null;
+    document.addEventListener('pointermove', (e) => {
+      lastE = e;
+      if (raf) return;
+      raf = requestAnimationFrame(() => {
+        raf = null;
+        const ev = lastE; if (!ev) return;
+        const target = ev.target.closest && ev.target.closest('.glow');
+        if (target) {
+          const r = target.getBoundingClientRect();
+          target.style.setProperty('--mx', (ev.clientX - r.left) + 'px');
+          target.style.setProperty('--my', (ev.clientY - r.top) + 'px');
+          lastTarget = target;
+        }
+      });
+    }, { passive: true });
+  }
+
   function init() {
     const note = $('#datasetNote');
     if (note) note.textContent = `${PLAYERS.length} joueurs · données Transfermarkt saison 2025-26 · valeurs marchandes en temps réel`;
@@ -1598,6 +1635,7 @@
     bindModals();
     bindPicker();
     bindShortlist();
+    bindSpotlight();
     $('#startGame').addEventListener('click', startGame);
     $('#restartBtn').addEventListener('click', restart);
     $('#logoHome').addEventListener('click', (e) => { e.preventDefault(); restart(); });

@@ -14,11 +14,31 @@
 <body>
 
   <header class="topbar">
-    <a href="#" class="logo" id="logoHome">
-      <span class="logo-mark">D</span>
-      <span class="logo-text">DRAFTER</span>
+    <a href="#" class="logo" id="logoHome" aria-label="Drafter — retour à l'accueil">
+      <svg class="logo-mark-svg" viewBox="0 0 48 48" aria-hidden="true">
+        <defs>
+          <linearGradient id="logoG" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#ffd76b"/>
+            <stop offset="55%" stop-color="#ffa531"/>
+            <stop offset="100%" stop-color="#ff5c4d"/>
+          </linearGradient>
+        </defs>
+        <!-- Corner-notched shield -->
+        <path d="M12 0 L48 0 L48 36 L36 48 L0 48 L0 12 Z" fill="url(#logoG)"/>
+        <!-- Stitching accents -->
+        <line x1="0" y1="14" x2="14" y2="0" stroke="rgba(255,255,255,0.35)" stroke-width="0.8" stroke-dasharray="2 2"/>
+        <line x1="36" y1="48" x2="48" y2="36" stroke="rgba(0,0,0,0.35)" stroke-width="0.8" stroke-dasharray="2 2"/>
+        <!-- Custom heavy D letterform -->
+        <path d="M11 10 L11 38 L22 38 C31 38 37 32 37 24 C37 16 31 10 22 10 Z M18 16 L22 16 C27 16 31 19 31 24 C31 29 27 32 22 32 L18 32 Z" fill="#1a0e00" fill-rule="evenodd"/>
+        <!-- 11 dot (squad size accent) -->
+        <circle cx="40" cy="8" r="2.5" fill="#1a0e00" opacity="0.85"/>
+      </svg>
+      <div class="logo-wordmark">
+        <span class="logo-text">DRAFTER</span>
+        <span class="logo-sub">XI · 25/26</span>
+      </div>
     </a>
-    <div class="topbar-tagline">/ snake draft · 4000+ joueurs · données Transfermarkt 25/26</div>
+    <div class="topbar-tagline">/ snake draft · 4000+ joueurs · données Transfermarkt</div>
   </header>
 
   <main id="app">

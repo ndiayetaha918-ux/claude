@@ -27,6 +27,7 @@
     listeners: { state: [], message: [], error: [] },
 
     on(evt, fn) { this.listeners[evt].push(fn); return this; },
+    off(evt) { if (evt) this.listeners[evt] = []; else { this.listeners.state=[]; this.listeners.message=[]; this.listeners.error=[]; } return this; },
     emit(evt, ...args) { (this.listeners[evt] || []).forEach(fn => fn(...args)); },
 
     // Hôte : créer un salon. Retourne une promesse.
@@ -73,21 +74,39 @@
         const peer = new Peer(myId, { debug: 0 });
         this.peer = peer;
         let opened = false;
+        let connected = false;
+        // Timeout global pour la jointure
+        const giveUp = setTimeout(() => {
+          if (!connected) reject(new Error('Salon introuvable ou hôte injoignable. Vérifie le code.'));
+        }, 12000);
         peer.on('open', (id) => {
           opened = true;
           const conn = peer.connect(targetId, { reliable: true, metadata: { name: me.name, formation: me.formation } });
           this.hostConn = conn;
           conn.on('open', () => {
+            connected = true;
+            clearTimeout(giveUp);
             conn.send({ type: 'hello', name: me.name, formation: me.formation });
             resolve({ id, roomCode: this.roomCode });
           });
           conn.on('data', (msg) => this.onMessageFromHost(msg));
           conn.on('close', () => this.emit('error', new Error('Connexion à l\'hôte perdue')));
-          conn.on('error', (err) => this.emit('error', err));
+          conn.on('error', (err) => {
+            // Si la connexion échoue avant ouverture, c'est une erreur fatale
+            if (!connected) { clearTimeout(giveUp); reject(err); }
+            else this.emit('error', err);
+          });
         });
         peer.on('error', (err) => {
-          if (!opened) reject(err);
-          this.emit('error', err);
+          // peer-unavailable = l'hôte n'existe pas
+          if (!connected && (err && (err.type === 'peer-unavailable' || !opened))) {
+            clearTimeout(giveUp);
+            reject(err.type === 'peer-unavailable'
+              ? new Error('Aucun salon "' + this.roomCode + '" — l\'hôte n\'a pas encore créé le salon.')
+              : err);
+          } else {
+            this.emit('error', err);
+          }
         });
       });
     },
