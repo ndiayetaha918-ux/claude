@@ -15,6 +15,24 @@
     return (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9-]+/g, '-').slice(0, 24) || 'room';
   }
 
+  // Config WebRTC : multiples STUN pour maximiser NAT traversal cross-device
+  // (TURN free non disponible publiquement en 2026 — cross-network parfois bloqué
+  //  par NAT symétrique des opérateurs mobiles, dans ce cas même réseau Wi-Fi recommandé)
+  const PEER_CONFIG = {
+    debug: 0,
+    config: {
+      iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' },
+        { urls: 'stun:stun2.l.google.com:19302' },
+        { urls: 'stun:stun3.l.google.com:19302' },
+        { urls: 'stun:stun.cloudflare.com:3478' },
+        { urls: 'stun:global.stun.twilio.com:3478' },
+      ],
+      iceCandidatePoolSize: 10,
+    },
+  };
+
   // ==== API publique ====
   const Online = window.Online = {
     role: null,                  // 'host' | 'guest' | null
@@ -37,7 +55,7 @@
       this.me = me;
       const desiredId = hostPeerId(this.roomCode);
       return new Promise((resolve, reject) => {
-        const peer = new Peer(desiredId, { debug: 0 });
+        const peer = new Peer(desiredId, PEER_CONFIG);
         this.peer = peer;
         let opened = false;
         peer.on('open', (id) => {
@@ -71,7 +89,7 @@
       const myId = guestPeerId(this.roomCode);
       const targetId = hostPeerId(this.roomCode);
       return new Promise((resolve, reject) => {
-        const peer = new Peer(myId, { debug: 0 });
+        const peer = new Peer(myId, PEER_CONFIG);
         this.peer = peer;
         let opened = false;
         let connected = false;

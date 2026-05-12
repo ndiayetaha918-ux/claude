@@ -110,6 +110,13 @@
     gambleUsed: false,
   };
 
+  // ---------- Détection device pour optimisations ----------
+  const isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints || 0) > 0;
+  const isMobile = isTouch || window.innerWidth < 720;
+  const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (isMobile) document.documentElement.classList.add('is-mobile');
+  if (isTouch) document.documentElement.classList.add('is-touch');
+
   // ---------- DOM helpers ----------
   const $ = (sel) => document.querySelector(sel);
   const $$ = (sel) => Array.from(document.querySelectorAll(sel));
@@ -134,10 +141,10 @@
   function buildHero() {
     const stage = $('#heroStage');
     if (!stage) return;
-    // Top players (by value), prendre 80 pour 4 rows × 20
-    const top = PLAYERS.slice(0, 80);
-    const rows = 4;
-    const perRow = 20;
+    // Léger sur mobile (perf) : 2 rangées × 12, 24 polaroïds au lieu de 160
+    const rows = isMobile ? 2 : 3;
+    const perRow = isMobile ? 10 : 16;
+    const top = PLAYERS.slice(0, rows * perRow);
     for (let r = 0; r < rows; r++) {
       const row = el('div', {
         class: 'hero-row' + (r % 2 ? ' reverse' : '') + (r === 1 ? ' fast' : '') + (r === 2 ? ' slow' : ''),
@@ -631,7 +638,7 @@
     const cur = state.currentParticipant;
     const list = pickerCandidates();
     list.sort((a, b) => b.value - a.value);
-    const MAX = 200;
+    const MAX = isMobile ? 80 : 200;
     const visible = list.slice(0, MAX);
 
     const grid = $('#pickerGrid');
@@ -1670,11 +1677,11 @@
   // ============================================================
   // Track mouse globally pour l'effet spotlight (gradient border qui suit le curseur)
   function bindSpotlight() {
-    // Applique .glow aux éléments statiques au boot
+    // Skip totalement sur touch / mobile : aucune classe, aucun listener
+    if (isTouch) return;
     $$('.setup-card, .mode-tab, .lobby-card, .feature').forEach(n => n.classList.add('glow'));
 
-    // Délégation pointermove : trouve la card hovered et set les CSS vars
-    let raf = null, lastTarget = null, lastE = null;
+    let raf = null, lastE = null;
     document.addEventListener('pointermove', (e) => {
       lastE = e;
       if (raf) return;
@@ -1686,7 +1693,6 @@
           const r = target.getBoundingClientRect();
           target.style.setProperty('--mx', (ev.clientX - r.left) + 'px');
           target.style.setProperty('--my', (ev.clientY - r.top) + 'px');
-          lastTarget = target;
         }
       });
     }, { passive: true });
