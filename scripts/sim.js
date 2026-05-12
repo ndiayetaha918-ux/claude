@@ -152,85 +152,149 @@
   // ============================================================
   // SIMULATION ANIMÉE — séquence d'événements pour le SVG
   // ============================================================
-  // Génère une séquence chronologique d'événements pour le rendu :
-  //   { minute, team: 'A'|'B', type: 'pass'|'shot'|'goal'|'kickoff'|'half', from, to, text }
+  // Génère une séquence chronologique d'événements garantissant
+  // EXACTEMENT outcome.goalsA buts pour A et outcome.goalsB pour B.
   function generateMatchSequence(teamA, teamB, scoreA, scoreB, styleA, styleB, outcome) {
     const events = [];
-    const totalEvents = 26; // ~26 actions sur 90 minutes virtuelles
+    const totalEvents = 32; // ~32 actions sur 90 min (plus de temps pour respirer)
     const goalsAFinal = outcome.goalsA;
     const goalsBFinal = outcome.goalsB;
-    let scoredA = 0, scoredB = 0;
 
-    // Distribuer les buts de façon plausible (pas tous au début/fin)
-    const goalMinutes = [];
-    function pickGoalMinute() {
-      let m;
-      do { m = 2 + Math.floor(Math.random() * 88); } while (goalMinutes.some(g => Math.abs(g - m) < 5));
-      goalMinutes.push(m); return m;
+    // ====== Étape 1 : Construction de la timeline de possession ======
+    // Probabilité que A ait le ballon à un moment donné, dérivée du diff + style
+    const possessionA = 0.5 + (outcome.diff / 220);
+    const slots = [];
+    for (let i = 0; i < totalEvents; i++) {
+      const minute = Math.min(89, 2 + Math.floor((i + 1) / totalEvents * 88));
+      const inPossA = Math.random() < possessionA;
+      slots.push({ idx: i, minute, team: inPossA ? 'A' : 'B', type: 'pass' });
     }
-    const aMinutes = Array.from({length: goalsAFinal}, () => pickGoalMinute()).sort((x,y)=>x-y);
-    const bMinutes = Array.from({length: goalsBFinal}, () => pickGoalMinute()).sort((x,y)=>x-y);
 
+    // ====== Étape 2 : Allouer EXACTEMENT le bon nombre de buts ======
+    function placeGoals(team, count) {
+      const eligible = slots.filter(s => s.team === team && s.type === 'pass');
+      // Si pas assez de slots pour cette équipe, forcer
+      let candidatePool = eligible.slice();
+      if (candidatePool.length < count) {
+        // Forcer des slots de l'autre équipe à basculer (ex: contre-attaque)
+        const others = slots.filter(s => s.team !== team && s.type === 'pass').slice().sort(() => Math.random() - 0.5);
+        while (candidatePool.length < count && others.length > 0) {
+          const o = others.shift();
+          o.team = team;
+          candidatePool.push(o);
+        }
+      }
+      // Mélanger + prendre `count`, en évitant de coller plusieurs buts à la suite
+      candidatePool.sort(() => Math.random() - 0.5);
+      const picked = [];
+      for (const s of candidatePool) {
+        if (picked.length >= count) break;
+        // Pas 2 buts dans la même minute ±3
+        if (picked.some(p => Math.abs(p.minute - s.minute) < 4)) continue;
+        picked.push(s);
+      }
+      // Si on n'a toujours pas assez (très improbable), accepter le restant
+      while (picked.length < count && candidatePool.length > picked.length) {
+        for (const s of candidatePool) {
+          if (!picked.includes(s)) { picked.push(s); break; }
+        }
+      }
+      picked.forEach(s => { s.type = 'goal'; });
+    }
+    placeGoals('A', goalsAFinal);
+    placeGoals('B', goalsBFinal);
+
+    // ====== Étape 3 : Construire les événements ======
     events.push({ minute: 0, type: 'kickoff', team: null, text: 'Coup d\'envoi' });
 
-    // Générer N moments où le jeu bascule entre les 2 équipes
-    const possessionA = 0.5 + (outcome.diff / 200); // 0-1 prob A en posession
-    let minute = 1;
-    for (let i = 0; i < totalEvents; i++) {
-      minute = Math.min(89, 2 + Math.floor((i + 1) / totalEvents * 88));
-      const inPossA = Math.random() < possessionA;
-      const team = inPossA ? 'A' : 'B';
-      const teamData = inPossA ? teamA : teamB;
+    const halfIdx = Math.floor(totalEvents / 2);
+    slots.forEach((s, i) => {
+      const teamData = s.team === 'A' ? teamA : teamB;
+      const oppData = s.team === 'A' ? teamB : teamA;
 
-      // Choisir un joueur (poids = valeur)
-      const players = teamData.players;
-      const totalW = players.reduce((s, p) => s + Math.sqrt(p.value || 1), 0);
-      let r = Math.random() * totalW, fromPlayer = players[0];
-      for (const p of players) { r -= Math.sqrt(p.value || 1); if (r <= 0) { fromPlayer = p; break; } }
-      let toPlayer = players[Math.floor(Math.random() * players.length)];
-      while (toPlayer === fromPlayer && players.length > 1) {
-        toPlayer = players[Math.floor(Math.random() * players.length)];
-      }
-
-      // Tirer un but ?
-      const goalThisMinute = inPossA
-        ? aMinutes.includes(minute) && scoredA < goalsAFinal
-        : bMinutes.includes(minute) && scoredB < goalsBFinal;
-
-      if (goalThisMinute) {
+      if (s.type === 'goal') {
         const scorer = pickAttacker(teamData.players);
+        const assist = pickAssister(teamData.players, scorer);
         events.push({
-          minute, type: 'goal', team,
+          minute: s.minute, type: 'goal', team: s.team,
           scorer: scorer.name,
-          text: `BUT ! ${scorer.name} marque pour ${team === 'A' ? teamA.name : teamB.name}`,
+          scorerId: scorer.id,
+          assistId: assist ? assist.id : null,
+          text: assist
+            ? `⚽ BUT ! ${scorer.name} (passe ${assist.name}) — ${s.team === 'A' ? teamA.name : teamB.name}`
+            : `⚽ BUT ! ${scorer.name} — ${s.team === 'A' ? teamA.name : teamB.name}`,
         });
-        if (inPossA) scoredA++; else scoredB++;
       } else {
+        // Pass ou shot raté — varier
+        const players = teamData.players;
+        const totalW = players.reduce((sum, p) => sum + Math.sqrt(p.value || 1), 0);
+        let r = Math.random() * totalW, fromPlayer = players[0];
+        for (const p of players) { r -= Math.sqrt(p.value || 1); if (r <= 0) { fromPlayer = p; break; } }
+        let toPlayer = players[Math.floor(Math.random() * players.length)];
+        while (toPlayer === fromPlayer && players.length > 1) {
+          toPlayer = players[Math.floor(Math.random() * players.length)];
+        }
+
+        // Mix d'événements pour variété
+        const variety = Math.random();
+        let evType = 'pass';
+        let evText = `${fromPlayer.name} → ${toPlayer.name}`;
+        if (variety < 0.08) {
+          // Tir raté (1 chance sur 12)
+          const shooter = pickAttacker(teamData.players);
+          evType = 'shot';
+          evText = `Tir de ${shooter.name} — repoussé !`;
+          fromPlayer = shooter;
+          toPlayer = shooter; // ball stays near attacker
+        } else if (variety < 0.18) {
+          // Interception (1 chance sur 10)
+          const defender = pickDefender(oppData.players);
+          if (defender) {
+            evType = 'interception';
+            evText = `${defender.name} intercepte !`;
+            fromPlayer = defender;
+          }
+        }
+
         events.push({
-          minute, type: 'pass', team,
+          minute: s.minute, type: evType, team: s.team,
           from: fromPlayer.name, to: toPlayer.name,
-          text: `${fromPlayer.name} → ${toPlayer.name}`,
+          fromId: fromPlayer.id, toId: toPlayer.id,
+          text: evText,
         });
       }
-      // Halftime
-      if (i === Math.floor(totalEvents / 2) - 1) {
-        events.push({ minute: 45, type: 'half', team: null, text: 'Mi-temps' });
+
+      if (i === halfIdx - 1) {
+        events.push({ minute: 45, type: 'half', team: null, text: '— Mi-temps —' });
       }
-    }
+    });
     events.push({ minute: 90, type: 'end', team: null,
-      text: `Coup de sifflet final · ${teamA.name} ${outcome.goalsA} – ${outcome.goalsB} ${teamB.name}` });
+      text: `Coup de sifflet final — ${teamA.name} ${outcome.goalsA} – ${outcome.goalsB} ${teamB.name}` });
     return events;
   }
 
   function pickAttacker(players) {
-    // Préférer les CF/ST/LW/RW/AM
     const attackers = players.filter(p => ['CF','ST','LW','RW','AM','SS'].includes(p.positions[0]));
     const pool = attackers.length ? attackers : players;
-    // Pondérer par valeur
-    const totalW = pool.reduce((s, p) => s + p.value, 0);
+    const totalW = pool.reduce((s, p) => s + (p.value || 1), 0);
     let r = Math.random() * totalW;
-    for (const p of pool) { r -= p.value; if (r <= 0) return p; }
+    for (const p of pool) { r -= (p.value || 1); if (r <= 0) return p; }
     return pool[pool.length - 1];
+  }
+
+  function pickAssister(players, scorer) {
+    // Assistant : milieu créatif ou ailier, exclure le buteur
+    const creatives = players.filter(p =>
+      p !== scorer && ['AM','CM','LW','RW','LM','RM'].includes(p.positions[0]));
+    if (creatives.length === 0) return null;
+    if (Math.random() < 0.3) return null; // 30% : pas d'assistant (frappe directe)
+    return creatives[Math.floor(Math.random() * creatives.length)];
+  }
+
+  function pickDefender(players) {
+    const defs = players.filter(p => ['CB','LB','RB','DM','LWB','RWB'].includes(p.positions[0]));
+    if (defs.length === 0) return null;
+    return defs[Math.floor(Math.random() * defs.length)];
   }
 
   // ============================================================

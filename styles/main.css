@@ -740,15 +740,30 @@ h1, h2, h3, h4 { margin: 0; font-weight: 800; letter-spacing: -0.02em; color: va
   font-family: var(--mono); font-size: 9px;
   color: var(--neon); letter-spacing: 0.12em;
 }
-.lobby-tip {
-  padding: 12px 14px;
-  background: var(--bg);
-  border: 1px dashed var(--line-2);
-  border-radius: 10px;
-  font-size: 12px; line-height: 1.5;
-  color: var(--ink-soft);
+.lobby-share {
+  padding: 14px; background: var(--bg);
+  border: 1px solid var(--line); border-radius: 12px;
 }
-.lobby-tip strong { color: var(--neon); font-family: var(--mono); letter-spacing: 0.04em; }
+.lobby-share-label {
+  font-family: var(--mono); font-size: 10px;
+  color: var(--slate); letter-spacing: 0.1em;
+  text-transform: uppercase; margin-bottom: 8px;
+}
+.lobby-share-box {
+  display: flex; gap: 10px; align-items: stretch;
+}
+.lobby-share-box code {
+  flex: 1;
+  background: var(--surface-2); border: 1px solid var(--line-2);
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-family: var(--mono); font-size: 13px;
+  color: var(--neon);
+  letter-spacing: 0.04em;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  user-select: all;
+}
+.lobby-share-box .btn { padding: 0 18px; font-size: 13px; }
 .lobby-host-actions, .lobby-guest-msg { padding-top: 8px; border-top: 1px dashed var(--line); }
 .lobby-host-actions { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
 .lobby-host-actions p { flex: 1; min-width: 240px; }
@@ -2159,9 +2174,11 @@ h1, h2, h3, h4 { margin: 0; font-weight: 800; letter-spacing: -0.02em; color: va
 }
 .sim-ball {
   fill: white; stroke: #1a1a1a; stroke-width: 0.8;
-  transition: cx 0.4s cubic-bezier(0.4, 0, 0.2, 1), cy 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
+  transition: cx 0.95s cubic-bezier(0.4, 0, 0.2, 1), cy 0.95s cubic-bezier(0.4, 0, 0.2, 1);
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.6));
 }
+.sim-pawn-group { pointer-events: none; }
+.sim-pawn-group text { user-select: none; }
 .sim-pass-line {
   stroke: rgba(255,255,255,0.6);
   stroke-width: 1.5;

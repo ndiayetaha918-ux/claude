@@ -97,16 +97,20 @@
               <input type="text" id="onlineName" class="line-input" maxlength="18" placeholder="Pseudo" />
             </div>
             <div class="setup-field">
-              <label>Code du salon</label>
-              <input type="text" id="onlineRoom" class="line-input" maxlength="14" placeholder="ex: foot-friday" />
+              <label>Nom du salon</label>
+              <input type="text" id="onlineRoom" class="line-input" maxlength="20" placeholder="ex: foot-friday" />
             </div>
             <div class="setup-field">
               <label>Ta formation</label>
               <select id="onlineFormation" class="select"></select>
             </div>
+            <div class="setup-field setup-field-wide">
+              <label>Pour rejoindre un salon existant, colle le <strong>code</strong> partagé :</label>
+              <input type="text" id="onlineJoinCode" class="line-input" placeholder="Code du salon" />
+            </div>
             <div class="lobby-actions">
-              <button class="btn btn-ghost" id="btnJoin">Rejoindre</button>
-              <button class="btn btn-primary" id="btnCreate">Créer le salon</button>
+              <button class="btn btn-ghost" id="btnJoin">Rejoindre avec le code</button>
+              <button class="btn btn-primary" id="btnCreate">Créer un nouveau salon</button>
             </div>
           </div>
 
@@ -116,12 +120,13 @@
                 <div class="turn-label">/ Salon</div>
                 <h3 id="lobbyRoomName">—</h3>
               </div>
-              <button class="btn btn-ghost" id="btnCopyCode">Copier le code</button>
             </div>
-            <div class="lobby-tip">
-              <strong>Astuce :</strong> Pour que ça marche entre appareils différents (PC/téléphone),
-              le mieux est d'être <strong>sur le même Wi-Fi</strong>. Les réseaux mobiles peuvent
-              bloquer la connexion P2P (NAT symétrique).
+            <div class="lobby-share">
+              <div class="lobby-share-label">Code à partager à tes potes :</div>
+              <div class="lobby-share-box">
+                <code id="lobbyShareCode">—</code>
+                <button class="btn btn-primary" id="btnCopyCode">Copier</button>
+              </div>
             </div>
             <div class="lobby-players" id="lobbyPlayers"></div>
             <div class="lobby-host-actions" id="lobbyHostActions" style="display:none">
@@ -494,7 +499,6 @@
     </div>
   </div>
 
-  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
   <script src="scripts/players.js"></script>
   <script src="scripts/online.js"></script>
   <script src="scripts/sim.js"></script>

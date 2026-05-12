@@ -1175,22 +1175,19 @@
   }
 
   function onlineEnterRoom(role) {
-    if (typeof Peer === 'undefined') {
-      return toast('PeerJS indisponible', 'Vérifie ta connexion. Le mode online nécessite que peerjs.com soit accessible.');
-    }
     const name = ($('#onlineName').value || '').trim().slice(0, 18) || 'Joueur';
-    const room = ($('#onlineRoom').value || '').trim();
+    const roomName = ($('#onlineRoom').value || '').trim() || 'Salon';
+    const joinCode = ($('#onlineJoinCode').value || '').trim();
     const formation = $('#onlineFormation').value || '4-3-3';
-    if (!room) return toast('Code manquant', 'Choisis un code de salon (ex : "foot-friday").');
-    const me = { name, formation };
+    if (role === 'guest' && !joinCode) return toast('Code manquant', 'Colle le code partagé par l\'hôte dans le champ « Code du salon ».');
+    const me = { name, formation, roomName };
 
     $('#btnCreate').disabled = true;
     $('#btnJoin').disabled = true;
-    $('#lobbyState').textContent = role === 'host' ? 'Création du salon...' : 'Connexion à l\'hôte...';
+    $('#lobbyState').textContent = role === 'host' ? 'Création du salon...' : 'Connexion au salon...';
 
-    // Reset listeners pour éviter doublons sur retry
     Online.off();
-    const promise = role === 'host' ? Online.createRoom(room, me) : Online.joinRoom(room, me);
+    const promise = role === 'host' ? Online.createRoom(roomName, me) : Online.joinRoom(joinCode, me);
     promise.then(({ id, roomCode }) => {
       state.online.joined = true;
       state.online.isHost = (role === 'host');
@@ -1199,15 +1196,15 @@
 
       $('#lobbyForm').style.display = 'none';
       $('#lobbyRoom').style.display = 'flex';
-      $('#lobbyRoomName').textContent = roomCode;
+      $('#lobbyRoomName').textContent = roomName;
+      $('#lobbyShareCode').textContent = roomCode;
       $('#lobbyHostActions').style.display = role === 'host' ? 'flex' : 'none';
       $('#lobbyGuestMsg').style.display = role === 'guest' ? 'block' : 'none';
       $('#lobbyState').textContent = role === 'host'
-        ? 'Salon créé. Partage le code à tes potes.'
+        ? 'Salon créé. Partage le code à tes potes — il marche partout (Wi-Fi, 4G, n\'importe où).'
         : 'Connecté ! En attente du lancement par l\'hôte.';
 
       ensureOnlineStatus(true);
-      // Si host : ajouter soi-même à participants pour le rendu lobby
       if (role === 'host') {
         renderLobbyPlayers(Online.state.participants);
         updateStartButton();
@@ -1216,9 +1213,9 @@
       console.error(err);
       $('#btnCreate').disabled = false;
       $('#btnJoin').disabled = false;
-      $('#lobbyState').textContent = 'Erreur : ' + (err && err.message || 'connexion impossible');
-      const isTaken = (err && err.type === 'unavailable-id');
-      if (isTaken) toast('Salon déjà existant', 'Quelqu\'un héberge déjà ce salon. Choisis un autre code, ou rejoins-le avec "Rejoindre".');
+      const msg = (err && err.message) || 'connexion impossible';
+      $('#lobbyState').textContent = 'Erreur : ' + msg;
+      toast(role === 'host' ? 'Création échouée' : 'Connexion échouée', msg);
     });
 
     Online.on('state', (st) => {
@@ -2005,6 +2002,37 @@
     simAnim.rafs = []; simAnim.timeouts = [];
   }
 
+  // Numéros maillot par type de slot (convention foot classique)
+  // Plusieurs slots du même type → on incrémente avec un fallback
+  const JERSEY_NUMBERS = {
+    GK: [1, 13],
+    LB: [3], RB: [2],
+    CB: [4, 5, 6, 15],
+    DM: [6, 8, 16],
+    CM: [8, 10, 6, 14],
+    AM: [10, 21],
+    LM: [11, 17], RM: [7, 17],
+    LW: [11, 17, 22], RW: [7, 17, 24],
+    CF: [9, 19], ST: [9, 19, 17],
+    SS: [22, 27],
+  };
+
+  function assignJerseyNumbers(participant) {
+    const F = FORMATIONS[participant.formation];
+    const used = new Set();
+    const map = {}; // slotId → number
+    const counts = {}; // type → seen so far
+    F.slots.forEach(slot => {
+      counts[slot.type] = (counts[slot.type] || 0) + 1;
+      const pool = JERSEY_NUMBERS[slot.type] || [];
+      let num = pool[counts[slot.type] - 1] || (counts[slot.type] + 20);
+      while (used.has(num) && num < 99) num++;
+      used.add(num);
+      map[slot.id] = num;
+    });
+    return map;
+  }
+
   function playMatchAnimation(m, partA, partB) {
     clearSimAnim();
     simAnim.skipping = false;
@@ -2032,51 +2060,93 @@
     pitch.appendChild(svg('rect', { x: 4, y: 4, width: W-8, height: H-8, fill: 'none', stroke: 'rgba(255,255,255,0.35)', 'stroke-width': 2, rx: 6 }));
     pitch.appendChild(svg('line', { x1: W/2, y1: 4, x2: W/2, y2: H-4, stroke: 'rgba(255,255,255,0.35)', 'stroke-width': 2 }));
     pitch.appendChild(svg('circle', { cx: W/2, cy: H/2, r: 40, fill: 'none', stroke: 'rgba(255,255,255,0.35)', 'stroke-width': 2 }));
-    // Boxes
     pitch.appendChild(svg('rect', { x: 4, y: H/2 - 60, width: 50, height: 120, fill: 'none', stroke: 'rgba(255,255,255,0.35)', 'stroke-width': 1.5 }));
     pitch.appendChild(svg('rect', { x: W-54, y: H/2 - 60, width: 50, height: 120, fill: 'none', stroke: 'rgba(255,255,255,0.35)', 'stroke-width': 1.5 }));
 
-    // Pawns A (left side) and B (right side)
+    // Numéros maillot
+    const numA = assignJerseyNumbers(partA);
+    const numB = assignJerseyNumbers(partB);
+    const slotsA = FORMATIONS[partA.formation].slots;
+    const slotsB = FORMATIONS[partB.formation].slots;
+
+    // Positions pions
     const positionsA = computePawnPositions(partA, 'A', W, H);
     const positionsB = computePawnPositions(partB, 'B', W, H);
-    const pawnsA = [], pawnsB = [];
-    m.events && m.events.forEach && (m.events.players || []);
-    const playersA = m.events.find(e => e.type === 'kickoff') ? state.participants[m.a].slots : null;
 
-    // We render simpler: 11 dots per side from positions
-    positionsA.forEach((pos, i) => {
-      const c = svg('circle', { class: 'sim-pawn', cx: pos.x, cy: pos.y, r: 9, fill: partA.color.solid });
-      pitch.appendChild(c);
-      pawnsA.push({ el: c, baseX: pos.x, baseY: pos.y });
+    // Map joueur ID → pawn group
+    const pawnByPlayerId = {};
+    const pawnsA = [], pawnsB = [];
+
+    function buildPawn(participant, slot, pos, side, num, partColor) {
+      const playerId = participant.slots[slot.id];
+      const player = playerId ? playerById(playerId) : null;
+      const lastName = player ? (player.name.split(' ').slice(-1)[0]) : slot.type;
+      const g = svg('g', { class: 'sim-pawn-group' });
+      // Cercle de fond (couleur d'équipe)
+      const ring = svg('circle', { class: 'sim-pawn', cx: pos.x, cy: pos.y, r: 11, fill: partColor, stroke: 'rgba(0,0,0,0.5)', 'stroke-width': 1 });
+      g.appendChild(ring);
+      // Numéro maillot (texte central)
+      const numTxt = svg('text', {
+        x: pos.x, y: pos.y + 4,
+        'text-anchor': 'middle',
+        'font-family': 'Bebas Neue, Inter, sans-serif',
+        'font-size': 13,
+        'font-weight': 700,
+        fill: 'white',
+        style: 'pointer-events:none; text-shadow:0 1px 2px rgba(0,0,0,0.6)',
+      });
+      numTxt.textContent = num;
+      g.appendChild(numTxt);
+      // Nom du joueur (sous le pion)
+      const nameTxt = svg('text', {
+        x: pos.x, y: pos.y + 24,
+        'text-anchor': 'middle',
+        'font-family': 'JetBrains Mono, monospace',
+        'font-size': 8.5,
+        fill: 'white',
+        style: 'pointer-events:none; text-shadow:0 1px 2px rgba(0,0,0,0.8)',
+      });
+      nameTxt.textContent = lastName.slice(0, 12).toUpperCase();
+      g.appendChild(nameTxt);
+      pitch.appendChild(g);
+      const obj = { el: ring, baseX: pos.x, baseY: pos.y, group: g, player };
+      if (player) pawnByPlayerId[player.id] = obj;
+      return obj;
+    }
+
+    slotsA.forEach((slot, i) => {
+      pawnsA.push(buildPawn(partA, slot, positionsA[i], 'A', numA[slot.id], partA.color.solid));
     });
-    positionsB.forEach((pos, i) => {
-      const c = svg('circle', { class: 'sim-pawn', cx: pos.x, cy: pos.y, r: 9, fill: partB.color.solid });
-      pitch.appendChild(c);
-      pawnsB.push({ el: c, baseX: pos.x, baseY: pos.y });
+    slotsB.forEach((slot, i) => {
+      pawnsB.push(buildPawn(partB, slot, positionsB[i], 'B', numB[slot.id], partB.color.solid));
     });
-    const ball = svg('circle', { class: 'sim-ball', cx: W/2, cy: H/2, r: 5 });
+
+    // Ball
+    const ball = svg('circle', { class: 'sim-ball', cx: W/2, cy: H/2, r: 6, fill: 'white', stroke: '#1a1a1a', 'stroke-width': 1 });
     pitch.appendChild(ball);
 
     // Play events
     openModal('#modalSim');
     const events = m.events;
     let score = { a: 0, b: 0 };
-    const stepDelay = 450;
+    const stepDelay = 1100; // ralenti vs 450 — on suit la simulation
+    const halfPause = 1500; // pause supplémentaire à la mi-temps
 
+    let cumDelay = 0;
     events.forEach((ev, i) => {
       const t = setTimeout(() => {
         if (simAnim.skipping) return;
         $('#simMinute').textContent = ev.minute + "'";
         if (ev.type === 'kickoff') {
           $('#simEvent').textContent = "Coup d'envoi !";
-          animateBallTo(ball, W/2, H/2);
+          moveBall(ball, W/2, H/2);
         } else if (ev.type === 'half') {
-          $('#simEvent').textContent = 'Mi-temps';
+          $('#simEvent').textContent = '⏸ Mi-temps';
           appendSimEvent(ev);
+          moveBall(ball, W/2, H/2);
         } else if (ev.type === 'end') {
-          $('#simEvent').textContent = 'Match terminé';
+          $('#simEvent').textContent = '🏁 Match terminé';
           appendSimEvent(ev);
-          // Refresh tournament view
           renderTournament();
         } else if (ev.type === 'goal') {
           score[ev.team === 'A' ? 'a' : 'b']++;
@@ -2088,26 +2158,39 @@
           const flash = el('div', { class: 'sim-goal-flash' });
           $('.sim-pitch-wrap').appendChild(flash);
           setTimeout(() => flash.remove(), 1200);
-          // Move ball to goal
-          const goalX = ev.team === 'A' ? W - 24 : 24;
+          // Move ball vers le but adverse (côté droit si A, gauche si B)
+          const goalX = ev.team === 'A' ? W - 12 : 12;
           const goalY = H / 2 + (Math.random() * 80 - 40);
-          animateBallTo(ball, goalX, goalY);
-        } else if (ev.type === 'pass') {
+          // Mouvement du buteur vers le ballon
+          if (ev.scorerId && pawnByPlayerId[ev.scorerId]) {
+            const scorerPawn = pawnByPlayerId[ev.scorerId];
+            const scorerX = ev.team === 'A' ? W - 50 : 50;
+            scorerPawn.el.setAttribute('cx', scorerX);
+            scorerPawn.group.querySelectorAll('text').forEach(t => t.setAttribute('x', scorerX));
+          }
+          moveBall(ball, goalX, goalY);
+        } else if (ev.type === 'pass' || ev.type === 'shot' || ev.type === 'interception') {
           $('#simEvent').textContent = ev.text;
           appendSimEvent(ev);
-          // Move ball to a random pawn of the team
-          const arr = ev.team === 'A' ? pawnsA : pawnsB;
-          const target = arr[Math.floor(Math.random() * arr.length)];
-          const tx = target.baseX + (Math.random() * 30 - 15);
-          const ty = target.baseY + (Math.random() * 30 - 15);
-          animateBallTo(ball, tx, ty);
+          // Move ball au joueur cible (ou tireur pour shot)
+          let targetPawn = null;
+          if (ev.toId) targetPawn = pawnByPlayerId[ev.toId];
+          if (!targetPawn && ev.fromId) targetPawn = pawnByPlayerId[ev.fromId];
+          if (!targetPawn) {
+            const arr = ev.team === 'A' ? pawnsA : pawnsB;
+            targetPawn = arr[Math.floor(Math.random() * arr.length)];
+          }
+          const tx = targetPawn.baseX + (Math.random() * 16 - 8);
+          const ty = targetPawn.baseY + (Math.random() * 16 - 8);
+          moveBall(ball, tx, ty);
         }
-      }, i * stepDelay);
+      }, cumDelay);
+      cumDelay += stepDelay + (ev.type === 'half' ? halfPause : 0) + (ev.type === 'goal' ? 600 : 0);
       simAnim.timeouts.push(t);
     });
   }
 
-  function animateBallTo(ball, x, y) {
+  function moveBall(ball, x, y) {
     ball.setAttribute('cx', x);
     ball.setAttribute('cy', y);
   }
@@ -2163,7 +2246,10 @@
       playMatch(i);
       // Attendre la fin de l'animation avant de jouer le suivant
       const events = stadiumState.matches[i].events;
-      const duration = events.length * 450 + 1000;
+      // Tenir compte du nouveau stepDelay (1100) + pauses mi-temps/buts
+      const goals = events.filter(e => e.type === 'goal').length;
+      const halves = events.filter(e => e.type === 'half').length;
+      const duration = events.length * 1100 + halves * 1500 + goals * 600 + 1500;
       setTimeout(() => {
         closeModal('#modalSim');
         // Vérifier si on a ajouté de nouveaux matchs (finale en 4j)
