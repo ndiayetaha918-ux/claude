@@ -459,6 +459,26 @@ h1, h2, h3, h4 { margin: 0; font-weight: 800; letter-spacing: -0.02em; color: va
   color: var(--slate); margin-left: 4px;
 }
 
+/* Age slider */
+.age-slider-wrap .slider-value {
+  font-family: var(--display); font-size: 22px;
+  min-width: 110px;
+}
+.age-ticks {
+  display: flex; justify-content: space-between;
+  padding: 8px 4px 0;
+  font-family: var(--mono); font-size: 10px;
+  color: var(--slate); letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.age-label {
+  font-family: var(--mono); font-size: 10px;
+  letter-spacing: 0.08em;
+  color: var(--neon);
+  margin-left: 8px;
+  text-transform: none;
+}
+
 /* Chips multi-select */
 .chip-multi { display: flex; flex-wrap: wrap; gap: 8px; }
 .chip-multi .chip {
@@ -1090,6 +1110,8 @@ h1, h2, h3, h4 { margin: 0; font-weight: 800; letter-spacing: -0.02em; color: va
   cursor: pointer;
   font-size: 14px;
   letter-spacing: 0.06em;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: rgba(255,200,87,0.3);
 }
 .pitch-large .slot:not(.filled) .slot-bubble:hover {
   background: rgba(255,200,87,0.18);

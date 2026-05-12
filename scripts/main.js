@@ -77,6 +77,17 @@
   }
 
   // ---------- État global ----------
+  // ageSlider : 0-10
+  //   0..8 = U19..U27 (cap max age = 19 + index)
+  //   9    = Tous âges (pas de filtre)
+  //   10   = 27 ans et + (uniquement vétérans)
+  const AGE_LABELS = ['U19','U20','U21','U22','U23','U24','U25','U26','U27','Tous âges','27 ans et +'];
+  function passesAge(age, ageSlider) {
+    if (ageSlider === 10) return age >= 27;
+    if (ageSlider === 9)  return true;
+    return age <= 19 + ageSlider;
+  }
+
   const state = {
     mode: 'local',       // 'local' | 'online'
     online: { joined: false, isHost: false, myId: null, roomCode: null, shortlist: [] },
@@ -85,7 +96,7 @@
     timerSec: 45,
     gamble: true,
     leagues: new Set(),  // Championnats activés
-    ageRule: 'all',      // 'all' | 'u21' | 'u25' | 'o30'
+    ageSlider: 9,        // 9 = "Tous âges" par défaut
     participants: [],
     order: [],
     round: 1,
@@ -187,7 +198,21 @@
     bindSeg('#segPlayers', 'nbPlayers', 'number');
     bindSeg('#segTimer',   'timerSec',  'number');
     bindSeg('#segGamble',  'gamble',    'bool');
-    bindSeg('#segAge',     'ageRule',   'string');
+
+    // Age slider
+    const ageSlider = $('#ageSlider');
+    if (ageSlider) {
+      const setAge = () => {
+        const v = +ageSlider.value;
+        state.ageSlider = v;
+        const min = +ageSlider.min, max = +ageSlider.max;
+        ageSlider.style.setProperty('--p', ((v - min) / (max - min) * 100) + '%');
+        $('#ageSliderVal').textContent = AGE_LABELS[v];
+        $('#ageLabel').textContent = AGE_LABELS[v];
+      };
+      ageSlider.addEventListener('input', setAge);
+      setAge();
+    }
 
     // Budget slider
     const slider = $('#budgetSlider');
@@ -454,9 +479,21 @@
         filledP
           ? filledP.name.split(' ').slice(-1)[0].toUpperCase() + ' · ' + filledP.value + 'M'
           : slot.type));
-      // Click → ouvrir picker pour ce slot (uniquement si interactif et vide)
-      if (opts.interactive && !filledP) {
-        bubble.addEventListener('click', () => openPicker(slot));
+      // Click → ouvrir picker pour ce slot (zone tappable étendue au slot complet)
+      if (!filledP) {
+        const handler = (ev) => {
+          ev.preventDefault();
+          ev.stopPropagation();
+          if (opts.interactive) {
+            openPicker(slot);
+          } else if (state.mode === 'online') {
+            const cur = state.currentParticipant;
+            const whose = cur ? cur.name : 'quelqu\'un';
+            toast('Patience…', `C'est au tour de ${whose} de drafter. À ton tour bientôt.`);
+          }
+        };
+        slotEl.addEventListener('click', handler);
+        slotEl.style.cursor = opts.interactive ? 'pointer' : 'help';
       }
       mountEl.appendChild(slotEl);
     });
@@ -570,9 +607,7 @@
     return PLAYERS.filter(p => {
       // ===== Critères de la draft (verrouillés au setup) =====
       if (!state.leagues.has(p.league)) return false;
-      if (state.ageRule === 'u21' && p.age >= 21) return false;
-      if (state.ageRule === 'u25' && p.age >= 25) return false;
-      if (state.ageRule === 'o30' && p.age < 30) return false;
+      if (!passesAge(p.age, state.ageSlider)) return false;
       if (state.takenIds.has(p.id)) return false;
       // ===== Slot eligibility =====
       if (!p.positions.some(pos => accepted.includes(pos))) return false;
@@ -1237,7 +1272,7 @@
       timerSec: state.timerSec,
       gamble: state.gamble,
       leagues: Array.from(state.leagues),
-      ageRule: state.ageRule,
+      ageSlider: state.ageSlider,
     };
     // Init host state for draft
     const parts = Online.state.participants.slice();
@@ -1264,7 +1299,7 @@
     state.timerSec = st.settings.timerSec;
     state.gamble = st.settings.gamble;
     state.leagues = new Set(st.settings.leagues);
-    state.ageRule = st.settings.ageRule;
+    state.ageSlider = (typeof st.settings.ageSlider === 'number') ? st.settings.ageSlider : 9;
 
     state.participants = st.participants.map((p, i) => ({
       id: p.id, name: p.name, formation: p.formation,

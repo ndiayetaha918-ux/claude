@@ -164,12 +164,19 @@
             </div>
 
             <div class="setup-field setup-field-wide">
-              <label>Restriction d'âge</label>
-              <div class="seg" id="segAge">
-                <button data-val="all" class="active">Tous âges</button>
-                <button data-val="u21">U21</button>
-                <button data-val="u25">U25</button>
-                <button data-val="o30">30 ans et +</button>
+              <label>Filtre d'âge <span class="age-label" id="ageLabel">Tous âges</span></label>
+              <div class="slider-wrap age-slider-wrap">
+                <input type="range" id="ageSlider" min="0" max="10" value="9" step="1" />
+                <div class="slider-value"><span id="ageSliderVal">Tous</span></div>
+              </div>
+              <div class="age-ticks">
+                <span>U19</span>
+                <span>U21</span>
+                <span>U23</span>
+                <span>U25</span>
+                <span>U27</span>
+                <span>Tous</span>
+                <span>27+</span>
               </div>
             </div>
 
