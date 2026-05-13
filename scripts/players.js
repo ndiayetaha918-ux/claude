@@ -150,8 +150,9 @@ window.FORMATIONS = {
   ]},
 };
 
-// Photo en cascade : Sofifa (haute qualité, stable) → Sofascore → Fotmob → Transfermarkt → fallback
+// Photo en cascade : photo directe (légendes) → Sofifa → Sofascore → Fotmob → Transfermarkt
 window.photoUrl = function(player) {
+  if (player.photo)  return player.photo;
   if (player.sofifa) return player.sofifa;
   if (player.sofa)   return 'https://api.sofascore.app/api/v1/player/' + player.sofa + '/image';
   if (player.fot)    return 'https://images.fotmob.com/image_resources/playerimages/' + player.fot + '.png';

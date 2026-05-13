@@ -4,7 +4,9 @@
 (function () {
   'use strict';
 
-  const PLAYERS = window.PLAYERS;
+  let PLAYERS = window.PLAYERS;        // dataset actif (mutable selon mode)
+  const REAL_PLAYERS = window.PLAYERS;
+  const LEGENDS = window.LEGENDS || [];
   const SLOT_RULES = window.SLOT_RULES;
   const FORMATIONS = window.FORMATIONS;
 
@@ -209,6 +211,45 @@
     bindSeg('#segTimer',   'timerSec',  'number');
     bindSeg('#segGamble',  'gamble',    'bool');
     bindSeg('#segOnePerClub', 'onePerClub', 'bool');
+
+    // Toggle dataset (Joueurs réels / Légendes)
+    const segDataset = $('#segDataset');
+    if (segDataset) {
+      segDataset.addEventListener('click', (e) => {
+        const btn = e.target.closest('button');
+        if (!btn) return;
+        segDataset.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const isLegends = btn.dataset.val === 'legends';
+        PLAYERS = isLegends ? LEGENDS : REAL_PLAYERS;
+        window.__currentDataset = isLegends ? 'legends' : 'real';
+        // En mode légendes : pas de filtre championnat (toutes les ligues)
+        if (isLegends) {
+          state.leagues = new Set(['Légendes']);
+          // Réinit league chips visuels
+          const chipsWrap = $('#leagueChips');
+          if (chipsWrap) {
+            chipsWrap.querySelectorAll('button[data-league]').forEach(b => b.classList.remove('active'));
+          }
+          $('#leagueCounter') && ($('#leagueCounter').textContent = 'Mode Légendes : 60+ stars de l\'histoire');
+        } else {
+          state.leagues = new Set(TOP5_LEAGUES);
+          const chipsWrap = $('#leagueChips');
+          if (chipsWrap) {
+            chipsWrap.querySelectorAll('button[data-league]').forEach(b => {
+              if (TOP5_LEAGUES.includes(b.dataset.league)) b.classList.add('active');
+              else b.classList.remove('active');
+            });
+          }
+          updateLeagueCounter();
+        }
+        // Update note
+        const note = $('#datasetNote');
+        if (note) note.textContent = isLegends
+          ? `Mode Légendes : ${LEGENDS.length} icônes du foot, valeurs estimées dans leur prime`
+          : `${REAL_PLAYERS.length} joueurs · données Transfermarkt saison 2025-26 · valeurs en temps réel`;
+      });
+    }
 
     // Mode Club : segment + select
     const segClubMode = $('#segClubMode');
