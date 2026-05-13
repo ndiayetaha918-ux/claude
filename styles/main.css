@@ -435,6 +435,23 @@ h1, h2, h3, h4 { margin: 0; font-weight: 800; letter-spacing: -0.02em; color: va
   background: var(--neon); color: #1a0e00;
   font-weight: 800;
 }
+.seg.seg-wrap { flex-wrap: wrap; }
+.seg.seg-wrap button { padding: 9px 14px; }
+
+/* Chip logos */
+.chip-multi-leagues .chip-league .chip-logo {
+  font-size: 14px; line-height: 1;
+  margin-right: 4px;
+}
+
+/* AI key row */
+.ai-key-row {
+  display: flex; gap: 10px; align-items: center;
+}
+.ai-key-row .line-input { flex: 1; }
+@media (max-width: 720px) {
+  .ai-key-row { flex-direction: column; align-items: stretch; }
+}
 
 /* Slider */
 .slider-wrap {
@@ -2088,6 +2105,36 @@ h1, h2, h3, h4 { margin: 0; font-weight: 800; letter-spacing: -0.02em; color: va
 .standing-row .name { font-family: var(--display); font-size: 15px; }
 .standing-row .pts { font-family: var(--mono); font-weight: 800; font-size: 14px; color: var(--ink); text-align: right; }
 .standing-row .gd { font-family: var(--mono); font-size: 11px; color: var(--slate); text-align: right; }
+
+/* AI analysis output */
+.ai-analysis-area {
+  background: var(--grad-card);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  padding: 24px;
+  font-size: 14px; line-height: 1.6;
+  color: var(--ink-soft);
+}
+.ai-loading {
+  font-family: var(--mono); font-size: 12px;
+  color: var(--neon);
+  letter-spacing: 0.06em;
+  padding: 24px;
+  text-align: center;
+}
+.ai-output h2.ai-h, .ai-output h3.ai-h, .ai-output h4.ai-h {
+  font-family: var(--display);
+  color: var(--neon);
+  text-transform: uppercase;
+  margin: 18px 0 8px;
+  letter-spacing: 0.03em;
+}
+.ai-output h2.ai-h { font-size: 22px; }
+.ai-output h3.ai-h { font-size: 18px; }
+.ai-output h4.ai-h { font-size: 15px; }
+.ai-output p { margin: 0 0 12px; }
+.ai-output strong { color: var(--ink); }
+.ai-error { color: var(--rose); font-family: var(--mono); font-size: 12px; }
 
 /* ==========================================================================
    STYLE MODAL

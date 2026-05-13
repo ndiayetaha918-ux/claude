@@ -213,10 +213,21 @@
 
             <div class="setup-field setup-field-wide">
               <label>Base de joueurs</label>
-              <div class="seg" id="segDataset">
-                <button data-val="real" class="active">⚽ Joueurs réels (saison 25/26)</button>
-                <button data-val="legends">⭐ Légendes (CR7, Messi, Pelé, Hazard…)</button>
+              <div class="seg seg-wrap" id="segDataset">
+                <button data-val="real" class="active">⚽ Réels 25/26</button>
+                <button data-val="legends">⭐ Légendes</button>
+                <button data-val="naruto">🍥 Naruto</button>
+                <button data-val="animals">🐾 Animaux</button>
               </div>
+            </div>
+
+            <div class="setup-field setup-field-wide">
+              <label>Analyse IA en fin de draft <span class="age-label">facultatif</span></label>
+              <div class="ai-key-row">
+                <input type="password" id="aiApiKey" class="line-input" placeholder="Colle ta clé Claude API (sk-ant-...) pour activer une critique tactique IA"/>
+                <button class="btn btn-ghost" id="btnSaveAiKey">Enregistrer</button>
+              </div>
+              <p class="muted" style="margin-top:6px;font-size:11px">La clé reste dans ton navigateur (localStorage). Sans clé → analyse heuristique uniquement.</p>
             </div>
 
             <div class="setup-field setup-field-wide">
@@ -383,6 +394,14 @@
         <div class="tournament-area" id="tournamentArea"></div>
       </div>
 
+      <!-- Analyse IA (facultatif) -->
+      <div class="stadium-section" id="aiAnalysisSection">
+        <h2 class="section-title"><span class="num">03</span>Analyse IA <span class="age-label" id="aiAnalysisStatus">activée si clé Claude API</span></h2>
+        <div class="ai-analysis-area" id="aiAnalysisArea">
+          <p class="muted">Tu n'as pas configuré de clé Claude API au setup. Ajoute-la depuis l'écran de configuration pour obtenir une critique tactique sur chaque équipe.</p>
+        </div>
+      </div>
+
       <div class="setup-actions" style="justify-content:center; gap:14px;">
         <button class="btn btn-ghost btn-lg" id="restartBtn2">Rejouer</button>
       </div>
@@ -530,6 +549,8 @@
 
   <script src="scripts/players.js"></script>
   <script src="scripts/legends.js"></script>
+  <script src="scripts/naruto.js"></script>
+  <script src="scripts/animals.js"></script>
   <script src="scripts/online.js"></script>
   <script src="scripts/sim.js"></script>
   <script src="scripts/main.js"></script>

@@ -7,6 +7,14 @@
   let PLAYERS = window.PLAYERS;        // dataset actif (mutable selon mode)
   const REAL_PLAYERS = window.PLAYERS;
   const LEGENDS = window.LEGENDS || [];
+  const NARUTO  = window.NARUTO  || [];
+  const ANIMALS = window.ANIMALS || [];
+  const DATASETS = {
+    real:    { label: 'Joueurs réels',  data: REAL_PLAYERS, league: null },
+    legends: { label: 'Légendes',       data: LEGENDS,      league: 'Légendes' },
+    naruto:  { label: 'Naruto',         data: NARUTO,       league: 'Naruto' },
+    animals: { label: 'Animaux',        data: ANIMALS,      league: 'Animaux' },
+  };
   const SLOT_RULES = window.SLOT_RULES;
   const FORMATIONS = window.FORMATIONS;
 
@@ -39,8 +47,12 @@
   function gradientFor(player) {
     return CARD_GRADIENTS[hashStr(player.id) % CARD_GRADIENTS.length];
   }
-  const initials = (name) =>
-    name.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('');
+  const initials = (player_or_name) => {
+    // Pour Naruto/Animaux : si emoji défini, on l'utilise comme "initiales visuelles"
+    if (typeof player_or_name === 'object' && player_or_name && player_or_name.emoji) return player_or_name.emoji;
+    const name = typeof player_or_name === 'string' ? player_or_name : (player_or_name && player_or_name.name) || '';
+    return name.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('');
+  };
 
   // Recherche insensible aux accents (Ødegaard, Konaté, Leão, Müller…)
   function normSearch(s) {
@@ -167,7 +179,7 @@
             style: `background:${gradientFor(p)}`,
           });
           attachPhoto(img, p, 'polaroid-img-photo');
-          img.appendChild(el('span', { class: 'polaroid-img-fallback' }, initials(p.name)));
+          img.appendChild(el('span', { class: 'polaroid-img-fallback' }, initials(p)));
           polaroid.appendChild(img);
           polaroid.appendChild(el('div', { class: 'polaroid-name' }, p.name.toUpperCase()));
           polaroid.appendChild(el('div', { class: 'polaroid-meta' }, p.value + ' M€'));
@@ -212,7 +224,7 @@
     bindSeg('#segGamble',  'gamble',    'bool');
     bindSeg('#segOnePerClub', 'onePerClub', 'bool');
 
-    // Toggle dataset (Joueurs réels / Légendes)
+    // Toggle dataset (4 options : real / legends / naruto / animals)
     const segDataset = $('#segDataset');
     if (segDataset) {
       segDataset.addEventListener('click', (e) => {
@@ -220,34 +232,47 @@
         if (!btn) return;
         segDataset.querySelectorAll('button').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
-        const isLegends = btn.dataset.val === 'legends';
-        PLAYERS = isLegends ? LEGENDS : REAL_PLAYERS;
-        window.__currentDataset = isLegends ? 'legends' : 'real';
-        // En mode légendes : pas de filtre championnat (toutes les ligues)
-        if (isLegends) {
-          state.leagues = new Set(['Légendes']);
-          // Réinit league chips visuels
-          const chipsWrap = $('#leagueChips');
-          if (chipsWrap) {
-            chipsWrap.querySelectorAll('button[data-league]').forEach(b => b.classList.remove('active'));
-          }
-          $('#leagueCounter') && ($('#leagueCounter').textContent = 'Mode Légendes : 60+ stars de l\'histoire');
+        const key = btn.dataset.val;
+        const ds = DATASETS[key] || DATASETS.real;
+        PLAYERS = ds.data;
+        state.dataset = key;
+        const chipsWrap = $('#leagueChips');
+        if (ds.league) {
+          // Mode thématique : forcer la ligue unique
+          state.leagues = new Set([ds.league]);
+          if (chipsWrap) chipsWrap.querySelectorAll('button[data-league]').forEach(b => b.classList.remove('active'));
+          $('#leagueCounter') && ($('#leagueCounter').textContent = `Mode ${ds.label} : ${ds.data.length} personnages`);
         } else {
           state.leagues = new Set(TOP5_LEAGUES);
-          const chipsWrap = $('#leagueChips');
-          if (chipsWrap) {
-            chipsWrap.querySelectorAll('button[data-league]').forEach(b => {
-              if (TOP5_LEAGUES.includes(b.dataset.league)) b.classList.add('active');
-              else b.classList.remove('active');
-            });
-          }
+          if (chipsWrap) chipsWrap.querySelectorAll('button[data-league]').forEach(b => {
+            if (TOP5_LEAGUES.includes(b.dataset.league)) b.classList.add('active');
+            else b.classList.remove('active');
+          });
           updateLeagueCounter();
         }
-        // Update note
         const note = $('#datasetNote');
-        if (note) note.textContent = isLegends
-          ? `Mode Légendes : ${LEGENDS.length} icônes du foot, valeurs estimées dans leur prime`
+        if (note) note.textContent = ds.league
+          ? `Mode ${ds.label} : ${ds.data.length} personnages, valeurs estimées`
           : `${REAL_PLAYERS.length} joueurs · données Transfermarkt saison 2025-26 · valeurs en temps réel`;
+      });
+    }
+
+    // Clé API IA (optionnel)
+    const aiKeyInput = $('#aiApiKey');
+    const btnSaveAi = $('#btnSaveAiKey');
+    if (aiKeyInput && btnSaveAi) {
+      try {
+        const saved = localStorage.getItem('drafter_ai_key');
+        if (saved) aiKeyInput.value = saved;
+      } catch (e) {}
+      btnSaveAi.addEventListener('click', () => {
+        const v = aiKeyInput.value.trim();
+        try {
+          if (v) localStorage.setItem('drafter_ai_key', v);
+          else localStorage.removeItem('drafter_ai_key');
+          btnSaveAi.textContent = '✓ Enregistré';
+          setTimeout(() => btnSaveAi.textContent = 'Enregistrer', 1500);
+        } catch (e) { toast('Erreur', 'localStorage indisponible.'); }
       });
     }
 
@@ -332,11 +357,24 @@
     chipsWrap.appendChild(allChip);
     chipsWrap.appendChild(noneChip);
 
-    // Chips individuels
+    // Logos/drapeaux par championnat (emoji léger, pas de fetch externe)
+    const LEAGUE_LOGOS = {
+      'Premier League':   '🏴󠁧󠁢󠁥󠁮󠁧󠁿',
+      'La Liga':          '🇪🇸',
+      'Bundesliga':       '🇩🇪',
+      'Serie A':          '🇮🇹',
+      'Ligue 1':          '🇫🇷',
+      'Eredivisie':       '🇳🇱',
+      'Saudi Pro League': '🇸🇦',
+      'Süper Lig':        '🇹🇷',
+    };
+
+    // Chips individuels avec logos
     ALL_LEAGUES.forEach(l => {
       const count = PLAYERS.filter(p => p.league === l).length;
       const cls = 'chip chip-league' + (state.leagues.has(l) ? ' active' : '');
       const chip = el('button', { class: cls, 'data-league': l, type: 'button', title: count + ' joueurs' });
+      chip.appendChild(el('span', { class: 'chip-logo' }, LEAGUE_LOGOS[l] || '⚽'));
       chip.appendChild(el('span', { class: 'chip-name' }, l));
       chip.appendChild(el('span', { class: 'chip-count' }, '' + count));
       chip.addEventListener('click', () => {
@@ -566,7 +604,7 @@
           style: `background:${gradientFor(filledP)}`,
         });
         attachPhoto(ph, filledP, 'slot-photo-img');
-        ph.appendChild(el('span', { class: 'slot-photo-fb' }, initials(filledP.name)));
+        ph.appendChild(el('span', { class: 'slot-photo-fb' }, initials(filledP)));
         bubble.appendChild(ph);
       } else {
         bubble.appendChild(el('span', {}, slot.type));
@@ -887,7 +925,7 @@
     // Photo
     const photo = el('div', { class: 'pr-photo', style: `background:${gradientFor(p)}` });
     attachPhoto(photo, p, '');
-    photo.appendChild(el('span', {}, initials(p.name)));
+    photo.appendChild(el('span', {}, initials(p)));
     row.appendChild(photo);
 
     // Info
@@ -940,7 +978,7 @@
       style: `background:${gradientFor(p)}`,
     });
     attachPhoto(photo, p, 'pc-photo-img');
-    photo.appendChild(el('span', { class: 'pc-photo-initials' }, initials(p.name)));
+    photo.appendChild(el('span', { class: 'pc-photo-initials' }, initials(p)));
 
     // Position badges
     const badges = el('div', { class: 'pos-badges' });
@@ -1038,7 +1076,7 @@
     const body = $('#confirmBody');
     body.innerHTML = '';
     const summary = el('div', { class: 'confirm-summary' },
-      el('div', { class: 'conf-photo', style: `background:${gradientFor(player)}` }, initials(player.name)),
+      el('div', { class: 'conf-photo', style: `background:${gradientFor(player)}` }, initials(player)),
       el('div', {},
         el('div', { class: 'name' }, player.name),
         el('div', { class: 'sub' }, `${player.club} · ${player.age} ans · ${player.value} M€`)),
@@ -1079,7 +1117,7 @@
     card.appendChild(el('div', { class: 'pick-reveal-eyebrow' }, '/ DRAFTÉ'));
     const photo = el('div', { class: 'pick-reveal-photo', style: `background:${gradientFor(player)}` });
     attachPhoto(photo, player, '');
-    photo.appendChild(el('span', {}, initials(player.name)));
+    photo.appendChild(el('span', {}, initials(player)));
     card.appendChild(photo);
     card.appendChild(el('div', { class: 'pick-reveal-name' }, player.name));
     card.appendChild(el('div', { class: 'pick-reveal-meta' },
@@ -1759,7 +1797,7 @@
       card.appendChild(remove);
       const photo = el('div', { class: 'photo', style: `background:${gradientFor(p)}` });
       attachPhoto(photo, p, '');
-      photo.appendChild(el('span', {}, initials(p.name)));
+      photo.appendChild(el('span', {}, initials(p)));
       card.appendChild(photo);
       const body = el('div', { class: 'body' });
       body.appendChild(el('div', { class: 'name' }, p.name));
@@ -1920,6 +1958,7 @@
     showScreen('stadium');
     renderTeamScores();
     renderTournament();
+    renderAiAnalysis();
 
     // Démarrer les modals de style (un par participant)
     setTimeout(askNextStyle, 400);
@@ -1979,6 +2018,94 @@
     stadiumState.matches = window.Sim.buildBracket(state.participants, stadiumState.scores)
       .map(m => ({ ...m, played: false, result: null }));
     renderTournament();
+  }
+
+  // ============================================================
+  // ANALYSE IA (optionnelle, via clé Claude API du user)
+  // ============================================================
+  async function renderAiAnalysis() {
+    const area = $('#aiAnalysisArea');
+    const status = $('#aiAnalysisStatus');
+    if (!area) return;
+    let key = null;
+    try { key = localStorage.getItem('drafter_ai_key'); } catch (e) {}
+    if (!key) {
+      status.textContent = 'pas de clé configurée';
+      area.innerHTML = '<p class="muted">Aucune clé Claude API détectée. Configure-la dans le setup pour activer une analyse tactique sur-mesure.</p>';
+      return;
+    }
+    status.textContent = 'génération en cours...';
+    area.innerHTML = '<div class="ai-loading">⏳ Claude analyse les équipes (10-30s)...</div>';
+
+    const teams = state.participants.map((p, i) => {
+      const score = stadiumState.scores[i];
+      const style = stadiumState.styles[i];
+      const lineup = FORMATIONS[p.formation].slots.map(slot => {
+        const pid = p.slots[slot.id];
+        const player = pid ? playerById(pid) : null;
+        return slot.type + ' : ' + (player ? player.name + ' (' + player.value + 'M)' : '—');
+      });
+      return {
+        drafter: p.name,
+        formation: FORMATIONS[p.formation].label,
+        style: style ? window.Sim.STYLES[style].label : '—',
+        overall: score.overall,
+        breakdown: { qualite: score.quality, chimie: score.chemistry, adequation: score.fit },
+        lineup,
+      };
+    });
+
+    const prompt = 'Tu es un analyste tactique de foot expérimenté. Voici ' + teams.length + ' équipes draftées par des amis :\\n\\n' +
+      teams.map((t, i) => '### Équipe ' + (i+1) + ' — ' + t.drafter + '\\n' +
+        'Formation : ' + t.formation + '\\n' +
+        'Style déclaré : ' + t.style + '\\n' +
+        'Note globale : ' + t.overall + ' (qualité ' + t.breakdown.qualite + ', chimie ' + t.breakdown.chimie + ', adéquation poste ' + t.breakdown.adequation + ')\\n' +
+        'Compo :\\n' + t.lineup.map(l => '- ' + l).join('\\n')
+      ).join('\\n\\n') +
+      '\\n\\nPour CHAQUE équipe : 3-5 phrases d\'analyse tactique CONCRÈTE qui couvre forces, faiblesses tactiques (couvertures, redondances de rôle, écarts de niveau), et comment elle pourrait jouer face aux autres. Sois critique, pas générique. Format : ## Équipe X — pseudo puis le paragraphe.';
+
+    try {
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'x-api-key': key,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true',
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-6',
+          max_tokens: 2000,
+          messages: [{ role: 'user', content: prompt }],
+        }),
+      });
+      if (!res.ok) {
+        const errTxt = await res.text();
+        area.innerHTML = '<p class="muted ai-error">Erreur API ' + res.status + '. ' + errTxt.slice(0, 200) + '</p>';
+        status.textContent = 'erreur';
+        return;
+      }
+      const data = await res.json();
+      const text = (data.content || []).map(c => c.text || '').join('\n');
+      area.innerHTML = '<div class="ai-output">' + renderMarkdown(text) + '</div>';
+      status.textContent = '✓ générée par Claude';
+    } catch (e) {
+      area.innerHTML = '<p class="muted ai-error">Erreur réseau : ' + e.message + '</p>';
+      status.textContent = 'erreur réseau';
+    }
+  }
+
+  function renderMarkdown(md) {
+    let out = md.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    out = out.replace(/^### (.+)$/gm, '<h4 class="ai-h">$1</h4>');
+    out = out.replace(/^## (.+)$/gm, '<h3 class="ai-h">$1</h3>');
+    out = out.replace(/^# (.+)$/gm, '<h2 class="ai-h">$1</h2>');
+    out = out.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+    out = out.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+    out = '<p>' + out.split(/\n\n+/).join('</p><p>') + '</p>';
+    out = out.replace(/<p>(\s*<h[234])/g, '$1');
+    out = out.replace(/(<\/h[234]>)<\/p>/g, '$1');
+    return out;
   }
 
   function renderTeamScores() {
@@ -2044,7 +2171,7 @@
         const tpEl = el('div', { class: 'top-player' });
         const ph = el('div', { class: 'photo', style: `background:${gradientFor(tp)}` });
         attachPhoto(ph, tp, '');
-        ph.appendChild(el('span', {}, initials(tp.name)));
+        ph.appendChild(el('span', {}, initials(tp)));
         tpEl.appendChild(ph);
         tpEl.appendChild(el('div', { class: 'nm' }, tp.name));
         tpEl.appendChild(el('div', { class: 'vl' }, tp.value + ' M€'));
