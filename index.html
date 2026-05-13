@@ -202,6 +202,27 @@
                 <button data-val="0">Désactivé</button>
               </div>
             </div>
+
+            <div class="setup-field setup-field-wide">
+              <label>Règle 1 joueur par club</label>
+              <div class="seg" id="segOnePerClub">
+                <button data-val="0" class="active">Désactivée</button>
+                <button data-val="1">Activée — une seule pioche par club</button>
+              </div>
+            </div>
+
+            <div class="setup-field setup-field-wide">
+              <label>Mode club <span class="age-label" id="clubModeLabel">Désactivé</span></label>
+              <div class="club-mode-row">
+                <select id="clubModeSelect" class="select">
+                  <option value="">— Désactivé —</option>
+                </select>
+                <div class="seg" id="segClubMode">
+                  <button data-val="actuel" class="active">Joueurs actuels</button>
+                  <button data-val="passe">Joueurs actuels OU passés</button>
+                </div>
+              </div>
+            </div>
           </div>
 
           <h3 class="setup-subtitle" id="participantsTitle">Joueurs &amp; Formations</h3>

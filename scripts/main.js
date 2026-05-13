@@ -95,6 +95,9 @@
     budget: 500,
     timerSec: 45,
     gamble: true,
+    onePerClub: false,
+    clubMode: '',        // '' = off, sinon = nom du club
+    clubModeFormer: false, // true = inclure anciens joueurs
     leagues: new Set(),  // Championnats activés
     ageSlider: 9,        // 9 = "Tous âges" par défaut
     participants: [],
@@ -205,6 +208,38 @@
     bindSeg('#segPlayers', 'nbPlayers', 'number');
     bindSeg('#segTimer',   'timerSec',  'number');
     bindSeg('#segGamble',  'gamble',    'bool');
+    bindSeg('#segOnePerClub', 'onePerClub', 'bool');
+
+    // Mode Club : segment + select
+    const segClubMode = $('#segClubMode');
+    if (segClubMode) {
+      segClubMode.addEventListener('click', (e) => {
+        const btn = e.target.closest('button');
+        if (!btn) return;
+        segClubMode.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        state.clubModeFormer = btn.dataset.val === 'passe';
+      });
+    }
+    const clubSel = $('#clubModeSelect');
+    if (clubSel) {
+      // Populer avec tous les clubs distincts (uniquement ceux des ligues actives au boot)
+      const allClubs = new Set();
+      PLAYERS.forEach(p => {
+        allClubs.add(p.club);
+        (p.former || []).forEach(c => allClubs.add(c));
+      });
+      const sorted = Array.from(allClubs).sort();
+      sorted.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c; opt.textContent = c;
+        clubSel.appendChild(opt);
+      });
+      clubSel.addEventListener('change', () => {
+        state.clubMode = clubSel.value;
+        $('#clubModeLabel').textContent = clubSel.value || 'Désactivé';
+      });
+    }
 
     // Age slider
     const ageSlider = $('#ageSlider');
@@ -292,21 +327,35 @@
     const defaults = ['Alex', 'Jordan', 'Sam', 'Charlie'];
     for (let i = 0; i < state.nbPlayers; i++) {
       const grad = TEAM_COLORS[i].grad;
+      const select = el('select', { 'data-pidx': i });
+      Object.keys(FORMATIONS).forEach((f, idx) => {
+        const opt = el('option', { value: f }, FORMATIONS[f].label);
+        if (idx === 0) opt.setAttribute('selected', '');
+        select.appendChild(opt);
+      });
+      const preview = el('div', { class: 'preview', 'data-preview': i });
       const row = el('div', { class: 'participant' },
         el('div', { class: 'participant-avatar', style: `background:${grad}` }, `J${i+1}`),
         el('input', { type: 'text', value: defaults[i], 'data-pidx': i, placeholder: 'Pseudo' }),
-        (() => {
-          const sel = el('select', { 'data-pidx': i });
-          Object.keys(FORMATIONS).forEach((f, idx) => {
-            const opt = el('option', { value: f }, FORMATIONS[f].label);
-            if (idx === 0) opt.setAttribute('selected', '');
-            sel.appendChild(opt);
-          });
-          return sel;
-        })(),
+        select,
+        preview,
       );
       list.appendChild(row);
+      // Render preview initial + on change
+      const renderPrev = () => renderFormationPreview(preview, select.value);
+      renderPrev();
+      select.addEventListener('change', renderPrev);
     }
+  }
+
+  function renderFormationPreview(mountEl, formation) {
+    const F = FORMATIONS[formation];
+    if (!F) return;
+    mountEl.innerHTML = '';
+    F.slots.forEach(slot => {
+      const dot = el('div', { class: 'dot', style: `left:${slot.x}%; top:${slot.y}%` });
+      mountEl.appendChild(dot);
+    });
   }
 
   // ============================================================
@@ -486,11 +535,11 @@
         filledP
           ? filledP.name.split(' ').slice(-1)[0].toUpperCase() + ' · ' + filledP.value + 'M'
           : slot.type));
-      // Click → ouvrir picker pour ce slot (zone tappable étendue au slot complet)
-      if (!filledP) {
-        const handler = (ev) => {
-          ev.preventDefault();
-          ev.stopPropagation();
+      // Click → ouvrir picker (slot vide) ou modal swap (slot rempli)
+      const handler = (ev) => {
+        ev.preventDefault();
+        ev.stopPropagation();
+        if (!filledP) {
           if (opts.interactive) {
             openPicker(slot);
           } else if (state.mode === 'online') {
@@ -498,10 +547,12 @@
             const whose = cur ? cur.name : 'quelqu\'un';
             toast('Patience…', `C'est au tour de ${whose} de drafter. À ton tour bientôt.`);
           }
-        };
-        slotEl.addEventListener('click', handler);
-        slotEl.style.cursor = opts.interactive ? 'pointer' : 'help';
-      }
+        } else if (opts.interactive && opts.allowSwap !== false) {
+          openSwapPicker(participant, slot, filledP);
+        }
+      };
+      slotEl.addEventListener('click', handler);
+      slotEl.style.cursor = (opts.interactive || (filledP && opts.allowSwap !== false)) ? 'pointer' : 'default';
       mountEl.appendChild(slotEl);
     });
   }
@@ -548,6 +599,91 @@
     );
   }
 
+  // Modal d'échange : pour un slot rempli, propose les autres slots où on
+  // peut le déplacer (+ swap avec un autre joueur déjà placé)
+  function openSwapPicker(participant, sourceSlot, sourcePlayer) {
+    const F = FORMATIONS[participant.formation];
+    // Slots cibles : tout slot DIFFÉRENT où sourcePlayer peut jouer
+    const targets = F.slots.filter(s => s.id !== sourceSlot.id &&
+      SLOT_RULES[s.type].some(pos => sourcePlayer.positions.includes(pos))
+    );
+    if (targets.length === 0) {
+      return toast('Pas d\'échange possible', `${sourcePlayer.name} ne peut jouer qu'au poste ${sourceSlot.type}.`);
+    }
+
+    $('#pickerEyebrow').textContent = '/ ÉCHANGE · DÉPLACER ' + sourcePlayer.name.toUpperCase();
+    $('#pickerTitle').textContent = `Déplacer ${sourcePlayer.name} (${sourceSlot.type})`;
+
+    // Reset filtres
+    $('#pickerSearch').value = '';
+    $('#pickerSearch').placeholder = 'Rechercher un slot ou un joueur...';
+    pickerState.target = 'swap';
+    pickerState.swapSource = { participant, sourceSlot, sourcePlayer };
+
+    // Construire la liste : pour chaque slot cible, montrer le slot vide ou le joueur à swap
+    const grid = $('#pickerGrid');
+    grid.innerHTML = '';
+    $('#pickerStats').textContent = `${targets.length} POSTES COMPATIBLES`;
+
+    targets.forEach(target => {
+      const occupantId = participant.slots[target.id];
+      const occupant = occupantId ? playerById(occupantId) : null;
+      // Si occupant existe, on doit aussi vérifier qu'il peut jouer au slot source
+      if (occupant) {
+        const canSwap = SLOT_RULES[sourceSlot.type].some(pos => occupant.positions.includes(pos));
+        if (!canSwap) return; // ce swap n'est pas valide
+      }
+      const row = el('div', { class: 'player-row glow' });
+      // Avatar : poste cible
+      const photo = el('div', { class: 'pr-photo', style: `background: var(--surface-2)` });
+      photo.appendChild(el('span', {}, target.type));
+      row.appendChild(photo);
+      const info = el('div', { class: 'pr-info' });
+      info.appendChild(el('div', { class: 'pr-name' }, 'POSTE ' + target.type));
+      const meta = el('div', { class: 'pr-meta' });
+      if (occupant) {
+        meta.appendChild(el('span', { class: 'club' }, '⇄ Échanger avec ' + occupant.name));
+      } else {
+        meta.appendChild(el('span', { class: 'club' }, 'Slot libre'));
+      }
+      info.appendChild(meta);
+      row.appendChild(info);
+      const action = el('div', { class: 'pr-price' }, occupant ? '⇄' : '→');
+      row.appendChild(action);
+      row.addEventListener('click', () => performSwap(participant, sourceSlot, target));
+      grid.appendChild(row);
+    });
+
+    if (grid.children.length === 0) {
+      grid.appendChild(el('div', { class: 'muted', style: 'padding:20px;text-align:center' }, 'Aucun échange possible : aucun autre joueur de l\'équipe ne peut jouer à ce poste.'));
+    }
+    // Hide les filtres pendant un swap
+    $('.picker-toolbar').style.display = 'none';
+    openModal('#modalPicker');
+  }
+
+  function performSwap(participant, sourceSlot, targetSlot) {
+    const sourceId = participant.slots[sourceSlot.id];
+    const targetId = participant.slots[targetSlot.id];
+    participant.slots[sourceSlot.id] = targetId;
+    participant.slots[targetSlot.id] = sourceId;
+    closeModal('#modalPicker');
+    $('.picker-toolbar').style.display = ''; // restore for next time
+    // Re-render the pitch
+    if (state.mode === 'online') {
+      // En online, broadcast l'état modifié si je suis l'hôte
+      if (state.online.isHost) {
+        Online.state.slots[participant.id] = participant.slots;
+        Online.broadcastState();
+      }
+      renderMyTeamForMeOnline();
+      renderOpponentsOnline();
+    } else {
+      renderMyTeam();
+      renderOpponents();
+    }
+  }
+
   // Postes longs FR pour titre du picker
   const POS_LABEL_FR = {
     GK: 'Gardien', CB: 'Défenseur central', LB: 'Latéral gauche', RB: 'Latéral droit',
@@ -565,6 +701,11 @@
     pickerState.league = '';
     pickerState.club = '';
     pickerState.affordable = true;
+    // Restore toolbar (caché par swap picker)
+    const toolbar = $('.picker-toolbar');
+    if (toolbar) toolbar.style.display = '';
+    const search = $('#pickerSearch');
+    if (search) search.placeholder = 'Rechercher un joueur...';
 
     const cur = state.currentParticipant;
     const filled = Object.values(cur.slots).filter(Boolean).length;
@@ -611,11 +752,33 @@
     let accepted = pickerState.acceptedPositionsOverride
       ? Array.from(pickerState.acceptedPositionsOverride)
       : SLOT_RULES[slot.type] || [];
+    // 1 joueur par club : compter clubs déjà présents dans MON équipe
+    let myClubs = null;
+    if (state.onePerClub && cur && cur.slots) {
+      myClubs = new Set();
+      Object.values(cur.slots).forEach(pid => {
+        if (pid) {
+          const pl = playerById(pid);
+          if (pl) myClubs.add(pl.club);
+        }
+      });
+    }
+
     return PLAYERS.filter(p => {
       // ===== Critères de la draft (verrouillés au setup) =====
-      if (!state.leagues.has(p.league)) return false;
+      if (state.clubMode) {
+        // Filtre par club actuel ou passé
+        const inCurrent = p.club === state.clubMode;
+        const inFormer = state.clubModeFormer && (p.former || []).includes(state.clubMode);
+        if (!inCurrent && !inFormer) return false;
+      } else {
+        // Filtre championnat (ignoré si mode club actif)
+        if (!state.leagues.has(p.league)) return false;
+      }
       if (!passesAge(p.age, state.ageSlider)) return false;
       if (state.takenIds.has(p.id)) return false;
+      // Règle 1 par club
+      if (myClubs && myClubs.has(p.club)) return false;
       // ===== Slot eligibility =====
       if (!p.positions.some(pos => accepted.includes(pos))) return false;
       // ===== Filtres affinés du picker =====
