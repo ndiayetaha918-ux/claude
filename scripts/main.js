@@ -577,11 +577,16 @@
     });
   }
 
-  const playerById = (() => {
+  // Index global sur TOUS les datasets (réels + légendes + naruto + animaux)
+  // → permet de retrouver un joueur drafté quel que soit le mode actif
+  const ALL_INDEX = (() => {
     const map = new Map();
-    PLAYERS.forEach(p => map.set(p.id, p));
-    return (id) => map.get(id);
+    [REAL_PLAYERS, LEGENDS, NARUTO, ANIMALS].forEach(ds => {
+      (ds || []).forEach(p => { if (p && p.id) map.set(p.id, p); });
+    });
+    return map;
   })();
+  const playerById = (id) => ALL_INDEX.get(id);
 
   function renderPitch(participant, mountEl, opts) {
     opts = opts || {};
@@ -632,8 +637,116 @@
       };
       slotEl.addEventListener('click', handler);
       slotEl.style.cursor = (opts.interactive || (filledP && opts.allowSwap !== false)) ? 'pointer' : 'default';
+
+      // Drag-to-swap : maintenir un joueur rempli et le lâcher sur un autre
+      if (filledP && opts.interactive && opts.allowSwap !== false) {
+        slotEl.classList.add('slot-draggable');
+        enableDragSwap(slotEl, mountEl, participant, slot, filledP);
+      }
       mountEl.appendChild(slotEl);
     });
+  }
+
+  // Drag & drop par maintien (pointer events, marche tactile + souris)
+  function enableDragSwap(slotEl, mountEl, participant, slot, player) {
+    slotEl.addEventListener('pointerdown', (ev) => {
+      if (ev.button !== undefined && ev.button !== 0) return;
+      const startX = ev.clientX, startY = ev.clientY;
+      let dragging = false, ghost = null;
+      const onMove = (e) => {
+        const dx = e.clientX - startX, dy = e.clientY - startY;
+        if (!dragging && Math.hypot(dx, dy) > 9) {
+          dragging = true;
+          slotEl.classList.add('slot-dragging');
+          ghost = buildDragGhost(player, e.clientX, e.clientY);
+        }
+        if (dragging) {
+          if (ghost) { ghost.style.left = e.clientX + 'px'; ghost.style.top = e.clientY + 'px'; }
+          highlightDropTarget(mountEl, slotEl, e.clientX, e.clientY, participant, slot);
+        }
+      };
+      const onUp = (e) => {
+        document.removeEventListener('pointermove', onMove);
+        document.removeEventListener('pointerup', onUp);
+        if (!dragging) return; // simple clic → géré par 'click'
+        slotEl.classList.remove('slot-dragging');
+        if (ghost) ghost.remove();
+        const tgt = dropTargetAt(mountEl, e.clientX, e.clientY);
+        clearDropHighlights(mountEl);
+        if (tgt && tgt !== slotEl) {
+          attemptDragSwap(participant, slot.id, tgt.dataset.sid);
+        }
+      };
+      document.addEventListener('pointermove', onMove);
+      document.addEventListener('pointerup', onUp);
+    });
+  }
+
+  function buildDragGhost(player, x, y) {
+    const g = el('div', { class: 'drag-ghost' });
+    const ph = el('div', { class: 'dg-photo', style: `background:${gradientFor(player)}` });
+    attachPhoto(ph, player, 'dg-img');
+    ph.appendChild(el('span', {}, initials(player)));
+    g.appendChild(ph);
+    g.appendChild(el('div', { class: 'dg-name' }, player.name.split(' ').slice(-1)[0]));
+    g.style.left = x + 'px'; g.style.top = y + 'px';
+    document.body.appendChild(g);
+    return g;
+  }
+
+  function dropTargetAt(mountEl, x, y) {
+    const els = document.elementsFromPoint(x, y);
+    for (const e of els) {
+      const s = e.closest && e.closest('.slot');
+      if (s && mountEl.contains(s)) return s;
+    }
+    return null;
+  }
+
+  function highlightDropTarget(mountEl, sourceEl, x, y, participant, sourceSlot) {
+    clearDropHighlights(mountEl);
+    const tgt = dropTargetAt(mountEl, x, y);
+    if (!tgt || tgt === sourceEl) return;
+    const ok = swapValid(participant, sourceSlot.id, tgt.dataset.sid);
+    tgt.classList.add(ok ? 'drop-ok' : 'drop-no');
+  }
+  function clearDropHighlights(mountEl) {
+    mountEl.querySelectorAll('.drop-ok, .drop-no').forEach(s => s.classList.remove('drop-ok', 'drop-no'));
+  }
+
+  function swapValid(participant, srcSid, tgtSid) {
+    if (srcSid === tgtSid) return false;
+    const F = FORMATIONS[participant.formation];
+    const srcSlot = F.slots.find(s => s.id === srcSid);
+    const tgtSlot = F.slots.find(s => s.id === tgtSid);
+    if (!srcSlot || !tgtSlot) return false;
+    const srcPl = playerById(participant.slots[srcSid]);
+    const tgtPl = participant.slots[tgtSid] ? playerById(participant.slots[tgtSid]) : null;
+    if (!srcPl) return false;
+    // src joueur doit pouvoir jouer au poste cible
+    const srcOk = (SLOT_RULES[tgtSlot.type] || []).some(p => srcPl.positions.includes(p));
+    // si cible occupée, ce joueur doit pouvoir jouer au poste source
+    const tgtOk = !tgtPl || (SLOT_RULES[srcSlot.type] || []).some(p => tgtPl.positions.includes(p));
+    return srcOk && tgtOk;
+  }
+
+  function attemptDragSwap(participant, srcSid, tgtSid) {
+    if (!swapValid(participant, srcSid, tgtSid)) {
+      const tgtPl = participant.slots[tgtSid] ? playerById(participant.slots[tgtSid]) : null;
+      toast('Échange impossible', tgtPl
+        ? `Postes incompatibles entre ces deux joueurs.`
+        : `Ce joueur ne peut pas jouer à ce poste.`);
+      return;
+    }
+    const a = participant.slots[srcSid];
+    participant.slots[srcSid] = participant.slots[tgtSid];
+    participant.slots[tgtSid] = a;
+    if (state.mode === 'online') {
+      if (state.online.isHost) { Online.state.slots[participant.id] = participant.slots; Online.broadcastState(); }
+      renderMyTeamForMeOnline(); renderOpponentsOnline();
+    } else {
+      renderMyTeam(); renderOpponents();
+    }
   }
 
   function renderAllPitches() {
@@ -1941,26 +2054,32 @@
   // PHASE B — STADIUM (verdict + simulation)
   // ============================================================
   const stadiumState = {
-    scores: [],        // par participant
-    styles: [],        // par participant
+    scores: [],        // par participant (computeTeamScore)
+    styles: [],        // clé de style par participant
+    tactics: [],       // {lineHeight,tempo,press,width,directness} par participant
+    profiles: [],      // teamProfile par participant
     matches: [],       // bracket
     pendingStyleIdx: 0,
   };
 
+  function recomputeScores() {
+    stadiumState.scores = state.participants.map((p, i) =>
+      window.Sim.computeTeamScore(p, FORMATIONS, SLOT_RULES, playerById, stadiumState.tactics[i]));
+    stadiumState.profiles = state.participants.map((p, i) =>
+      window.Sim.teamProfile(p, FORMATIONS, playerById, stadiumState.tactics[i]));
+  }
+
   function goToStadium() {
-    // Calcul scoring pour chaque participant
-    stadiumState.scores = state.participants.map(p =>
-      window.Sim.computeTeamScore(p, FORMATIONS, SLOT_RULES, playerById));
     stadiumState.styles = state.participants.map(() => null);
+    stadiumState.tactics = state.participants.map(() => null);
     stadiumState.matches = [];
     stadiumState.pendingStyleIdx = 0;
+    recomputeScores();
 
     showScreen('stadium');
     renderTeamScores();
     renderTournament();
-    renderAiAnalysis();
 
-    // Démarrer les modals de style (un par participant)
     setTimeout(askNextStyle, 400);
   }
 
@@ -1969,55 +2088,115 @@
     if (idx >= state.participants.length) return;
     const part = state.participants[idx];
     const STYLES = window.Sim.STYLES;
-    let chosen = null;
-    $('#styleEyebrow').textContent = `/ STYLE DE JEU · JOUEUR ${idx + 1} / ${state.participants.length}`;
+    let chosen = 'equilibre';
+    let tac = Object.assign({}, STYLES.equilibre.tactics);
+
+    $('#styleEyebrow').textContent = `/ TACTIQUE · ${part.name.toUpperCase()} (${idx + 1}/${state.participants.length})`;
     $('#styleTitle').textContent = `${part.name}, comment fais-tu jouer ton équipe ?`;
-    $('#styleSub').textContent = 'Ton style influence la simulation. Chaque style en bat un autre (pierre-papier-ciseaux).';
+    $('#styleSub').textContent = 'Choisis une philosophie, puis affine les curseurs. La simulation s\'appuie réellement dessus.';
 
     const wrap = $('#styleOptions');
     wrap.innerHTML = '';
     Object.values(STYLES).forEach(s => {
-      const opt = el('button', { class: 'style-opt', type: 'button', 'data-key': s.key });
-      opt.appendChild(el('span', { class: 'icon' }, '/ ' + s.icon + ' ' + s.label.toUpperCase()));
+      const opt = el('button', { class: 'style-opt' + (s.key === chosen ? ' selected' : ''), type: 'button', 'data-key': s.key });
+      opt.appendChild(el('span', { class: 'icon' }, s.icon + ' ' + s.label.toUpperCase()));
       opt.appendChild(el('h4', {}, s.label));
       opt.appendChild(el('p', {}, s.desc));
-      if (s.counter) {
-        const counterStyle = STYLES[s.counter];
-        opt.appendChild(el('span', { class: 'counter' }, '↗ Contre : ' + counterStyle.label));
-      } else {
-        opt.appendChild(el('span', { class: 'counter' }, '↗ Neutre face aux autres'));
-      }
       opt.addEventListener('click', () => {
         $$('#styleOptions .style-opt').forEach(o => o.classList.remove('selected'));
         opt.classList.add('selected');
         chosen = s.key;
+        tac = Object.assign({}, STYLES[s.key].tactics);
+        syncTacticSliders();
         $('#styleConfirm').disabled = false;
       });
       wrap.appendChild(opt);
     });
 
-    $('#styleConfirm').disabled = true;
+    // Curseurs tactiques (injectés une fois)
+    let sliderHost = $('#tacticSliders');
+    if (!sliderHost) {
+      sliderHost = el('div', { id: 'tacticSliders', class: 'tactic-sliders' });
+      $('#styleOptions').after(sliderHost);
+    }
+    const SL = [
+      ['lineHeight', 'Hauteur de bloc', 'Bas', 'Haut'],
+      ['tempo', 'Tempo', 'Posé', 'Rapide'],
+      ['press', 'Pressing', 'Passif', 'Agressif'],
+      ['width', 'Largeur', 'Axial', 'Large'],
+      ['directness', 'Verticalité', 'Patient', 'Direct'],
+    ];
+    sliderHost.innerHTML = '';
+    SL.forEach(([k, label, lo, hi]) => {
+      const row = el('div', { class: 'tactic-slider' });
+      row.appendChild(el('div', { class: 'ts-label' }, label, el('span', { class: 'ts-val', 'data-k': k }, String(tac[k]))));
+      const input = el('input', { type: 'range', min: '0', max: '100', step: '1', value: String(tac[k]), 'data-key': k });
+      input.addEventListener('input', () => {
+        tac[k] = +input.value;
+        row.querySelector('.ts-val').textContent = input.value;
+      });
+      const ends = el('div', { class: 'ts-ends' }, el('span', {}, lo), el('span', {}, hi));
+      row.appendChild(input);
+      row.appendChild(ends);
+      sliderHost.appendChild(row);
+    });
+    function syncTacticSliders() {
+      sliderHost.querySelectorAll('input[type=range]').forEach(inp => {
+        inp.value = String(tac[inp.dataset.key]);
+        const v = sliderHost.querySelector('.ts-val[data-k="' + inp.dataset.key + '"]');
+        if (v) v.textContent = String(tac[inp.dataset.key]);
+      });
+    }
+
+    $('#styleConfirm').disabled = false;
     $('#styleConfirm').onclick = () => {
-      if (!chosen) return;
       stadiumState.styles[idx] = chosen;
+      stadiumState.tactics[idx] = Object.assign({}, tac);
       closeModal('#modalStyle');
       stadiumState.pendingStyleIdx++;
+      recomputeScores();
       renderTeamScores();
       if (stadiumState.pendingStyleIdx < state.participants.length) {
-        setTimeout(askNextStyle, 350);
+        setTimeout(askNextStyle, 300);
       } else {
-        // Tous les styles déclarés → préparer le bracket
         buildBracketAndRender();
+        renderTournament();
+        renderAiAnalysis();
       }
     };
 
     openModal('#modalStyle');
   }
 
+  // ---- Bracket (local) ----
   function buildBracketAndRender() {
-    stadiumState.matches = window.Sim.buildBracket(state.participants, stadiumState.scores)
-      .map(m => ({ ...m, played: false, result: null }));
+    const n = state.participants.length;
+    let bracket;
+    if (n === 2) bracket = [{ a: 0, b: 1, type: 'final' }];
+    else if (n === 3) bracket = [{ a:0,b:1,type:'rr' }, { a:0,b:2,type:'rr' }, { a:1,b:2,type:'rr' }];
+    else {
+      const ranked = state.participants.map((p, i) => ({ i, ov: stadiumState.scores[i].overall }))
+        .sort((x, y) => y.ov - x.ov);
+      bracket = [
+        { a: ranked[0].i, b: ranked[3].i, type: 'semi' },
+        { a: ranked[1].i, b: ranked[2].i, type: 'semi' },
+      ];
+    }
+    stadiumState.matches = bracket.map(m => ({ ...m, played: false, result: null }));
     renderTournament();
+  }
+
+  function computeStandings() {
+    const stats = state.participants.map((p, i) => ({ idx:i, name:p.name, color:p.color, p:0,w:0,d:0,l:0,gf:0,ga:0,pts:0 }));
+    stadiumState.matches.forEach(m => {
+      if (!m.played) return;
+      const A = stats[m.a], B = stats[m.b], r = m.result;
+      A.p++; B.p++; A.gf += r.scoreA; A.ga += r.scoreB; B.gf += r.scoreB; B.ga += r.scoreA;
+      if (r.scoreA > r.scoreB) { A.w++; A.pts += 3; B.l++; }
+      else if (r.scoreA < r.scoreB) { B.w++; B.pts += 3; A.l++; }
+      else { A.d++; B.d++; A.pts++; B.pts++; }
+    });
+    return stats.sort((x, y) => y.pts - x.pts || (y.gf-y.ga)-(x.gf-x.ga) || y.gf-x.gf);
   }
 
   // ============================================================
@@ -2153,7 +2332,7 @@
 
       // Score bars
       const bars = el('div', { class: 'score-bars' });
-      [['QUALITÉ', score.quality], ['CHIMIE', score.chemistry], ['ADÉQUATION', score.fit], ['ÉQUILIBRE D\'ÂGE', score.ageBalance]].forEach(([lbl, v]) => {
+      [['QUALITÉ', score.quality], ['CHIMIE', score.chemistry], ['ADÉQUATION', score.fit], ['ÉQUILIBRE', score.balance], ['COHÉRENCE TACTIQUE', score.tactic]].forEach(([lbl, v]) => {
         const bar = el('div', { class: 'score-bar' });
         bar.appendChild(el('span', { class: 'label' }, lbl));
         const barEl = el('div', { class: 'bar' });
@@ -2217,8 +2396,8 @@
   function buildMatchRow(m, idx) {
     const pa = state.participants[m.a], pb = state.participants[m.b];
     const sa = stadiumState.scores[m.a], sb = stadiumState.scores[m.b];
-    const winA = m.played && m.result.goalsA > m.result.goalsB;
-    const winB = m.played && m.result.goalsA < m.result.goalsB;
+    const winA = m.played && m.result.scoreA > m.result.scoreB;
+    const winB = m.played && m.result.scoreA < m.result.scoreB;
     const row = el('div', { class: 'match-row' + (m.played ? ' played' : '') + (winA ? ' win-a' : '') + (winB ? ' win-b' : '') });
 
     // Team A
@@ -2233,9 +2412,9 @@
     // Score
     const scoreEl = el('div', { class: 'match-score' });
     if (m.played) {
-      scoreEl.appendChild(el('span', {}, String(m.result.goalsA)));
+      scoreEl.appendChild(el('span', {}, String(m.result.scoreA)));
       scoreEl.appendChild(el('span', { class: 'pending' }, '–'));
-      scoreEl.appendChild(el('span', {}, String(m.result.goalsB)));
+      scoreEl.appendChild(el('span', {}, String(m.result.scoreB)));
     } else {
       scoreEl.appendChild(el('span', { class: 'pending' }, 'vs'));
     }
@@ -2267,7 +2446,7 @@
   }
 
   function renderStandings(parent) {
-    const standings = window.Sim.computeStandings(state.participants, stadiumState.matches);
+    const standings = computeStandings();
     const wrap = el('div', { class: 'standings' });
     wrap.appendChild(el('h3', { class: 'standings-title' }, 'Classement final'));
     const grid = el('div', { class: 'standings-grid' });
@@ -2292,250 +2471,306 @@
     if (m.played) return replayMatch(matchIdx);
 
     const partA = state.participants[m.a], partB = state.participants[m.b];
-    const scoreA = stadiumState.scores[m.a], scoreB = stadiumState.scores[m.b];
-    const styleA = stadiumState.styles[m.a], styleB = stadiumState.styles[m.b];
+    const tpA = stadiumState.profiles[m.a], tpB = stadiumState.profiles[m.b];
+    const tacA = stadiumState.tactics[m.a] || window.Sim.STYLES.equilibre.tactics;
+    const tacB = stadiumState.tactics[m.b] || window.Sim.STYLES.equilibre.tactics;
 
-    // Outcome
-    const outcome = window.Sim.simulateMatchOutcome(scoreA, scoreB, styleA, styleB);
-    const teamA = { ...partA, players: scoreA.players };
-    const teamB = { ...partB, players: scoreB.players };
-    const events = window.Sim.generateMatchSequence(teamA, teamB, scoreA, scoreB, styleA, styleB, outcome);
-
-    m.result = outcome;
-    m.events = events;
+    const result = window.Sim.simulateMatch(tpA, tpB, tacA, tacB, { five: state.matchMode === 'five' });
+    m.result = result;
     m.played = true;
 
-    playMatchAnimation(m, partA, partB);
-
-    // After playoff structure : for 4 players, après les 2 semis, ajouter la finale + 3e place
-    if (state.participants.length === 4 && stadiumState.matches.every(mm => mm.played) && stadiumState.matches.length === 2) {
-      // Ajouter finale + 3e place
-      const winners = stadiumState.matches.map(mm => mm.result.goalsA > mm.result.goalsB ? mm.a : mm.b);
-      const losers = stadiumState.matches.map(mm => mm.result.goalsA > mm.result.goalsB ? mm.b : mm.a);
-      stadiumState.matches.push({ a: losers[0], b: losers[1], type: '3rd', played: false, result: null });
-      stadiumState.matches.push({ a: winners[0], b: winners[1], type: 'final', played: false, result: null });
+    // Bracket 4 joueurs : après les 2 demies, créer finale + 3e place
+    if (state.participants.length === 4 && stadiumState.matches.length === 2 &&
+        stadiumState.matches.every(mm => mm.played)) {
+      const win = stadiumState.matches.map(mm => mm.result.scoreA >= mm.result.scoreB ? mm.a : mm.b);
+      const los = stadiumState.matches.map(mm => mm.result.scoreA >= mm.result.scoreB ? mm.b : mm.a);
+      stadiumState.matches.push({ a: los[0], b: los[1], type: '3rd', played: false, result: null });
+      stadiumState.matches.push({ a: win[0], b: win[1], type: 'final', played: false, result: null });
     }
+
+    playMatchAnimation(m, partA, partB);
   }
 
   function replayMatch(matchIdx) {
     const m = stadiumState.matches[matchIdx];
     if (!m.played) return;
-    const partA = state.participants[m.a], partB = state.participants[m.b];
-    playMatchAnimation(m, partA, partB);
+    playMatchAnimation(m, state.participants[m.a], state.participants[m.b]);
   }
 
-  // Animation overlay : pawns + ball + events stream
-  let simAnim = { rafs: [], timeouts: [], skipping: false };
+  // ---- Animation ----
+  let simAnim = { timeouts: [], skipping: false, speed: 1 };
+  function clearSimAnim() { simAnim.timeouts.forEach(t => clearTimeout(t)); simAnim.timeouts = []; }
 
-  function clearSimAnim() {
-    simAnim.rafs.forEach(r => cancelAnimationFrame(r));
-    simAnim.timeouts.forEach(t => clearTimeout(t));
-    simAnim.rafs = []; simAnim.timeouts = [];
-  }
-
-  // Numéros maillot par type de slot (convention foot classique)
-  // Plusieurs slots du même type → on incrémente avec un fallback
   const JERSEY_NUMBERS = {
-    GK: [1, 13],
-    LB: [3], RB: [2],
-    CB: [4, 5, 6, 15],
-    DM: [6, 8, 16],
-    CM: [8, 10, 6, 14],
-    AM: [10, 21],
-    LM: [11, 17], RM: [7, 17],
-    LW: [11, 17, 22], RW: [7, 17, 24],
-    CF: [9, 19], ST: [9, 19, 17],
-    SS: [22, 27],
+    GK:[1,13], LB:[3,12], RB:[2,12], LWB:[3,12], RWB:[2,12], CB:[4,5,6,15],
+    DM:[6,8,16], CM:[8,10,6,14], AM:[10,21], LM:[11,17], RM:[7,17],
+    LW:[11,17,22], RW:[7,17,24], CF:[9,19], ST:[9,19,17], SS:[22,27],
   };
-
   function assignJerseyNumbers(participant) {
     const F = FORMATIONS[participant.formation];
-    const used = new Set();
-    const map = {}; // slotId → number
-    const counts = {}; // type → seen so far
+    const used = new Set(); const map = {}; const counts = {};
     F.slots.forEach(slot => {
-      counts[slot.type] = (counts[slot.type] || 0) + 1;
+      counts[slot.type] = (counts[slot.type]||0)+1;
       const pool = JERSEY_NUMBERS[slot.type] || [];
-      let num = pool[counts[slot.type] - 1] || (counts[slot.type] + 20);
+      let num = pool[counts[slot.type]-1] || (counts[slot.type]+20);
       while (used.has(num) && num < 99) num++;
-      used.add(num);
-      map[slot.id] = num;
+      used.add(num); map[slot.id] = num;
     });
     return map;
+  }
+
+  // Couleurs maillots contrastées pour un match
+  function kitColors(partA, partB) {
+    let a = partA.color.solid, b = partB.color.solid;
+    // si trop proches, l'équipe B passe en blanc cassé
+    if (closeColor(a, b)) b = '#eef2f6';
+    return { a, b };
+  }
+  function closeColor(h1, h2) {
+    const c1 = hexRgb(h1), c2 = hexRgb(h2);
+    if (!c1 || !c2) return false;
+    const d = Math.abs(c1[0]-c2[0]) + Math.abs(c1[1]-c2[1]) + Math.abs(c1[2]-c2[2]);
+    return d < 120;
+  }
+  function hexRgb(h) {
+    const m = /^#?([0-9a-f]{6})$/i.exec(h || ''); if (!m) return null;
+    const n = parseInt(m[1], 16); return [(n>>16)&255, (n>>8)&255, n&255];
+  }
+
+  const SIMW = 760, SIMH = 480;
+
+  function pawnXY(slot, side) {
+    // portrait (x:largeur 0-100, y:profondeur 92=propre but) → paysage
+    const margin = 34;
+    const depth = 1 - (slot.y / 100);      // 0 propre but → 1 but adverse
+    const width = slot.x / 100;
+    if (side === 'A') {
+      return { x: margin + depth * (SIMW/2 - margin*0.5), y: margin + width * (SIMH - margin*2) };
+    } else {
+      return { x: SIMW - margin - depth * (SIMW/2 - margin*0.5), y: margin + (1 - width) * (SIMH - margin*2) };
+    }
   }
 
   function playMatchAnimation(m, partA, partB) {
     clearSimAnim();
     simAnim.skipping = false;
+    const r = m.result;
+    const kits = kitColors(partA, partB);
 
-    // Setup head
+    // En-tête
     $('#simNameA').textContent = partA.name;
     $('#simNameB').textContent = partB.name;
-    $('#simMetaA').textContent = (stadiumState.styles[m.a] ? window.Sim.STYLES[stadiumState.styles[m.a]].label : 'Style ?') + ' · ' + FORMATIONS[partA.formation].label;
-    $('#simMetaB').textContent = (stadiumState.styles[m.b] ? window.Sim.STYLES[stadiumState.styles[m.b]].label : 'Style ?') + ' · ' + FORMATIONS[partB.formation].label;
-    $('#simAvA').style.background = partA.color.grad;
-    $('#simAvA').textContent = initials(partA.name);
-    $('#simAvB').style.background = partB.color.grad;
-    $('#simAvB').textContent = initials(partB.name);
-    $('#simScoreA').textContent = '0';
-    $('#simScoreB').textContent = '0';
-    $('#simMinute').textContent = "0'";
-    $('#simEvent').textContent = "Coup d'envoi";
+    const tA = stadiumState.tactics[m.a], tB = stadiumState.tactics[m.b];
+    const styA = stadiumState.styles[m.a], styB = stadiumState.styles[m.b];
+    $('#simMetaA').textContent = (styA ? window.Sim.STYLES[styA].label : '—') + ' · ' + FORMATIONS[partA.formation].label;
+    $('#simMetaB').textContent = (styB ? window.Sim.STYLES[styB].label : '—') + ' · ' + FORMATIONS[partB.formation].label;
+    $('#simAvA').style.background = partA.color.grad; $('#simAvA').textContent = initials(partA.name);
+    $('#simAvB').style.background = partB.color.grad; $('#simAvB').textContent = initials(partB.name);
+    $('#simScoreA').textContent = '0'; $('#simScoreB').textContent = '0';
+    $('#simMinute').textContent = "0'"; $('#simEvent').textContent = "Coup d'envoi";
     $('#simEvents').innerHTML = '';
 
-    // Render pitch with pawns
+    // Terrain
     const pitch = $('#simPitch');
+    pitch.setAttribute('viewBox', `0 0 ${SIMW} ${SIMH}`);
     pitch.innerHTML = '';
-    const W = 600, H = 400;
-    // Pitch markings
-    pitch.appendChild(svg('rect', { x: 4, y: 4, width: W-8, height: H-8, fill: 'none', stroke: 'rgba(255,255,255,0.35)', 'stroke-width': 2, rx: 6 }));
-    pitch.appendChild(svg('line', { x1: W/2, y1: 4, x2: W/2, y2: H-4, stroke: 'rgba(255,255,255,0.35)', 'stroke-width': 2 }));
-    pitch.appendChild(svg('circle', { cx: W/2, cy: H/2, r: 40, fill: 'none', stroke: 'rgba(255,255,255,0.35)', 'stroke-width': 2 }));
-    pitch.appendChild(svg('rect', { x: 4, y: H/2 - 60, width: 50, height: 120, fill: 'none', stroke: 'rgba(255,255,255,0.35)', 'stroke-width': 1.5 }));
-    pitch.appendChild(svg('rect', { x: W-54, y: H/2 - 60, width: 50, height: 120, fill: 'none', stroke: 'rgba(255,255,255,0.35)', 'stroke-width': 1.5 }));
+    const line = 'rgba(255,255,255,0.32)';
+    pitch.appendChild(svg('rect', { x:6, y:6, width:SIMW-12, height:SIMH-12, fill:'none', stroke:line, 'stroke-width':2, rx:8 }));
+    pitch.appendChild(svg('line', { x1:SIMW/2, y1:6, x2:SIMW/2, y2:SIMH-6, stroke:line, 'stroke-width':2 }));
+    pitch.appendChild(svg('circle', { cx:SIMW/2, cy:SIMH/2, r:54, fill:'none', stroke:line, 'stroke-width':2 }));
+    pitch.appendChild(svg('circle', { cx:SIMW/2, cy:SIMH/2, r:3, fill:line }));
+    pitch.appendChild(svg('rect', { x:6, y:SIMH/2-78, width:66, height:156, fill:'none', stroke:line, 'stroke-width':1.5 }));
+    pitch.appendChild(svg('rect', { x:SIMW-72, y:SIMH/2-78, width:66, height:156, fill:'none', stroke:line, 'stroke-width':1.5 }));
+    pitch.appendChild(svg('rect', { x:6, y:SIMH/2-30, width:26, height:60, fill:'none', stroke:line, 'stroke-width':1.5 }));
+    pitch.appendChild(svg('rect', { x:SIMW-32, y:SIMH/2-30, width:26, height:60, fill:'none', stroke:line, 'stroke-width':1.5 }));
 
-    // Numéros maillot
-    const numA = assignJerseyNumbers(partA);
-    const numB = assignJerseyNumbers(partB);
-    const slotsA = FORMATIONS[partA.formation].slots;
-    const slotsB = FORMATIONS[partB.formation].slots;
-
-    // Positions pions
-    const positionsA = computePawnPositions(partA, 'A', W, H);
-    const positionsB = computePawnPositions(partB, 'B', W, H);
-
-    // Map joueur ID → pawn group
-    const pawnByPlayerId = {};
-    const pawnsA = [], pawnsB = [];
-
-    function buildPawn(participant, slot, pos, side, num, partColor) {
-      const playerId = participant.slots[slot.id];
-      const player = playerId ? playerById(playerId) : null;
-      const lastName = player ? (player.name.split(' ').slice(-1)[0]) : slot.type;
-      const g = svg('g', { class: 'sim-pawn-group' });
-      // Cercle de fond (couleur d'équipe)
-      const ring = svg('circle', { class: 'sim-pawn', cx: pos.x, cy: pos.y, r: 11, fill: partColor, stroke: 'rgba(0,0,0,0.5)', 'stroke-width': 1 });
-      g.appendChild(ring);
-      // Numéro maillot (texte central)
-      const numTxt = svg('text', {
-        x: pos.x, y: pos.y + 4,
-        'text-anchor': 'middle',
-        'font-family': 'Bebas Neue, Inter, sans-serif',
-        'font-size': 13,
-        'font-weight': 700,
-        fill: 'white',
-        style: 'pointer-events:none; text-shadow:0 1px 2px rgba(0,0,0,0.6)',
+    // Pions
+    const numA = assignJerseyNumbers(partA), numB = assignJerseyNumbers(partB);
+    const pawnById = {};
+    const allPawns = [];
+    function buildPawns(part, side, kit, nums) {
+      FORMATIONS[part.formation].slots.forEach(slot => {
+        const pid = part.slots[slot.id];
+        const pl = pid ? playerById(pid) : null;
+        const base = pawnXY(slot, side);
+        const g = svg('g', { class: 'sim-pawn-group' });
+        const ring = svg('circle', { class:'sim-pawn', cx:base.x, cy:base.y, r:13, fill:kit, stroke:'rgba(0,0,0,0.55)', 'stroke-width':1.5 });
+        const num = svg('text', { x:base.x, y:base.y+4.5, 'text-anchor':'middle', 'font-family':'Bebas Neue, sans-serif',
+          'font-size':14, fill: kit === '#eef2f6' ? '#10131a' : '#fff', style:'pointer-events:none' });
+        num.textContent = nums[slot.id];
+        const nm = svg('text', { x:base.x, y:base.y+26, 'text-anchor':'middle', 'font-family':'JetBrains Mono, monospace',
+          'font-size':9, fill:'#fff', style:'pointer-events:none; text-shadow:0 1px 2px rgba(0,0,0,0.9)' });
+        nm.textContent = pl ? pl.name.split(' ').slice(-1)[0].slice(0,11).toUpperCase() : slot.type;
+        g.appendChild(ring); g.appendChild(num); g.appendChild(nm);
+        pitch.appendChild(g);
+        const obj = { side, base, x:base.x, y:base.y, ring, num, nm, g, pid };
+        allPawns.push(obj);
+        if (pl) pawnById[pl.id] = obj;
       });
-      numTxt.textContent = num;
-      g.appendChild(numTxt);
-      // Nom du joueur (sous le pion)
-      const nameTxt = svg('text', {
-        x: pos.x, y: pos.y + 24,
-        'text-anchor': 'middle',
-        'font-family': 'JetBrains Mono, monospace',
-        'font-size': 8.5,
-        fill: 'white',
-        style: 'pointer-events:none; text-shadow:0 1px 2px rgba(0,0,0,0.8)',
-      });
-      nameTxt.textContent = lastName.slice(0, 12).toUpperCase();
-      g.appendChild(nameTxt);
-      pitch.appendChild(g);
-      const obj = { el: ring, baseX: pos.x, baseY: pos.y, group: g, player };
-      if (player) pawnByPlayerId[player.id] = obj;
-      return obj;
     }
+    buildPawns(partA, 'A', kits.a, numA);
+    buildPawns(partB, 'B', kits.b, numB);
 
-    slotsA.forEach((slot, i) => {
-      pawnsA.push(buildPawn(partA, slot, positionsA[i], 'A', numA[slot.id], partA.color.solid));
-    });
-    slotsB.forEach((slot, i) => {
-      pawnsB.push(buildPawn(partB, slot, positionsB[i], 'B', numB[slot.id], partB.color.solid));
-    });
-
-    // Ball
-    const ball = svg('circle', { class: 'sim-ball', cx: W/2, cy: H/2, r: 6, fill: 'white', stroke: '#1a1a1a', 'stroke-width': 1 });
+    const ball = svg('circle', { class:'sim-ball', cx:SIMW/2, cy:SIMH/2, r:6.5, fill:'#fff', stroke:'#111', 'stroke-width':1.2 });
     pitch.appendChild(ball);
 
-    // Play events
     openModal('#modalSim');
-    const events = m.events;
-    let score = { a: 0, b: 0 };
-    const stepDelay = 1100; // ralenti vs 450 — on suit la simulation
-    const halfPause = 1500; // pause supplémentaire à la mi-temps
 
-    let cumDelay = 0;
-    events.forEach((ev, i) => {
-      const t = setTimeout(() => {
-        if (simAnim.skipping) return;
-        $('#simMinute').textContent = ev.minute + "'";
-        if (ev.type === 'kickoff') {
-          $('#simEvent').textContent = "Coup d'envoi !";
-          moveBall(ball, W/2, H/2);
-        } else if (ev.type === 'half') {
-          $('#simEvent').textContent = '⏸ Mi-temps';
-          appendSimEvent(ev);
-          moveBall(ball, W/2, H/2);
-        } else if (ev.type === 'end') {
-          $('#simEvent').textContent = '🏁 Match terminé';
-          appendSimEvent(ev);
-          renderTournament();
-        } else if (ev.type === 'goal') {
-          score[ev.team === 'A' ? 'a' : 'b']++;
-          $('#simScoreA').textContent = score.a;
-          $('#simScoreB').textContent = score.b;
-          $('#simEvent').textContent = '⚽ BUT ' + (ev.team === 'A' ? partA.name : partB.name);
-          appendSimEvent(ev);
-          // Goal flash
-          const flash = el('div', { class: 'sim-goal-flash' });
-          $('.sim-pitch-wrap').appendChild(flash);
-          setTimeout(() => flash.remove(), 1200);
-          // Move ball vers le but adverse (côté droit si A, gauche si B)
-          const goalX = ev.team === 'A' ? W - 12 : 12;
-          const goalY = H / 2 + (Math.random() * 80 - 40);
-          // Mouvement du buteur vers le ballon
-          if (ev.scorerId && pawnByPlayerId[ev.scorerId]) {
-            const scorerPawn = pawnByPlayerId[ev.scorerId];
-            const scorerX = ev.team === 'A' ? W - 50 : 50;
-            scorerPawn.el.setAttribute('cx', scorerX);
-            scorerPawn.group.querySelectorAll('text').forEach(t => t.setAttribute('x', scorerX));
-          }
-          moveBall(ball, goalX, goalY);
-        } else if (ev.type === 'pass' || ev.type === 'shot' || ev.type === 'interception') {
-          $('#simEvent').textContent = ev.text;
-          appendSimEvent(ev);
-          // Move ball au joueur cible (ou tireur pour shot)
-          let targetPawn = null;
-          if (ev.toId) targetPawn = pawnByPlayerId[ev.toId];
-          if (!targetPawn && ev.fromId) targetPawn = pawnByPlayerId[ev.fromId];
-          if (!targetPawn) {
-            const arr = ev.team === 'A' ? pawnsA : pawnsB;
-            targetPawn = arr[Math.floor(Math.random() * arr.length)];
-          }
-          const tx = targetPawn.baseX + (Math.random() * 16 - 8);
-          const ty = targetPawn.baseY + (Math.random() * 16 - 8);
-          moveBall(ball, tx, ty);
-        }
-      }, cumDelay);
-      cumDelay += stepDelay + (ev.type === 'half' ? halfPause : 0) + (ev.type === 'goal' ? 600 : 0);
-      simAnim.timeouts.push(t);
+    // Déplacer le bloc d'une équipe vers une profondeur (0 propre but..1 adverse)
+    function shiftTeam(side, attackDepth) {
+      const dir = side === 'A' ? 1 : -1;
+      const push = (attackDepth - 0.5) * 70 * dir;
+      allPawns.filter(p => p.side === side).forEach(p => {
+        const nx = p.base.x + push;
+        p.x = nx; p.ring.setAttribute('cx', nx);
+        p.num.setAttribute('x', nx); p.nm.setAttribute('x', nx);
+      });
+    }
+    function resetShape() {
+      allPawns.forEach(p => { p.x = p.base.x; p.y = p.base.y;
+        p.ring.setAttribute('cx', p.base.x); p.ring.setAttribute('cy', p.base.y);
+        p.num.setAttribute('x', p.base.x); p.num.setAttribute('y', p.base.y+4.5);
+        p.nm.setAttribute('x', p.base.x); p.nm.setAttribute('y', p.base.y+26);
+      });
+    }
+    function moveBallTo(x, y) { ball.setAttribute('cx', x); ball.setAttribute('cy', y); }
+    function ballToPawn(pid) { const p = pawnById[pid]; if (p) moveBallTo(p.x, p.y); }
+
+    // ---- Construire la séquence d'animation (hops) à partir des moments ----
+    const HOP = 560 / simAnim.speed;       // durée par passe
+    const PAUSE = 360 / simAnim.speed;
+    let cum = 0;
+    let liveScore = { a:0, b:0 };
+
+    function schedule(fn, dur) { const t = setTimeout(() => { if(!simAnim.skipping) fn(); }, cum); simAnim.timeouts.push(t); cum += dur; }
+
+    r.moments.forEach(mo => {
+      if (mo.type === 'kickoff') {
+        schedule(() => { $('#simEvent').textContent = "Coup d'envoi"; resetShape(); moveBallTo(SIMW/2, SIMH/2); }, HOP);
+        return;
+      }
+      if (mo.type === 'half') {
+        schedule(() => { $('#simEvent').textContent = '⏸ Mi-temps'; pushLog(mo); resetShape(); moveBallTo(SIMW/2, SIMH/2); }, HOP*2.2);
+        return;
+      }
+      if (mo.type === 'end') {
+        schedule(() => { $('#simEvent').textContent = '🏁 Terminé'; pushLog(mo); renderTournament(); }, HOP);
+        return;
+      }
+      if (mo.type === 'foul' || mo.type === 'card' || mo.type === 'corner' || mo.type === 'freekick') {
+        schedule(() => {
+          $('#simEvent').textContent = (mo.type==='card'?(mo.card==='red'?'🟥 ':'🟨 '):mo.type==='corner'?'⛳ ':'⚑ ') + mo.text;
+          pushLog(mo);
+        }, HOP*1.4);
+        return;
+      }
+
+      const side = mo.team; // 'A'|'B'
+      const attackDepth = mo.type === 'goal' ? 0.95 : mo.type === 'save' || mo.type === 'miss' ? 0.82 : 0.62;
+      // pousser le bloc attaquant, reculer le bloc défenseur
+      schedule(() => {
+        $('#simEvent').textContent = mo.text;
+        shiftTeam(side, attackDepth);
+        shiftTeam(side === 'A' ? 'B' : 'A', 1 - attackDepth*0.85);
+      }, 0);
+
+      // hops sur la trajectoire (passes réelles entre joueurs)
+      const path = (mo.path || []).filter(p => p && p.id && pawnById[p.id]);
+      path.forEach((pt, idx) => {
+        schedule(() => {
+          ballToPawn(pt.id);
+          // trace de passe
+          drawPassTrace(pawnById, path, idx, side, kits);
+        }, HOP);
+      });
+
+      if (mo.type === 'goal') {
+        schedule(() => {
+          // ballon dans le but
+          const gx = side === 'A' ? SIMW-10 : 10;
+          moveBallTo(gx, SIMH/2 + (Math.random()*70-35));
+          liveScore[side==='A'?'a':'b']++;
+          $('#simScoreA').textContent = liveScore.a;
+          $('#simScoreB').textContent = liveScore.b;
+          pushLog(mo, true);
+          goalCelebration(mo, side === 'A' ? partA : partB, side === 'A' ? kits.a : kits.b);
+        }, HOP*1.2);
+        schedule(() => { resetShape(); moveBallTo(SIMW/2, SIMH/2); }, PAUSE*2.4);
+      } else if (mo.type === 'save' || mo.type === 'miss') {
+        schedule(() => { pushLog(mo); }, PAUSE*1.6);
+      } else {
+        schedule(() => { pushLog(mo); }, PAUSE);
+      }
     });
+
+    // fin d'anim : afficher rapport
+    schedule(() => { showMatchReport(m, partA, partB); }, 200);
+
+    function pushLog(mo, isGoal) {
+      const log = $('#simEvents');
+      const liNode = el('div', { class: 'sim-event-line' + (isGoal ? ' goal' : (mo.type==='card'?' card':'')) });
+      liNode.appendChild(el('span', { class:'ev-time' }, mo.t + "'"));
+      liNode.appendChild(el('span', { class:'ev-text' }, mo.text));
+      log.appendChild(liNode);
+      log.scrollTop = log.scrollHeight;
+    }
   }
 
-  function moveBall(ball, x, y) {
-    ball.setAttribute('cx', x);
-    ball.setAttribute('cy', y);
+  // Trace visuelle d'une passe (segment estompé)
+  function drawPassTrace(pawnById, path, idx, side, kits) {
+    if (idx === 0) return;
+    const from = path[idx-1], to = path[idx];
+    const a = pawnById[from.id], b = pawnById[to.id];
+    if (!a || !b) return;
+    const ln = svg('line', { class:'sim-pass-line', x1:a.x, y1:a.y, x2:b.x, y2:b.y,
+      stroke: side==='A'?kits.a:kits.b, 'stroke-width':2 });
+    $('#simPitch').appendChild(ln);
+    setTimeout(() => ln.remove(), 700);
   }
 
-  function appendSimEvent(ev) {
+  function goalCelebration(mo, part, kit) {
+    const wrap = $('.sim-pitch-wrap');
+    const flash = el('div', { class:'sim-goal-flash' });
+    wrap.appendChild(flash);
+    const banner = el('div', { class:'sim-goal-banner' });
+    banner.innerHTML = '<div class="gb-but">BUT&nbsp;!</div><div class="gb-scorer">' +
+      (mo.scorer || '') + '</div><div class="gb-team">' + part.name + '</div>';
+    banner.style.setProperty('--kit', kit);
+    wrap.appendChild(banner);
+    setTimeout(() => { flash.remove(); }, 1300);
+    setTimeout(() => { banner.remove(); }, 2200);
+  }
+
+  function showMatchReport(m, partA, partB) {
+    const r = m.result;
+    const tpA = stadiumState.profiles[m.a], tpB = stadiumState.profiles[m.b];
+    const tacA = stadiumState.tactics[m.a] || window.Sim.STYLES.equilibre.tactics;
+    const tacB = stadiumState.tactics[m.b] || window.Sim.STYLES.equilibre.tactics;
+    const rep = window.Sim.matchReport(partA.name, partB.name, tpA, tpB, tacA, tacB, r);
+    const host = $('#simEvent');
+    if (host) host.textContent = rep.winner ? ('Victoire ' + rep.winner) : 'Match nul';
+    // afficher un encart rapport dans la zone events
     const log = $('#simEvents');
-    const line = el('div', { class: 'sim-event-line' + (ev.type === 'goal' ? ' goal' : '') });
-    line.appendChild(el('span', { class: 'ev-time' }, ev.minute + "'"));
-    line.appendChild(el('span', { class: 'ev-text' }, ev.text));
-    log.appendChild(line);
+    const card = el('div', { class:'sim-report' });
+    card.appendChild(el('div', { class:'sr-title' }, '📋 Analyse du match'));
+    rep.lines.forEach(l => {
+      const p = el('div', { class:'sr-line' });
+      p.innerHTML = l.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+      card.appendChild(p);
+    });
+    // stats
+    const st = el('div', { class:'sr-stats' });
+    st.innerHTML =
+      `<div><span>${r.stats.A.possession}%</span><label>Possession</label><span>${r.stats.B.possession}%</span></div>` +
+      `<div><span>${r.stats.A.shots}</span><label>Tirs</label><span>${r.stats.B.shots}</span></div>` +
+      `<div><span>${r.stats.A.onTarget}</span><label>Cadrés</label><span>${r.stats.B.onTarget}</span></div>` +
+      `<div><span>${r.stats.A.xg}</span><label>xG</label><span>${r.stats.B.xg}</span></div>` +
+      `<div><span>${r.stats.A.corners}</span><label>Corners</label><span>${r.stats.B.corners}</span></div>`;
+    card.appendChild(st);
+    log.appendChild(card);
     log.scrollTop = log.scrollHeight;
   }
 
-  // SVG helper
   function svg(tag, attrs) {
     const ns = 'http://www.w3.org/2000/svg';
     const node = document.createElementNS(ns, tag);
@@ -2543,52 +2778,25 @@
     return node;
   }
 
-  function computePawnPositions(participant, side, W, H) {
-    // Convertir les coords de formation (% du pitch portrait) en coords pitch paysage simulation
-    // Notre pitch sim : 600x400 paysage. Côté A = gauche (0-50%), côté B = droite (50-100%)
-    const F = FORMATIONS[participant.formation];
-    const margin = 30;
-    return F.slots.map(slot => {
-      // slot.x: 0-100 (gauche-droite en mode portrait), slot.y: 0-100 (haut-bas)
-      // En sim paysage :
-      //   y_pitch (vertical en portrait → axe court) → x_sim (horizontal en paysage)
-      //   x_pitch (horizontal en portrait → axe long) → y_sim
-      // Pour le côté A (gauche) : y_pitch=92 (GK) → x_sim petit. y_pitch=14 (ST) → x_sim grand
-      // Pour le côté B (droite) : on miroir
-      const yNorm = 1 - (slot.y / 100); // 0 (GK) à 1 (ST)
-      const xNorm = slot.x / 100;
-      let x, y;
-      if (side === 'A') {
-        x = margin + yNorm * (W/2 - margin);
-        y = margin + xNorm * (H - margin * 2);
-      } else {
-        x = W - margin - yNorm * (W/2 - margin);
-        y = margin + (1 - xNorm) * (H - margin * 2);
-      }
-      return { x, y };
-    });
-  }
-
   function playAllMatches() {
-    // Joue chaque match séquentiellement avec un délai
     const playNext = (i) => {
       if (i >= stadiumState.matches.length) return;
       if (stadiumState.matches[i].played) return playNext(i + 1);
       playMatch(i);
-      // Attendre la fin de l'animation avant de jouer le suivant
-      const events = stadiumState.matches[i].events;
-      // Tenir compte du nouveau stepDelay (1100) + pauses mi-temps/buts
-      const goals = events.filter(e => e.type === 'goal').length;
-      const halves = events.filter(e => e.type === 'half').length;
-      const duration = events.length * 1100 + halves * 1500 + goals * 600 + 1500;
       setTimeout(() => {
         closeModal('#modalSim');
-        // Vérifier si on a ajouté de nouveaux matchs (finale en 4j)
         renderTournament();
-        setTimeout(() => playNext(i + 1), 600);
-      }, duration);
+        setTimeout(() => playNext(i + 1), 500);
+      }, estimateSimDuration(stadiumState.matches[i]));
     };
     playNext(0);
+  }
+
+  function estimateSimDuration(m) {
+    if (!m.result) return 8000;
+    let hops = 0;
+    m.result.moments.forEach(mo => { hops += 1 + ((mo.path||[]).length); if (mo.type==='goal') hops += 3; });
+    return Math.min(110000, hops * (560 / simAnim.speed) + 4000);
   }
 
   function init() {
@@ -2614,6 +2822,12 @@
       clearSimAnim();
       closeModal('#modalSim');
       renderTournament();
+    });
+    $('#simSpeed') && $('#simSpeed').addEventListener('click', (e) => {
+      const b = e.target.closest('button'); if (!b) return;
+      $$('#simSpeed button').forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+      simAnim.speed = +b.dataset.spd;
     });
     $('#logoHome').addEventListener('click', (e) => { e.preventDefault(); restart(); });
   }

@@ -2240,36 +2240,115 @@ h1, h2, h3, h4 { margin: 0; font-weight: 800; letter-spacing: -0.02em; color: va
 }
 .sim-pitch {
   width: 100%;
-  aspect-ratio: 600 / 400;
+  aspect-ratio: 760 / 480;
   background:
     repeating-linear-gradient(90deg,
-      rgba(255,255,255,0.04) 0,
-      rgba(255,255,255,0.04) 40px,
-      transparent 40px, transparent 80px),
+      rgba(255,255,255,0.045) 0,
+      rgba(255,255,255,0.045) 48px,
+      transparent 48px, transparent 96px),
     var(--grad-pitch);
   border-radius: 12px;
-  box-shadow: inset 0 0 0 2px rgba(255,255,255,0.2), inset 0 0 60px rgba(0,0,0,0.4);
+  box-shadow: inset 0 0 0 2px rgba(255,255,255,0.2), inset 0 0 70px rgba(0,0,0,0.45);
   display: block;
 }
 .sim-pawn {
-  fill: white; stroke: rgba(0,0,0,0.6); stroke-width: 0.5;
-  transition: cx 0.6s ease, cy 0.6s ease;
+  /* fill défini par attribut inline pour ne pas écraser la couleur d'équipe */
+  transition: cx 0.5s cubic-bezier(0.4, 0, 0.2, 1), cy 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  filter: drop-shadow(0 2px 3px rgba(0,0,0,0.5));
+}
+.sim-pawn-group text {
+  transition: x 0.5s cubic-bezier(0.4, 0, 0.2, 1), y 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  user-select: none;
 }
 .sim-ball {
-  fill: white; stroke: #1a1a1a; stroke-width: 0.8;
-  transition: cx 0.95s cubic-bezier(0.4, 0, 0.2, 1), cy 0.95s cubic-bezier(0.4, 0, 0.2, 1);
-  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.6));
+  transition: cx 0.5s cubic-bezier(0.45, 0, 0.25, 1), cy 0.5s cubic-bezier(0.45, 0, 0.25, 1);
+  filter: drop-shadow(0 2px 5px rgba(0,0,0,0.7));
 }
 .sim-pawn-group { pointer-events: none; }
-.sim-pawn-group text { user-select: none; }
 .sim-pass-line {
-  stroke: rgba(255,255,255,0.6);
-  stroke-width: 1.5;
   fill: none;
-  stroke-dasharray: 4 4;
-  animation: passDash 0.6s linear forwards;
+  opacity: 0.9;
+  stroke-dasharray: 5 4;
+  animation: passDash 0.7s linear forwards;
 }
-@keyframes passDash { from { stroke-dashoffset: 40; opacity: 1; } to { stroke-dashoffset: 0; opacity: 0; } }
+@keyframes passDash { from { stroke-dashoffset: 40; opacity: 0.9; } to { stroke-dashoffset: 0; opacity: 0; } }
+
+/* Bannière BUT plein écran */
+.sim-goal-banner {
+  position: absolute; inset: 0; z-index: 7;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 4px; pointer-events: none;
+  background: radial-gradient(circle at center, rgba(0,0,0,0.55), rgba(0,0,0,0.2) 60%, transparent);
+  animation: goalBannerIn 0.4s ease both;
+}
+.sim-goal-banner .gb-but {
+  font-family: var(--display); font-size: clamp(60px, 12vw, 130px); line-height: 0.9;
+  color: var(--kit, #fff);
+  text-shadow: 0 4px 30px rgba(0,0,0,0.7), 0 0 60px var(--kit, #fff);
+  letter-spacing: 0.04em;
+  animation: goalPunch 0.5s cubic-bezier(0.2,1.4,0.4,1) both;
+}
+.sim-goal-banner .gb-scorer {
+  font-family: var(--display); font-size: clamp(22px, 4vw, 40px); color: #fff;
+  text-transform: uppercase; letter-spacing: 0.04em;
+  text-shadow: 0 2px 10px rgba(0,0,0,0.8);
+}
+.sim-goal-banner .gb-team {
+  font-family: var(--mono); font-size: 12px; color: rgba(255,255,255,0.85);
+  letter-spacing: 0.16em; text-transform: uppercase;
+}
+@keyframes goalBannerIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes goalPunch { 0% { transform: scale(0.3) rotate(-6deg); opacity: 0; } 60% { transform: scale(1.12) rotate(2deg); } 100% { transform: scale(1) rotate(0); opacity: 1; } }
+
+/* Rapport de match dans le flux d'events */
+.sim-report {
+  margin-top: 10px; padding: 14px;
+  background: linear-gradient(180deg, rgba(255,200,87,0.07), transparent);
+  border: 1px solid var(--line-2); border-radius: 12px;
+  font-family: var(--font); line-height: 1.5;
+}
+.sim-report .sr-title { font-family: var(--display); font-size: 16px; color: var(--neon); text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.04em; }
+.sim-report .sr-line { font-size: 13px; color: var(--ink-soft); margin-bottom: 5px; }
+.sim-report .sr-line strong { color: var(--ink); }
+.sim-report .sr-stats { margin-top: 12px; display: grid; gap: 4px; }
+.sim-report .sr-stats > div { display: grid; grid-template-columns: 50px 1fr 50px; align-items: center; font-family: var(--mono); font-size: 12px; }
+.sim-report .sr-stats span:first-child { text-align: right; color: var(--neon); font-weight: 700; }
+.sim-report .sr-stats span:last-child { text-align: left; color: var(--neon); font-weight: 700; }
+.sim-report .sr-stats label { text-align: center; color: var(--slate); font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; }
+.sim-event-line.card .ev-text { color: var(--gold); }
+
+/* Curseurs tactiques (modal style) */
+.tactic-sliders { margin: 16px 0 6px; display: grid; gap: 12px; }
+.tactic-slider .ts-label { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-soft); margin-bottom: 5px; }
+.tactic-slider .ts-val { color: var(--neon); font-weight: 700; }
+.tactic-slider input[type=range] { width: 100%; accent-color: var(--neon); height: 4px; }
+.tactic-slider .ts-ends { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 9px; color: var(--slate-d); margin-top: 2px; letter-spacing: 0.06em; }
+
+/* Drag-to-swap sur le terrain */
+.slot-draggable { touch-action: none; }
+.slot.slot-dragging { opacity: 0.35; }
+.slot.drop-ok .slot-bubble { box-shadow: 0 0 0 3px var(--neon), 0 0 22px rgba(255,200,87,0.6); transform: scale(1.12); }
+.slot.drop-no .slot-bubble { box-shadow: 0 0 0 3px var(--rose); }
+.drag-ghost {
+  position: fixed; z-index: 200; pointer-events: none;
+  transform: translate(-50%, -50%) scale(1.05);
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  filter: drop-shadow(0 8px 18px rgba(0,0,0,0.6));
+}
+.drag-ghost .dg-photo {
+  width: 56px; height: 56px; border-radius: 50%;
+  position: relative; overflow: hidden;
+  display: grid; place-items: center;
+  font-family: var(--display); color: #fff; font-size: 20px;
+  border: 2px solid var(--neon);
+}
+.drag-ghost .dg-photo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: top center; }
+.drag-ghost .dg-name {
+  font-family: var(--mono); font-size: 10px; color: #fff;
+  background: rgba(0,0,0,0.7); padding: 2px 6px; border-radius: 5px;
+  text-transform: uppercase; letter-spacing: 0.04em;
+}
+.sim-speed button { padding: 7px 12px; font-size: 12px; }
 .sim-goal-flash {
   position: absolute;
   inset: 0;
