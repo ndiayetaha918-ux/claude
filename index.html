@@ -14,59 +14,86 @@
 <body>
 
   <header class="topbar">
-    <a href="#" class="logo" id="logoHome" aria-label="Drafter — retour à l'accueil">
-      <svg class="logo-mark-svg" viewBox="0 0 48 48" aria-hidden="true">
+    <a href="#" class="logo logo-v3" id="logoHome" aria-label="Drafter — accueil">
+      <svg class="logo-mark-svg" viewBox="0 0 56 56" aria-hidden="true">
         <defs>
-          <linearGradient id="logoG" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stop-color="#ffd76b"/>
-            <stop offset="55%" stop-color="#ffa531"/>
-            <stop offset="100%" stop-color="#ff5c4d"/>
+          <linearGradient id="logoG2" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#FF7AA5"/>
+            <stop offset="55%" stop-color="#FF5C8D"/>
+            <stop offset="100%" stop-color="#732553"/>
+          </linearGradient>
+          <linearGradient id="logoInner" x1="0%" y1="100%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#142030"/>
+            <stop offset="100%" stop-color="#1E3442"/>
           </linearGradient>
         </defs>
-        <!-- Corner-notched shield -->
-        <path d="M12 0 L48 0 L48 36 L36 48 L0 48 L0 12 Z" fill="url(#logoG)"/>
-        <!-- Stitching accents -->
-        <line x1="0" y1="14" x2="14" y2="0" stroke="rgba(255,255,255,0.35)" stroke-width="0.8" stroke-dasharray="2 2"/>
-        <line x1="36" y1="48" x2="48" y2="36" stroke="rgba(0,0,0,0.35)" stroke-width="0.8" stroke-dasharray="2 2"/>
-        <!-- Custom heavy D letterform -->
-        <path d="M11 10 L11 38 L22 38 C31 38 37 32 37 24 C37 16 31 10 22 10 Z M18 16 L22 16 C27 16 31 19 31 24 C31 29 27 32 22 32 L18 32 Z" fill="#1a0e00" fill-rule="evenodd"/>
-        <!-- 11 dot (squad size accent) -->
-        <circle cx="40" cy="8" r="2.5" fill="#1a0e00" opacity="0.85"/>
+        <!-- Hexagon-ish field -->
+        <path d="M8 6 L48 6 L54 28 L48 50 L8 50 L2 28 Z" fill="url(#logoG2)"/>
+        <!-- inner dark glyph -->
+        <path d="M14 12 L46 12 L50 28 L46 44 L14 44 L10 28 Z" fill="url(#logoInner)" opacity="0.85"/>
+        <!-- abstract D + arrow (drafter mark) -->
+        <path d="M20 17 L20 39 L29 39 C36 39 41 35 41 28 C41 21 36 17 29 17 Z M26 22 L29 22 C33 22 35 24.4 35 28 C35 31.6 33 34 29 34 L26 34 Z" fill="#FF5C8D"/>
+        <!-- pick arrow -->
+        <path d="M38 19 L46 28 L38 37 L38 31 L43 28 L38 25 Z" fill="#E9D8C8" opacity="0.95"/>
       </svg>
       <div class="logo-wordmark">
-        <span class="logo-text">DRAFTER</span>
-        <span class="logo-sub">XI · 25/26</span>
+        <span class="logo-text">drafter</span>
+        <span class="logo-sub">v3 · 25/26</span>
       </div>
     </a>
-    <div class="topbar-tagline">/ snake draft · 4000+ joueurs · données Transfermarkt</div>
+    <div class="topbar-tagline">/ moteur de raisonnement tactique · 2 500 joueurs</div>
   </header>
 
   <main id="app">
     <!-- ============= SCREEN 1 — SETUP ============= -->
     <section class="screen screen-setup active" id="screen-setup">
 
-      <!-- HERO with polaroid scroller -->
-      <div class="hero">
-        <div class="hero-stage" id="heroStage" aria-hidden="true">
-          <!-- Rows injected by JS -->
+      <!-- HERO — Bento mode selection -->
+      <div class="hero-v3">
+        <div class="hero-intro">
+          <div class="hero-eyebrow">SAISON 2025/26 · TRANSFERMARKT LIVE</div>
+          <h1 class="hero-title-v3">
+            Compose, simule,<br>
+            <span class="accent">analyse.</span>
+          </h1>
+          <p class="hero-sub-v3">
+            Un moteur de raisonnement tactique au cœur du produit. Choisis ton mode.
+          </p>
         </div>
-        <div class="hero-card">
-          <div class="hero-card-inner">
-            <div class="hero-eyebrow">LIVE · Saison 25/26</div>
-            <h1 class="hero-title">
-              Construis ton<br>
-              <span class="strike">XI</span> de <span class="accent">rêve.</span>
-            </h1>
-            <p class="hero-sub">
-              Snake draft 2-4 joueurs, budget réglable, postes stricts,<br>
-              filtres championnats, et un gamble final pour cramer la table.
-            </p>
-            <div class="hero-cta">
-              <button class="btn btn-primary btn-lg" onclick="document.getElementById('setupSection').scrollIntoView({behavior:'smooth'})">
-                Lancer le draft
-              </button>
+
+        <div class="mode-bento" id="modeBento">
+          <button class="mode-card mode-draft" data-bento="draft" aria-label="Mode Draft">
+            <div class="mc-bg"></div>
+            <div class="mc-glow"></div>
+            <img class="mc-player" src="assets/IMG_2575.webp" alt="Mbappé" loading="eager" decoding="async" />
+            <div class="mc-body">
+              <div class="mc-eyebrow">★ MODE PHARE</div>
+              <h2 class="mc-title">Draft</h2>
+              <p class="mc-desc">Snake draft 2-4, budget réglable, simulation positionnelle.</p>
             </div>
-          </div>
+          </button>
+
+          <button class="mode-card mode-five" data-bento="five" aria-label="Mode Five">
+            <div class="mc-bg"></div>
+            <div class="mc-glow"></div>
+            <img class="mc-player" src="assets/IMG_2576.webp" alt="Cherki" loading="eager" decoding="async" />
+            <div class="mc-body">
+              <div class="mc-eyebrow">◐ NOUVEAU</div>
+              <h2 class="mc-title">Five</h2>
+              <p class="mc-desc">5 contre 5. Espaces réduits, techniques décisives.</p>
+            </div>
+          </button>
+
+          <button class="mode-card mode-juste" data-bento="juste" aria-label="Mode Juste Prix">
+            <div class="mc-bg"></div>
+            <div class="mc-glow"></div>
+            <img class="mc-player" src="assets/IMG_2577.webp" alt="Yamal" loading="eager" decoding="async" />
+            <div class="mc-body">
+              <div class="mc-eyebrow">★ PARTY GAME</div>
+              <h2 class="mc-title">Juste Prix</h2>
+              <p class="mc-desc">Plus ou Moins · estimer la valeur. Seul ou à plusieurs.</p>
+            </div>
+          </button>
         </div>
       </div>
 
@@ -406,6 +433,163 @@
         <button class="btn btn-ghost btn-lg" id="restartBtn2">Rejouer</button>
       </div>
     </section>
+    <!-- ============= SCREEN 5 — FIVE (5v5) ============= -->
+    <section class="screen screen-five" id="screen-five">
+      <div class="screen-pad">
+        <div class="hero-intro" style="margin-bottom:28px">
+          <div class="hero-eyebrow">FIVE · 5 CONTRE 5</div>
+          <h1 class="hero-title-v3"><span class="accent">Five.</span></h1>
+          <p class="hero-sub-v3">Espaces réduits, transitions explosives, technique décisive.<br>Pioche 5 joueurs, l'IA en fait autant, puis on simule.</p>
+        </div>
+
+        <div class="setup-card">
+          <h2 class="card-title"><span class="num">01</span>Mon équipe Five</h2>
+          <p class="card-sub">Choisis ta formation (5 slots) puis pioche tes joueurs.</p>
+
+          <div class="setup-grid">
+            <div class="setup-field">
+              <label>Ton pseudo</label>
+              <input type="text" id="fiveName" class="line-input" maxlength="18" value="Toi" />
+            </div>
+            <div class="setup-field">
+              <label>Formation 5v5</label>
+              <select id="fiveFormation" class="select"></select>
+            </div>
+            <div class="setup-field setup-field-wide">
+              <label>Budget</label>
+              <div class="slider-wrap">
+                <input type="range" id="fiveBudget" min="20" max="500" value="200" step="10" />
+                <div class="slider-value"><span id="fiveBudgetVal">200</span><span class="unit">M€</span></div>
+              </div>
+            </div>
+            <div class="setup-field setup-field-wide">
+              <label>Profil de l'adversaire IA</label>
+              <div class="seg" id="fiveOppLevel">
+                <button data-val="easy">Amateur</button>
+                <button data-val="medium" class="active">Confirmé</button>
+                <button data-val="hard">Élite</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="five-pitch-wrap">
+            <div class="pitch pitch-large pitch-five" id="fivePitch"></div>
+            <div class="pitch-hint">Clique sur un poste pour piocher</div>
+          </div>
+
+          <div class="setup-actions">
+            <button class="btn btn-primary btn-lg" id="fiveStart" disabled>
+              <span>Simuler la rencontre Five</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="setup-actions" style="justify-content:center; gap:14px;">
+          <button class="btn btn-ghost" id="fiveBack">← Retour</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============= SCREEN 6 — JUSTE PRIX ============= -->
+    <section class="screen screen-juste" id="screen-juste">
+      <div class="screen-pad">
+        <div class="hero-intro" style="margin-bottom:32px">
+          <div class="hero-eyebrow">JUSTE PRIX · ESTIMATION</div>
+          <h1 class="hero-title-v3"><span class="accent">Juste Prix.</span></h1>
+          <p class="hero-sub-v3">Deux variantes : Plus ou Moins (solo, 3 vies) ou estimation multijoueur.</p>
+        </div>
+
+        <div class="juste-variant-grid">
+          <button class="juste-variant" data-variant="updown">
+            <div class="jv-head">PLUS OU MOINS</div>
+            <div class="jv-icon">⇕</div>
+            <div class="jv-desc">Solo · 3 vies. Le joueur suivant vaut-il plus ou moins ? Bonne réponse → série continue.</div>
+          </button>
+          <button class="juste-variant" data-variant="multi">
+            <div class="jv-head">ESTIMATION MULTI</div>
+            <div class="jv-icon">🎯</div>
+            <div class="jv-desc">2-4 joueurs. Chacun donne son prix, le plus proche prend le point. 7 manches.</div>
+          </button>
+        </div>
+
+        <!-- Plus ou Moins game area -->
+        <div class="juste-stage" id="justeUpDown" style="display:none">
+          <div class="juste-hud">
+            <div class="jh-lives" id="justeLives">❤❤❤</div>
+            <div class="jh-score">SÉRIE · <span id="justeScore">0</span></div>
+          </div>
+          <div class="juste-cards">
+            <div class="juste-pcard" id="justeA">
+              <div class="jp-photo"></div>
+              <div class="jp-name">—</div>
+              <div class="jp-club">—</div>
+              <div class="jp-value-known">— M€</div>
+            </div>
+            <div class="juste-vs">VS</div>
+            <div class="juste-pcard juste-pcard-b" id="justeB">
+              <div class="jp-photo"></div>
+              <div class="jp-name">—</div>
+              <div class="jp-club">—</div>
+              <div class="jp-value-hidden">?</div>
+              <div class="jp-buttons">
+                <button class="btn btn-ghost juste-lower" id="justeLower">↓ Moins cher</button>
+                <button class="btn btn-primary juste-higher" id="justeHigher">↑ Plus cher</button>
+              </div>
+            </div>
+          </div>
+          <div class="juste-feedback" id="justeFeedback"></div>
+        </div>
+
+        <!-- Multi setup -->
+        <div class="juste-stage" id="justeMulti" style="display:none">
+          <div class="multi-setup" id="multiSetup">
+            <h3>Joueurs (2-4)</h3>
+            <div id="multiParticipants"></div>
+            <button class="btn btn-primary" id="multiStart">Démarrer</button>
+          </div>
+          <div class="multi-round" id="multiRound" style="display:none"></div>
+        </div>
+
+        <div class="setup-actions" style="justify-content:center; gap:14px;">
+          <button class="btn btn-ghost" id="justeBack">← Retour</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============= SCREEN 7 — SEASON ============= -->
+    <section class="screen screen-season" id="screen-season">
+      <div class="screen-pad">
+        <div class="hero-intro" style="margin-bottom:28px">
+          <div class="hero-eyebrow">SAISON · CHAMPIONNAT 20 ÉQUIPES</div>
+          <h1 class="hero-title-v3"><span class="accent">Saison.</span></h1>
+          <p class="hero-sub-v3">Ton équipe affronte 19 adversaires générés. 38 journées, 1 titre à décrocher.</p>
+        </div>
+
+        <div class="season-controls">
+          <button class="btn btn-primary btn-lg" id="seasonStart">Lancer la saison</button>
+          <button class="btn btn-ghost" id="seasonNext" disabled>Journée suivante</button>
+          <button class="btn btn-ghost" id="seasonAll" disabled>Simuler tout</button>
+        </div>
+
+        <div class="season-grid">
+          <div class="season-table" id="seasonTable"></div>
+          <div class="season-side">
+            <div class="season-card">
+              <h3>Derniers résultats</h3>
+              <div id="seasonResults"></div>
+            </div>
+            <div class="season-card">
+              <h3>Mes prochains matches</h3>
+              <div id="seasonNextFixtures"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="setup-actions" style="justify-content:center; gap:14px;">
+          <button class="btn btn-ghost" id="seasonBack">← Retour</button>
+        </div>
+      </div>
+    </section>
   </main>
 
   <!-- ============= MODALS ============= -->
@@ -558,6 +742,9 @@
   <script src="scripts/animals.js"></script>
   <script src="scripts/online.js"></script>
   <script src="scripts/sim.js"></script>
+  <script src="scripts/ai_reasoner.js"></script>
+  <script src="scripts/juste.js"></script>
+  <script src="scripts/season.js"></script>
   <script src="scripts/main.js"></script>
 </body>
 </html>

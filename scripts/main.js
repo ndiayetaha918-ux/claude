@@ -156,37 +156,35 @@
   // HERO POLAROID SCROLLER
   // ============================================================
   function buildHero() {
-    const stage = $('#heroStage');
-    if (!stage) return;
-    // Léger sur mobile (perf) : 2 rangées × 12, 24 polaroïds au lieu de 160
-    const rows = isMobile ? 2 : 3;
-    const perRow = isMobile ? 10 : 16;
-    const top = PLAYERS.slice(0, rows * perRow);
-    for (let r = 0; r < rows; r++) {
-      const row = el('div', {
-        class: 'hero-row' + (r % 2 ? ' reverse' : '') + (r === 1 ? ' fast' : '') + (r === 2 ? ' slow' : ''),
-      });
-      const startIdx = (r * perRow) % top.length;
-      // On duplique la liste pour le défilement infini
-      for (let dup = 0; dup < 2; dup++) {
-        for (let i = 0; i < perRow; i++) {
-          const p = top[(startIdx + i) % top.length];
-          if (!p) continue;
-          const tilt = (((hashStr(p.id) % 9) - 4) / 1.3).toFixed(2) + 'deg';
-          const polaroid = el('div', { class: 'polaroid', style: `--tilt:${tilt}` });
-          const img = el('div', {
-            class: 'polaroid-img',
-            style: `background:${gradientFor(p)}`,
-          });
-          attachPhoto(img, p, 'polaroid-img-photo');
-          img.appendChild(el('span', { class: 'polaroid-img-fallback' }, initials(p)));
-          polaroid.appendChild(img);
-          polaroid.appendChild(el('div', { class: 'polaroid-name' }, p.name.toUpperCase()));
-          polaroid.appendChild(el('div', { class: 'polaroid-meta' }, p.value + ' M€'));
-          row.appendChild(polaroid);
-        }
-      }
-      stage.appendChild(row);
+    // Hero v3 : 3 cards bento (Draft / Five / Juste Prix)
+    const bento = $('#modeBento');
+    if (!bento) return;
+    // mouse glow tracking per card
+    bento.addEventListener('pointermove', (ev) => {
+      const card = ev.target.closest && ev.target.closest('.mode-card');
+      if (!card) return;
+      const r = card.getBoundingClientRect();
+      card.style.setProperty('--mx', ((ev.clientX - r.left) / r.width * 100) + '%');
+      card.style.setProperty('--my', ((ev.clientY - r.top) / r.height * 100) + '%');
+    });
+    bento.addEventListener('click', (ev) => {
+      const card = ev.target.closest('.mode-card');
+      if (!card) return;
+      const mode = card.dataset.bento;
+      routeMode(mode);
+    });
+  }
+
+  function routeMode(mode) {
+    if (mode === 'draft') {
+      // setup classique — scroll vers le panneau
+      $('#setupSection').scrollIntoView({ behavior: 'smooth' });
+    } else if (mode === 'five') {
+      showScreen('five');
+      initFiveScreen();
+    } else if (mode === 'juste') {
+      showScreen('juste');
+      initJusteScreen();
     }
   }
 
@@ -2206,15 +2204,16 @@
     const area = $('#aiAnalysisArea');
     const status = $('#aiAnalysisStatus');
     if (!area) return;
+    // 1) Toujours rendre le raisonnement déterministe en premier (instantané)
+    renderDeterministicAnalysis(area, status);
+    // 2) Si une clé est posée, on enrichit avec l'analyse LLM par-dessus
     let key = null;
     try { key = localStorage.getItem('drafter_ai_key'); } catch (e) {}
-    if (!key) {
-      status.textContent = 'pas de clé configurée';
-      area.innerHTML = '<p class="muted">Aucune clé Claude API détectée. Configure-la dans le setup pour activer une analyse tactique sur-mesure.</p>';
-      return;
-    }
-    status.textContent = 'génération en cours...';
-    area.innerHTML = '<div class="ai-loading">⏳ Claude analyse les équipes (10-30s)...</div>';
+    if (!key) return;
+    status.textContent = 'enrichissement Claude...';
+    const enrichBox = el('div', { class: 'ai-loading' });
+    enrichBox.textContent = '⏳ Claude approfondit l\'analyse...';
+    area.appendChild(enrichBox);
 
     const teams = state.participants.map((p, i) => {
       const score = stadiumState.scores[i];
@@ -2258,20 +2257,75 @@
           messages: [{ role: 'user', content: prompt }],
         }),
       });
+      enrichBox.remove();
       if (!res.ok) {
         const errTxt = await res.text();
-        area.innerHTML = '<p class="muted ai-error">Erreur API ' + res.status + '. ' + errTxt.slice(0, 200) + '</p>';
-        status.textContent = 'erreur';
+        const errEl = el('p', { class: 'muted ai-error' });
+        errEl.textContent = 'Enrichissement Claude indisponible (HTTP ' + res.status + '). Analyse heuristique conservée.';
+        area.appendChild(errEl);
+        status.textContent = 'heuristique seul';
         return;
       }
       const data = await res.json();
       const text = (data.content || []).map(c => c.text || '').join('\n');
-      area.innerHTML = '<div class="ai-output">' + renderMarkdown(text) + '</div>';
-      status.textContent = '✓ générée par Claude';
+      const div = el('div', { class: 'ai-output ai-llm' });
+      div.innerHTML = '<h3 class="ai-h">🤖 Approfondissement Claude</h3>' + renderMarkdown(text);
+      area.appendChild(div);
+      status.textContent = '✓ enrichi par Claude';
     } catch (e) {
-      area.innerHTML = '<p class="muted ai-error">Erreur réseau : ' + e.message + '</p>';
-      status.textContent = 'erreur réseau';
+      enrichBox.remove();
+      const errEl = el('p', { class: 'muted ai-error' });
+      errEl.textContent = 'Réseau Claude inaccessible : ' + e.message;
+      area.appendChild(errEl);
+      status.textContent = 'heuristique seul';
     }
+  }
+
+  function renderDeterministicAnalysis(area, status) {
+    if (!window.Reason) return;
+    status.textContent = 'raisonnement intégré';
+    area.innerHTML = '';
+    const wrap = el('div', { class: 'ai-output' });
+
+    // 1) Analyse par équipe
+    state.participants.forEach((p, i) => {
+      const tp = stadiumState.profiles[i];
+      const tac = stadiumState.tactics[i] || window.Sim.STYLES.equilibre.tactics;
+      const score = stadiumState.scores[i];
+      if (!tp || !score) return;
+      const block = el('div', { class: 'ai-team-block glow' });
+      block.appendChild(el('h3', { class: 'ai-h' }, p.name + ' — ' + FORMATIONS[p.formation].label + ' · ' + score.overall + '/99'));
+      const html = window.Reason.analyzeTeam(p.name, score, tp, tac, FORMATIONS, playerById, p.formation);
+      const div = document.createElement('div');
+      div.innerHTML = html;
+      block.appendChild(div);
+      wrap.appendChild(block);
+    });
+
+    // 2) Matchups par paire (max 6 paires pour rester lisible)
+    if (state.participants.length >= 2) {
+      const matchupsEl = el('div', { class: 'ai-matchups' });
+      matchupsEl.appendChild(el('h3', { class: 'ai-h' }, '⚔ Matchups potentiels'));
+      const seen = new Set();
+      const pairs = [];
+      for (let i = 0; i < state.participants.length; i++)
+        for (let j = i + 1; j < state.participants.length; j++) pairs.push([i, j]);
+      pairs.slice(0, 6).forEach(([i, j]) => {
+        const pa = state.participants[i], pb = state.participants[j];
+        const tpA = stadiumState.profiles[i], tpB = stadiumState.profiles[j];
+        const tacA = stadiumState.tactics[i] || window.Sim.STYLES.equilibre.tactics;
+        const tacB = stadiumState.tactics[j] || window.Sim.STYLES.equilibre.tactics;
+        if (!tpA || !tpB) return;
+        const block = el('div', { class: 'ai-team-block glow' });
+        block.appendChild(el('h4', { class: 'ai-h' }, pa.name + ' vs ' + pb.name));
+        const html = window.Reason.analyzeMatchup(pa.name, tpA, tacA, pb.name, tpB, tacB);
+        const div = document.createElement('div'); div.innerHTML = html;
+        block.appendChild(div);
+        matchupsEl.appendChild(block);
+      });
+      wrap.appendChild(matchupsEl);
+    }
+    area.appendChild(wrap);
   }
 
   function renderMarkdown(md) {
@@ -2799,6 +2853,483 @@
     return Math.min(110000, hops * (560 / simAnim.speed) + 4000);
   }
 
+  // ============================================================
+  // MODE FIVE (5v5)
+  // ============================================================
+  const FIVE_FORMATIONS = window.FIVE_FORMATIONS || {};
+  let fiveTeam = null;   // { formation, slots, name }
+  let fiveBudget = 200;
+
+  function initFiveScreen() {
+    // populate formations
+    const sel = $('#fiveFormation');
+    if (sel && sel.children.length === 0) {
+      Object.keys(FIVE_FORMATIONS).forEach((k, i) => {
+        const opt = el('option', { value: k }, FIVE_FORMATIONS[k].label);
+        if (i === 0) opt.setAttribute('selected', '');
+        sel.appendChild(opt);
+      });
+    }
+    fiveBudget = +($('#fiveBudget').value || 200);
+    $('#fiveBudgetVal').textContent = String(fiveBudget);
+    fiveTeam = { formation: sel.value, slots: {}, name: $('#fiveName').value || 'Toi' };
+    Object.keys(FIVE_FORMATIONS[fiveTeam.formation].slots || {}).forEach(() => {});
+    FIVE_FORMATIONS[fiveTeam.formation].slots.forEach(s => fiveTeam.slots[s.id] = null);
+    renderFivePitch();
+
+    // bindings
+    sel.onchange = () => {
+      fiveTeam.formation = sel.value;
+      fiveTeam.slots = {};
+      FIVE_FORMATIONS[fiveTeam.formation].slots.forEach(s => fiveTeam.slots[s.id] = null);
+      renderFivePitch();
+      validateFive();
+    };
+    $('#fiveBudget').oninput = () => {
+      fiveBudget = +$('#fiveBudget').value;
+      $('#fiveBudgetVal').textContent = String(fiveBudget);
+      validateFive();
+    };
+    $('#fiveName').oninput = () => { fiveTeam.name = $('#fiveName').value || 'Toi'; };
+    $('#fiveBack').onclick = () => showScreen('setup');
+    $('#fiveStart').onclick = startFiveSimulation;
+    $$('#fiveOppLevel button').forEach(b => b.onclick = () => {
+      $$('#fiveOppLevel button').forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+    });
+  }
+
+  function renderFivePitch() {
+    const mount = $('#fivePitch');
+    mount.innerHTML = '';
+    mount.appendChild(el('div', { class: 'pitch-circle' }));
+    const F = FIVE_FORMATIONS[fiveTeam.formation];
+    F.slots.forEach(slot => {
+      const pid = fiveTeam.slots[slot.id];
+      const pl = pid ? playerById(pid) : null;
+      const slotEl = el('div', {
+        class: 'slot' + (pl ? ' filled' : ''),
+        style: `left:${slot.x}%; top:${slot.y}%`,
+        'data-sid': slot.id,
+      });
+      const bubble = el('div', { class: 'slot-bubble' });
+      if (pl) {
+        const ph = el('div', { class: 'slot-photo', style: `background:${gradientFor(pl)}` });
+        attachPhoto(ph, pl, 'slot-photo-img');
+        ph.appendChild(el('span', { class: 'slot-photo-fb' }, initials(pl)));
+        bubble.appendChild(ph);
+      } else { bubble.appendChild(el('span', {}, slot.type)); }
+      slotEl.appendChild(bubble);
+      slotEl.appendChild(el('div', { class: 'slot-name' },
+        pl ? pl.name.split(' ').slice(-1)[0].toUpperCase() + ' · ' + pl.value + 'M' : slot.type));
+      slotEl.addEventListener('click', () => openFivePicker(slot));
+      mount.appendChild(slotEl);
+    });
+    validateFive();
+  }
+
+  function validateFive() {
+    const total = Object.values(fiveTeam.slots).filter(Boolean).length;
+    const spent = Object.values(fiveTeam.slots).filter(Boolean)
+      .reduce((s, id) => s + (playerById(id) ? (playerById(id).value || 0) : 0), 0);
+    $('#fiveStart').disabled = total < 5 || spent > fiveBudget;
+  }
+
+  let fivePickerSlot = null;
+  function openFivePicker(slot) {
+    fivePickerSlot = slot;
+    pickerState.slot = slot;
+    pickerState.target = 'five';
+    pickerState.acceptedPositionsOverride = null;
+    pickerState.search = ''; pickerState.age = 'all'; pickerState.league = ''; pickerState.club = '';
+    pickerState.affordable = true;
+    const toolbar = $('.picker-toolbar'); if (toolbar) toolbar.style.display = '';
+    $('#pickerEyebrow').textContent = '/ FIVE · POSTE ' + slot.type;
+    $('#pickerTitle').textContent = 'Choisis ton ' + (POS_LABEL_FR[slot.type] || slot.type);
+    $('#pickerSearch').value = '';
+    $$('#pickerAge .chip').forEach(c => c.classList.remove('active'));
+    $$('#pickerAge .chip')[0].classList.add('active');
+    $('#pickerAffordable').checked = true;
+    // dropdowns
+    const accepted = SLOT_RULES[slot.type] || [];
+    const cand = PLAYERS.filter(p => state.leagues.has(p.league) && p.positions.some(pp => accepted.includes(pp)));
+    const leagues = Array.from(new Set(cand.map(p => p.league))).sort();
+    $('#pickerLeague').innerHTML = '<option value="">Tous championnats</option>' + leagues.map(l => `<option>${l}</option>`).join('');
+    const clubs = Array.from(new Set(cand.map(p => p.club))).sort();
+    $('#pickerClub').innerHTML = '<option value="">Tous clubs</option>' + clubs.map(c => `<option>${c}</option>`).join('');
+    openModal('#modalPicker');
+    setTimeout(() => $('#pickerSearch').focus(), 60);
+    renderPickerFive();
+  }
+  function renderPickerFive() {
+    const slot = pickerState.slot;
+    const accepted = SLOT_RULES[slot.type] || [];
+    let list = PLAYERS.filter(p => state.leagues.has(p.league) && p.positions.some(pp => accepted.includes(pp)));
+    if (pickerState.search) list = list.filter(p => normSearch(p.name).includes(pickerState.search));
+    if (pickerState.age === 'u21') list = list.filter(p => p.age < 21);
+    else if (pickerState.age === 'u25') list = list.filter(p => p.age < 25);
+    else if (pickerState.age === 'o30') list = list.filter(p => p.age >= 30);
+    if (pickerState.league) list = list.filter(p => p.league === pickerState.league);
+    if (pickerState.club) list = list.filter(p => p.club === pickerState.club);
+    // déjà piochés
+    const taken = new Set(Object.values(fiveTeam.slots).filter(Boolean));
+    list = list.filter(p => !taken.has(p.id));
+    if (pickerState.affordable) {
+      const spent = Object.values(fiveTeam.slots).filter(Boolean).reduce((s, id) => s + (playerById(id) ? playerById(id).value || 0 : 0), 0);
+      const remain = fiveBudget - spent;
+      list = list.filter(p => p.value <= remain);
+    }
+    list.sort((a, b) => b.value - a.value);
+    const grid = $('#pickerGrid'); grid.innerHTML = '';
+    $('#pickerStats').textContent = `${list.length} JOUEUR(S) DISPONIBLE(S)`;
+    list.slice(0, 120).forEach(p => grid.appendChild(buildFivePickerRow(p)));
+  }
+  function buildFivePickerRow(p) {
+    const row = el('div', { class: 'player-row glow' });
+    const photo = el('div', { class: 'pr-photo', style: `background:${gradientFor(p)}` });
+    attachPhoto(photo, p, '');
+    photo.appendChild(el('span', {}, initials(p)));
+    row.appendChild(photo);
+    const info = el('div', { class: 'pr-info' });
+    info.appendChild(el('div', { class: 'pr-name' }, p.name));
+    const meta = el('div', { class: 'pr-meta' });
+    p.positions.forEach(pos => meta.appendChild(el('span', { class: 'pos' }, pos)));
+    meta.appendChild(el('span', { class: 'age' }, p.age + ' ans'));
+    meta.appendChild(el('span', { class: 'club' }, '· ' + p.club));
+    info.appendChild(meta);
+    row.appendChild(info);
+    row.appendChild(el('div', { class: 'pr-price' }, p.value + ' M€'));
+    row.addEventListener('click', () => {
+      fiveTeam.slots[fivePickerSlot.id] = p.id;
+      closeModal('#modalPicker');
+      renderFivePitch();
+    });
+    return row;
+  }
+
+  function startFiveSimulation() {
+    // Construit l'adversaire IA
+    const level = $('#fiveOppLevel button.active')?.dataset.val || 'medium';
+    const oppBudget = level === 'easy' ? Math.round(fiveBudget * 0.7)
+                    : level === 'hard' ? Math.round(fiveBudget * 1.2)
+                    : fiveBudget;
+    const oppFormationKeys = Object.keys(FIVE_FORMATIONS);
+    const oppFK = oppFormationKeys[Math.floor(Math.random() * oppFormationKeys.length)];
+    const TOP5 = ['Premier League','La Liga','Bundesliga','Serie A','Ligue 1'];
+    const pool = PLAYERS.filter(p => TOP5.includes(p.league)).slice().sort((a, b) => b.value - a.value);
+    const oppSlots = {};
+    const used = new Set(Object.values(fiveTeam.slots).filter(Boolean));
+    let remain = oppBudget;
+    FIVE_FORMATIONS[oppFK].slots.forEach(s => {
+      const acc = SLOT_RULES[s.type] || [];
+      const cand = pool.filter(p => !used.has(p.id) && p.value <= remain && p.positions.some(pp => acc.includes(pp)));
+      if (!cand.length) return;
+      // pick somewhere in the top of affordable list
+      const top = cand.slice(0, Math.min(15, cand.length));
+      const pick = top[Math.floor(Math.random() * top.length)];
+      oppSlots[s.id] = pick.id; used.add(pick.id); remain -= pick.value;
+    });
+
+    // Construit deux participants pour la sim
+    const A = { id: 'me', name: fiveTeam.name, formation: fiveTeam.formation, slots: fiveTeam.slots, color: TEAM_COLORS[0] };
+    const B = { id: 'ai', name: 'IA ' + (level==='easy'?'Amateur':level==='hard'?'Élite':'Confirmé'), formation: oppFK, slots: oppSlots, color: TEAM_COLORS[1] };
+
+    // Sauvegarde temporaire de state participants
+    const backup = state.participants.slice();
+    state.participants = [A, B];
+    // Hack pour utiliser FIVE_FORMATIONS sur le simulateur : on injecte temporairement
+    const SAVED_FORM = Object.assign({}, FORMATIONS);
+    Object.assign(FORMATIONS, FIVE_FORMATIONS);
+    stadiumState.styles = ['equilibre', 'equilibre'];
+    stadiumState.tactics = [window.Sim.STYLES.equilibre.tactics, window.Sim.STYLES.equilibre.tactics];
+    stadiumState.scores = [
+      window.Sim.computeTeamScore(A, FORMATIONS, SLOT_RULES, playerById, stadiumState.tactics[0]),
+      window.Sim.computeTeamScore(B, FORMATIONS, SLOT_RULES, playerById, stadiumState.tactics[1]),
+    ];
+    stadiumState.profiles = [
+      window.Sim.teamProfile(A, FORMATIONS, playerById, stadiumState.tactics[0]),
+      window.Sim.teamProfile(B, FORMATIONS, playerById, stadiumState.tactics[1]),
+    ];
+    stadiumState.matches = [{ a: 0, b: 1, type: 'five', played: false, result: null }];
+    state.matchMode = 'five';
+    // Switch écran stadium
+    showScreen('stadium');
+    renderTeamScores();
+    renderTournament();
+    // Lancer
+    setTimeout(() => playMatch(0), 400);
+    // après simulation, on restaure
+    setTimeout(() => {
+      // restauration différée (laisse la simulation finir)
+    }, 100);
+    // store restore handles
+    state._fiveRestore = () => {
+      Object.keys(FORMATIONS).forEach(k => { if (!SAVED_FORM[k]) delete FORMATIONS[k]; });
+      Object.assign(FORMATIONS, SAVED_FORM);
+      state.participants = backup;
+      state.matchMode = null;
+    };
+  }
+
+  // ============================================================
+  // MODE JUSTE PRIX
+  // ============================================================
+  function initJusteScreen() {
+    window.JustePrix.init(REAL_PLAYERS);
+    $('#justeBack').onclick = () => showScreen('setup');
+    $$('.juste-variant').forEach(b => b.onclick = () => {
+      const v = b.dataset.variant;
+      if (v === 'updown') startUpDownGame();
+      else if (v === 'multi') showMultiSetup();
+    });
+  }
+
+  function startUpDownGame() {
+    $('#justeUpDown').style.display = 'block';
+    $('#justeMulti').style.display = 'none';
+    const s = window.JustePrix.startUpDown();
+    renderUpDown(s);
+    $('#justeLower').onclick = () => answerUp('lower');
+    $('#justeHigher').onclick = () => answerUp('higher');
+  }
+  function renderUpDown(s) {
+    fillJusteCard('#justeA', s.current, false);
+    fillJusteCard('#justeB', s.next, true);
+    $('#justeLives').textContent = '❤'.repeat(s.lives) + '🖤'.repeat(3 - s.lives);
+    $('#justeScore').textContent = String(s.score);
+    $('#justeFeedback').textContent = '';
+    $('#justeFeedback').className = 'juste-feedback';
+  }
+  function fillJusteCard(sel, player, hidden) {
+    const card = $(sel);
+    const photoBox = card.querySelector('.jp-photo');
+    photoBox.innerHTML = '';
+    const url = window.photoUrl && window.photoUrl(player);
+    if (url) {
+      const img = new Image();
+      img.src = url; img.loading = 'lazy';
+      img.onerror = () => { img.remove(); photoBox.textContent = initials(player); };
+      photoBox.appendChild(img);
+    } else { photoBox.textContent = initials(player); }
+    card.querySelector('.jp-name').textContent = player.name;
+    card.querySelector('.jp-club').textContent = player.club + ' · ' + (player.league || '');
+    if (hidden) {
+      card.querySelector('.jp-value-hidden').textContent = '?';
+    } else {
+      card.querySelector('.jp-value-known').textContent = player.value + ' M€';
+    }
+  }
+  function answerUp(dir) {
+    const r = window.JustePrix.answerUpDown(dir);
+    const fb = $('#justeFeedback');
+    // brièvement révéler la vraie valeur
+    $('#justeB .jp-value-hidden').textContent = r.last.b.value + ' M€';
+    if (r.last.tie) {
+      fb.textContent = '🟰 Même valeur — on continue';
+      fb.className = 'juste-feedback';
+    } else if (r.last.correct) {
+      fb.textContent = '✓ Bien vu !';
+      fb.className = 'juste-feedback correct';
+    } else {
+      fb.textContent = '✗ Faux — vie en moins';
+      fb.className = 'juste-feedback wrong';
+    }
+    setTimeout(() => {
+      if (!r.alive) {
+        fb.textContent = `Game over — meilleure série : ${r.score}`;
+        fb.className = 'juste-feedback wrong';
+        $('#justeLower').disabled = true; $('#justeHigher').disabled = true;
+        return;
+      }
+      renderUpDown(window.JustePrix.state);
+      $('#justeLower').disabled = false; $('#justeHigher').disabled = false;
+    }, 1400);
+  }
+
+  function showMultiSetup() {
+    $('#justeUpDown').style.display = 'none';
+    $('#justeMulti').style.display = 'block';
+    $('#multiSetup').style.display = 'block';
+    $('#multiRound').style.display = 'none';
+    const wrap = $('#multiParticipants');
+    wrap.innerHTML = '';
+    for (let i = 0; i < 4; i++) {
+      const def = ['Alex', 'Sam', 'Jordan', 'Charlie'][i];
+      const row = el('div', { class: 'mr-guess-row' });
+      row.appendChild(el('label', {}, 'Joueur ' + (i+1)));
+      const inp = el('input', { type: 'text', value: i < 2 ? def : '', placeholder: 'Pseudo (vide = absent)' });
+      row.appendChild(inp);
+      wrap.appendChild(row);
+    }
+    $('#multiStart').onclick = () => {
+      const parts = $$('#multiParticipants input')
+        .map((inp, i) => ({ name: inp.value.trim(), color: TEAM_COLORS[i % 4], idx: i }))
+        .filter(p => p.name);
+      if (parts.length < 2) return toast('Pas assez de joueurs', 'Il faut au moins 2 participants.');
+      window.JustePrix.startMulti(parts);
+      renderMultiRound();
+      $('#multiSetup').style.display = 'none';
+      $('#multiRound').style.display = 'block';
+    };
+  }
+
+  function renderMultiRound() {
+    const s = window.JustePrix.state;
+    const wrap = $('#multiRound'); wrap.innerHTML = '';
+    // Target card
+    const tgt = el('div', { class: 'mr-target' });
+    const ph = el('div', { class: 'mr-photo' });
+    const url = window.photoUrl && window.photoUrl(s.target);
+    if (url) { const im = new Image(); im.src = url; im.loading = 'lazy'; ph.appendChild(im); }
+    else { ph.textContent = initials(s.target); }
+    tgt.appendChild(ph);
+    tgt.appendChild(el('div', { class: 'mr-name' }, s.target.name));
+    tgt.appendChild(el('div', { class: 'mr-club' }, s.target.club + ' · ' + (s.target.league || '')));
+    tgt.appendChild(el('div', { class: 'mr-club' }, 'Manche ' + (s.round + 1) + ' / ' + s.rounds));
+    wrap.appendChild(tgt);
+
+    // Guess inputs
+    const list = el('div', { class: 'mr-guesses' });
+    s.participants.forEach((p, i) => {
+      const row = el('div', { class: 'mr-guess-row' });
+      row.appendChild(el('label', {}, p.name));
+      const inp = el('input', { type: 'number', min: '0', step: '1', placeholder: 'M€' });
+      row.appendChild(inp);
+      const btn = el('button', { class: 'btn btn-primary' }, 'Valider');
+      btn.onclick = () => {
+        const v = +inp.value;
+        if (!v && v !== 0) return;
+        const res = window.JustePrix.submitGuess(i, v);
+        row.classList.add('locked');
+        btn.disabled = true;
+        if (res.resolved) renderMultiReveal(res);
+      };
+      row.appendChild(btn);
+      list.appendChild(row);
+    });
+    wrap.appendChild(list);
+
+    // Score board
+    const sb = el('div', { class: 'mr-scoreboard' });
+    s.participants.forEach((p, i) => {
+      const tile = el('div', { class: 'mr-score-tile' + (Math.max(...s.scores) === s.scores[i] && s.scores[i] > 0 ? ' lead' : '') });
+      tile.appendChild(el('span', { class: 'name' }, p.name));
+      tile.appendChild(el('span', { class: 'pts' }, String(s.scores[i])));
+      sb.appendChild(tile);
+    });
+    wrap.appendChild(sb);
+  }
+  function renderMultiReveal(res) {
+    const s = window.JustePrix.state;
+    const wrap = $('#multiRound');
+    const rev = el('div', { class: 'mr-reveal' });
+    const winnerName = s.participants[res.winnerIdx].name;
+    let html = '<strong>Vraie valeur : ' + res.target + ' M€</strong><br>Gagnant de la manche : ' + winnerName + '.<br>';
+    s.participants.forEach((p, i) => {
+      const g = res.history.guesses[i];
+      const diff = Math.abs(g - res.target);
+      html += '<br>' + p.name + ' : ' + g + ' M€ (Δ ' + diff + ')';
+    });
+    rev.innerHTML = html;
+    wrap.appendChild(rev);
+    if (!res.finished) {
+      const nextBtn = el('button', { class: 'btn btn-primary' }, 'Manche suivante');
+      nextBtn.onclick = () => renderMultiRound();
+      rev.appendChild(document.createElement('br'));
+      rev.appendChild(nextBtn);
+    } else {
+      const finalMsg = el('div', {}, '🏆 ' + s.participants[res.scores.indexOf(Math.max.apply(null, res.scores))].name + ' remporte la partie !');
+      finalMsg.style.marginTop = '12px';
+      finalMsg.style.fontFamily = 'Bebas Neue';
+      finalMsg.style.fontSize = '22px';
+      finalMsg.style.color = 'var(--neon)';
+      rev.appendChild(finalMsg);
+    }
+  }
+
+  // ============================================================
+  // MODE SAISON
+  // ============================================================
+  function initSeasonScreen() {
+    $('#seasonBack').onclick = () => showScreen('setup');
+    $('#seasonStart').onclick = startSeason;
+    $('#seasonNext').onclick = nextSeasonRound;
+    $('#seasonAll').onclick = simulateFullSeason;
+  }
+  function startSeason() {
+    // utilise la dernière équipe du user du draft, OU génère depuis le setup courant
+    if (!state.participants.length || !state.participants[0].slots) {
+      return toast('Pas d\'équipe', 'Construis d\'abord une équipe via Draft, puis reviens ici.');
+    }
+    const me = state.participants[0];
+    const profile = window.Sim.teamProfile(me, FORMATIONS, playerById, window.Sim.STYLES.equilibre.tactics);
+    window.Season.init(me, profile, PLAYERS, FORMATIONS, SLOT_RULES, playerById, {
+      myName: me.name || 'Mon équipe',
+      tactics: window.Sim.STYLES.equilibre.tactics,
+    });
+    $('#seasonStart').disabled = true;
+    $('#seasonNext').disabled = false;
+    $('#seasonAll').disabled = false;
+    renderSeasonTable();
+  }
+  function nextSeasonRound() {
+    const r = window.Season.playNextRound();
+    if (r.finished) { $('#seasonNext').disabled = true; $('#seasonAll').disabled = true; }
+    renderSeasonTable();
+    renderRecentResults();
+  }
+  function simulateFullSeason() {
+    while (true) {
+      const r = window.Season.playNextRound();
+      if (!r || r.finished) break;
+    }
+    $('#seasonNext').disabled = true; $('#seasonAll').disabled = true;
+    renderSeasonTable();
+    renderRecentResults();
+  }
+  function renderSeasonTable() {
+    const s = window.Season.state; if (!s) return;
+    const table = window.Season.standings();
+    const wrap = $('#seasonTable');
+    const tbl = el('table');
+    const thead = el('thead'); const trh = el('tr');
+    ['#','Équipe','J','V','N','D','BP','BC','+/-','Pts','Forme'].forEach(h => trh.appendChild(el('th', {}, h)));
+    thead.appendChild(trh); tbl.appendChild(thead);
+    const tbody = el('tbody');
+    table.forEach((t, i) => {
+      const tr = el('tr', { class: t.isUser ? 'me' : '' });
+      tr.appendChild(el('td', { class: 'pos-rank' }, '' + (i+1)));
+      tr.appendChild(el('td', { class: 'pos-team' }, t.name));
+      tr.appendChild(el('td', {}, '' + t.p));
+      tr.appendChild(el('td', {}, '' + t.w));
+      tr.appendChild(el('td', {}, '' + t.d));
+      tr.appendChild(el('td', {}, '' + t.l));
+      tr.appendChild(el('td', {}, '' + t.gf));
+      tr.appendChild(el('td', {}, '' + t.ga));
+      tr.appendChild(el('td', {}, '' + (t.gf - t.ga)));
+      tr.appendChild(el('td', {}, '' + t.pts));
+      const form = el('td', { class: 'pos-form' });
+      (t.form || []).slice(-5).forEach(f => form.appendChild(el('span', { class: f }, f)));
+      tr.appendChild(form);
+      tbody.appendChild(tr);
+    });
+    tbl.appendChild(tbody);
+    wrap.innerHTML = ''; wrap.appendChild(tbl);
+  }
+  function renderRecentResults() {
+    const s = window.Season.state; if (!s) return;
+    const wrap = $('#seasonResults'); wrap.innerHTML = '';
+    const latest = s.results.slice(-8).reverse();
+    latest.forEach(r => {
+      const home = s.teams[r.home].name, away = s.teams[r.away].name;
+      const row = el('div', { class: 'sr-result' + (r.userInvolved ? ' me' : '') });
+      row.appendChild(el('div', {}, home));
+      row.appendChild(el('div', { class: 'score' }, r.hg + ' – ' + r.ag));
+      row.appendChild(el('div', { class: 'away' }, away));
+      wrap.appendChild(row);
+    });
+  }
+
   function init() {
     const note = $('#datasetNote');
     if (note) note.textContent = `${PLAYERS.length} joueurs · données Transfermarkt saison 2025-26 · valeurs marchandes en temps réel`;
@@ -2813,6 +3344,7 @@
     bindPicker();
     bindShortlist();
     bindSpotlight();
+    initSeasonScreen();
     $('#startGame').addEventListener('click', startGame);
     $('#restartBtn').addEventListener('click', restart);
     $('#restartBtn2') && $('#restartBtn2').addEventListener('click', restart);
