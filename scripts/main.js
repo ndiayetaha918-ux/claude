@@ -3313,13 +3313,23 @@
     const card = $(sel);
     const photoBox = card.querySelector('.jp-photo');
     photoBox.innerHTML = '';
-    const url = window.photoUrl && window.photoUrl(player);
-    if (url) {
+    // Cascade haute résolution : HQ primaire → HQ secondaire → SD → initiales
+    const urlHQ = window.photoUrlHQ && window.photoUrlHQ(player);
+    const urlHQ2 = window.photoUrlHQFallback && window.photoUrlHQFallback(player);
+    const urlSD = window.photoUrl && window.photoUrl(player);
+    const candidates = [urlHQ, urlHQ2, urlSD].filter((u, i, a) => u && a.indexOf(u) === i);
+    function tryNext(idx) {
+      if (idx >= candidates.length) { photoBox.textContent = initials(player); return; }
       const img = new Image();
-      img.src = url; img.loading = 'lazy';
-      img.onerror = () => { img.remove(); photoBox.textContent = initials(player); };
+      img.src = candidates[idx];
+      img.referrerPolicy = 'no-referrer';
+      img.decoding = 'async';
+      img.loading = 'eager';
+      img.onerror = () => { img.remove(); tryNext(idx + 1); };
       photoBox.appendChild(img);
-    } else { photoBox.textContent = initials(player); }
+    }
+    if (candidates.length) tryNext(0);
+    else photoBox.textContent = initials(player);
     card.querySelector('.jp-name').textContent = player.name;
     card.querySelector('.jp-club').textContent = player.club + ' · ' + (player.league || '');
     if (hidden) {
@@ -3424,9 +3434,18 @@
     // Target card
     const tgt = el('div', { class: 'mr-target' });
     const ph = el('div', { class: 'mr-photo' });
-    const url = window.photoUrl && window.photoUrl(s.target);
-    if (url) { const im = new Image(); im.src = url; im.loading = 'lazy'; ph.appendChild(im); }
-    else { ph.textContent = initials(s.target); }
+    const urls = [
+      window.photoUrlHQ && window.photoUrlHQ(s.target),
+      window.photoUrlHQFallback && window.photoUrlHQFallback(s.target),
+      window.photoUrl && window.photoUrl(s.target),
+    ].filter((u, i, a) => u && a.indexOf(u) === i);
+    (function tryNext(i) {
+      if (i >= urls.length) { ph.textContent = initials(s.target); return; }
+      const im = new Image();
+      im.src = urls[i]; im.referrerPolicy = 'no-referrer'; im.decoding = 'async';
+      im.onerror = () => { im.remove(); tryNext(i+1); };
+      ph.appendChild(im);
+    })(0);
     tgt.appendChild(ph);
     tgt.appendChild(el('div', { class: 'mr-name' }, s.target.name));
     tgt.appendChild(el('div', { class: 'mr-club' }, s.target.club + ' · ' + (s.target.league || '')));

@@ -2985,10 +2985,10 @@ h1, h2, h3, h4 { margin: 0; font-weight: 800; letter-spacing: -0.02em; color: va
 .juste-pcard.flash::before { opacity: 1; animation: jpFlash 0.7s ease; }
 @keyframes jpFlash { 0%{background-position:-30% 0} 100%{background-position:130% 0} }
 
-/* Photo : carré aux bords arrondis */
+/* Photo : carré aux bords arrondis, taille généreuse pour exploiter le HD */
 .jp-photo {
-  width: 200px; height: 200px;
-  border-radius: 22px;
+  width: 260px; height: 260px;
+  border-radius: 26px;
   background: var(--grad-card);
   border: 1px solid rgba(255,255,255,0.12);
   display: grid; place-items: center;
@@ -2997,7 +2997,10 @@ h1, h2, h3, h4 { margin: 0; font-weight: 800; letter-spacing: -0.02em; color: va
   position: relative;
   box-shadow:
     inset 0 1px 0 rgba(255,255,255,0.15),
-    0 14px 30px rgba(0,0,0,0.45);
+    0 18px 36px rgba(0,0,0,0.5);
+}
+@media (max-width: 540px) {
+  .jp-photo { width: 200px; height: 200px; border-radius: 22px; }
 }
 .jp-photo::after {
   content: ""; position: absolute; inset: 0;

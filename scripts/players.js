@@ -207,3 +207,23 @@ window.photoUrlFallback = function(player) {
   if (player.tmid)   return 'https://img.a.transfermarkt.technology/portrait/medium/' + player.tmid + '-1.jpg';
   return null;
 };
+
+// Photo HAUTE RÉSOLUTION (≥1024px) — pour Juste Prix solo, cards immersives
+// Cascade différente : on privilégie les sources qui servent du gros (Sofascore ~1024,
+// TM /header ~1024, Sofifa /240 max), avec fallback vers la basse résolution si rien
+window.photoUrlHQ = function(player) {
+  if (player.photo) return player.photo;
+  if (player.sofa)  return 'https://api.sofascore.app/api/v1/player/' + player.sofa + '/image';
+  if (player.tmid)  return 'https://img.a.transfermarkt.technology/portrait/header/' + player.tmid + '-1.jpg';
+  if (player.fot)   return 'https://images.fotmob.com/image_resources/playerimages/' + player.fot + '.png';
+  if (player.sofifa) return player.sofifa.replace(/_120\.png$/, '_240.png');
+  return null;
+};
+window.photoUrlHQFallback = function(player) {
+  // si la HQ primaire fail, on essaye autre HQ puis la basse résolution
+  if (player.tmid && !player.sofa)  return null;
+  if (player.tmid)   return 'https://img.a.transfermarkt.technology/portrait/header/' + player.tmid + '-1.jpg';
+  if (player.fot)    return 'https://images.fotmob.com/image_resources/playerimages/' + player.fot + '.png';
+  if (player.sofifa) return player.sofifa.replace(/_120\.png$/, '_240.png');
+  return window.photoUrl ? window.photoUrl(player) : null;
+};
