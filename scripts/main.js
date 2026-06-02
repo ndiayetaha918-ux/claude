@@ -163,40 +163,64 @@
   // HERO POLAROID SCROLLER
   // ============================================================
   function buildHero() {
-    // Hero v4 : spatial arc 3 cards (Five / Draft / Juste)
+    buildHeroMosaic();
     const bento = $('#modeBento');
     if (!bento) return;
 
-    // Parallax au niveau du stage (l'ensemble bouge subtilement avec la souris)
-    let rafParallax = null;
-    function setParallax(mx, my) {
-      bento.style.setProperty('--mx', mx);
-      bento.style.setProperty('--my', my);
-    }
+    // Mouse-tracking glow par card (l'effet de halo qui suit le pointeur)
     bento.addEventListener('pointermove', (ev) => {
-      const r = bento.getBoundingClientRect();
-      const mx = ((ev.clientX - r.left) / r.width - 0.5) * 2;   // -1..1
-      const my = ((ev.clientY - r.top) / r.height - 0.5) * 2;
-      if (rafParallax) return;
-      rafParallax = requestAnimationFrame(() => {
-        rafParallax = null;
-        setParallax(mx.toFixed(3), my.toFixed(3));
-      });
-      // glow per card
       const card = ev.target.closest && ev.target.closest('.mode-card');
-      if (card) {
-        const cr = card.getBoundingClientRect();
-        card.style.setProperty('--mx-px', (ev.clientX - cr.left) + 'px');
-        card.style.setProperty('--my-px', (ev.clientY - cr.top) + 'px');
-      }
+      if (!card) return;
+      const cr = card.getBoundingClientRect();
+      const px = ((ev.clientX - cr.left) / cr.width) * 100;
+      const py = ((ev.clientY - cr.top) / cr.height) * 100;
+      card.style.setProperty('--mx-px', px + '%');
+      card.style.setProperty('--my-px', py + '%');
     });
-    bento.addEventListener('pointerleave', () => setParallax(0, 0));
 
     bento.addEventListener('click', (ev) => {
       const card = ev.target.closest('.mode-card');
       if (!card) return;
       routeMode(card.dataset.bento);
     });
+  }
+
+  // Mosaïque de mini-cards qui défile en boucle au-dessus du hero
+  function buildHeroMosaic() {
+    const r1 = document.querySelector('.hm-row.r1');
+    const r2 = document.querySelector('.hm-row.r2');
+    if (!r1 || !r2) return;
+    // Sélection : top 32 joueurs avec photo, mélange pour deux rows distinctes
+    const pool = (window.PLAYERS || []).slice()
+      .filter(p => (window.photoUrl && window.photoUrl(p)))
+      .sort((a, b) => (b.value || 0) - (a.value || 0))
+      .slice(0, 32);
+    // Mélange déterministe pour avoir 2 lignes différentes
+    function buildRow(target, offset) {
+      const items = pool.slice(offset).concat(pool.slice(0, offset));
+      // On répète 2× la séquence pour permettre une boucle continue (translate -50%)
+      const cycle = items.concat(items);
+      cycle.forEach(p => {
+        const card = el('div', { class: 'hm-card' });
+        // glow par club
+        const rgb = (typeof glowColorFor === 'function') ? glowColorFor(p) : [214, 139, 60];
+        card.style.setProperty('--glow-r', rgb[0]);
+        card.style.setProperty('--glow-g', rgb[1]);
+        card.style.setProperty('--glow-b', rgb[2]);
+        const url = window.photoUrl(p);
+        if (url) {
+          const img = new Image();
+          img.src = url; img.loading = 'lazy'; img.decoding = 'async';
+          img.referrerPolicy = 'no-referrer';
+          img.alt = p.name;
+          card.appendChild(img);
+        }
+        card.appendChild(el('div', { class: 'hm-name' }, p.name.split(' ').slice(-1)[0]));
+        target.appendChild(card);
+      });
+    }
+    buildRow(r1, 0);
+    buildRow(r2, 20);
   }
 
   function routeMode(mode) {
