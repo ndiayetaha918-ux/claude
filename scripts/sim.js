@@ -342,12 +342,14 @@
           const finisher = cOff.att.length ? weightedPick(cOff.att,'pac') : weightedPick(cOff.players,'att');
           const passer = cOff.mid.length ? weightedPick(cOff.mid,'cre') : pick(cOff.players);
           const shotQ = (finisher.att*0.6 + finisher.pac*0.2 + cOff.finishing*0.2)/100;
-          const onT = chance(shotQ*0.7+0.1);
+          const onT = chance(Math.max(0.1, Math.min(0.92, Math.pow(shotQ, 1.2) * 1.05)));
           const xg = +(0.08 + shotQ*0.22).toFixed(2);
           const cStats = cTeam==='A'?statsA:statsB;
           cStats.shots++; cStats.xg+=xg; if(onT)cStats.onTarget++;
           const gk = (cTeam==='A'?tpB:tpA).gkRating;
-          const isGoal = onT && chance(shotQ * (1 - gk/150) * 0.62);
+          const isGoal = onT && chance(Math.max(0.04, Math.min(0.95,
+            Math.pow(shotQ, 1.7) * (1 - gk/130) * 1.4
+          )));
           bump(passer.player.id,'key');
           moments.push({
             t:minute, type: isGoal?'goal':(onT?'save':'miss'), team:cTeam, counter:true,
@@ -367,12 +369,21 @@
       // chance créée → tir
       const shooter = finalP || (off.att.length?pick(off.att):pick(off.players));
       const assister = mid2 && mid2!==shooter ? mid2 : (mid1 && mid1!==shooter ? mid1 : null);
+      // Qualité du tir : 0..1, dépend du finisseur + finishing collective
       const shotQ = (shooter.att*0.55 + shooter.tec*0.2 + off.finishing*0.25)/100;
-      const onT = chance(shotQ*0.66 + 0.12);
-      const xg = +(0.1 + shotQ*0.28).toFixed(2);
+      // On-target : nonlinéaire — un attaquant médiocre cadre rarement, un top cadre presque toujours
+      const onTProb = Math.max(0.05, Math.min(0.92, Math.pow(shotQ, 1.2) * 1.1));
+      const onT = chance(onTProb);
+      const xg = +(0.06 + Math.pow(shotQ, 1.6) * 0.55).toFixed(2);
       if (aHas){ statsA.shots++; statsA.xg+=xg; if(onT)statsA.onTarget++; } else { statsB.shots++; statsB.xg+=xg; if(onT)statsB.onTarget++; }
       const gk = deff.gkRating;
-      const isGoal = onT && chance(shotQ * (1 - gk/150) * 0.6);
+      // Conversion but : quadratique en shotQ et linéaire inverse au GK
+      // → 2 équipes médiocres face à un bon GK : taux but très bas (0-1)
+      // → 2 super attaques face à GK moyen : taux but très haut (3-5+)
+      const goalProb = onT ? Math.max(0.02, Math.min(0.95,
+        Math.pow(shotQ, 1.7) * (1 - gk/130) * 1.35
+      )) : 0;
+      const isGoal = chance(goalProb);
       if (assister) bump(assister.player.id,'key');
 
       if (isGoal) {
