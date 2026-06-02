@@ -38,16 +38,63 @@
   --pitch-l:   #3a8a6c;
 
   /* gradients — utilisés avec parcimonie */
-  --grad-cta:    linear-gradient(135deg, #efb46f 0%, #d68b3c 55%, #8a4f1c 100%);
+  /* === Gradient maps RICHES (multi-stops, nacrés, irisés) — pas du orange→orange === */
+  --grad-cta: linear-gradient(135deg,
+    #fff4e0 0%,
+    #f6d49c 18%,
+    #efb46f 38%,
+    #d68b3c 58%,
+    #a36320 78%,
+    #5c3210 100%);
   --grad-orange: linear-gradient(135deg, #efb46f 0%, #d68b3c 100%);
   --grad-pitch:  linear-gradient(180deg, #3a8a6c 0%, #1f5740 55%, #0e2418 100%);
   --grad-card:   linear-gradient(180deg, #1a1f29 0%, #13171f 100%);
-  --grad-ink:    linear-gradient(135deg, #efb46f 0%, #8a4f1c 100%);
-  --grad-pearl:  linear-gradient(160deg, #f3dcb0 0%, #c79a64 50%, #6e4520 100%);
-  /* Pour les 3 modes hero */
-  --grad-mode-draft:  linear-gradient(160deg, #f3dcb0 0%, #b78c52 35%, #523920 70%, #1a120a 100%);
-  --grad-mode-five:   linear-gradient(160deg, #b6cfd9 0%, #5e87a0 40%, #1f3744 75%, #0a141b 100%);
-  --grad-mode-juste:  linear-gradient(160deg, #d4928a 0%, #8a3d3f 40%, #46161b 75%, #1a070a 100%);
+  /* Gradient nacré/ivoire pour les titres : plusieurs nuances de blanc cassé + cuivre */
+  --grad-ink: linear-gradient(125deg,
+    #fbf3e0 0%,
+    #ecdcc0 22%,
+    #d6b988 42%,
+    #c19660 60%,
+    #8a5c2a 80%,
+    #4a2810 100%);
+  --grad-pearl:  linear-gradient(135deg,
+    #fdf6e6 0%,
+    #f4e3c0 20%,
+    #e2c895 42%,
+    #b88a4c 65%,
+    #7a4318 88%,
+    #2a1305 100%);
+
+  /* === Gradient maps PAR MODE — gradiente map riche pour ombre, fond ambiance === */
+  /* Five — Cherki / City : bleu azur + blanc nacré + cyan + bleu profond */
+  --grad-mode-five: linear-gradient(160deg,
+    #e8f4fa 0%,
+    #b6dce8 18%,
+    #6fb1d4 38%,
+    #3a7fb5 58%,
+    #1d4a7d 78%,
+    #0b2138 100%);
+  --shadow-mode-five: 0 60px 100px rgba(58, 127, 181, 0.42), 0 30px 60px rgba(58, 127, 181, 0.28);
+
+  /* Draft — Yamal / Barça : grenat + rouge + or chaud + cassis */
+  --grad-mode-draft: linear-gradient(160deg,
+    #fbe8d8 0%,
+    #e8aa78 20%,
+    #c8542f 42%,
+    #8a2126 62%,
+    #4a0c1e 82%,
+    #1c0510 100%);
+  --shadow-mode-draft: 0 60px 100px rgba(200, 84, 47, 0.45), 0 30px 60px rgba(138, 33, 38, 0.3);
+
+  /* Juste Prix — Mbappé / Real : ivoire + or + nacré + champagne */
+  --grad-mode-juste: linear-gradient(160deg,
+    #fff8e8 0%,
+    #f5e3b8 18%,
+    #e0c177 38%,
+    #b88c4a 58%,
+    #6e4a1c 78%,
+    #2a1808 100%);
+  --shadow-mode-juste: 0 60px 100px rgba(224, 193, 119, 0.42), 0 30px 60px rgba(184, 140, 74, 0.32);
 
   --shadow-sm: 0 1px 3px rgba(0,0,0,0.55);
   --shadow-md: 0 10px 30px rgba(0,0,0,0.55), 0 2px 8px rgba(0,0,0,0.35);
@@ -61,7 +108,9 @@
   --r-2xl: 40px;
 
   --font: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-  --display: 'Bebas Neue', 'Inter', sans-serif;
+  /* Polices premium éditoriales (style Anthropic) — Instrument Serif est très proche de Tiempos */
+  --display: 'Instrument Serif', 'Times New Roman', serif;
+  --display-impact: 'Bebas Neue', 'Inter', sans-serif;   /* pour les titres très très impact uniquement */
   --display-2: 'Space Grotesk', 'Inter', sans-serif;
   --mono: 'JetBrains Mono', ui-monospace, monospace;
 }
@@ -132,6 +181,27 @@ body {
   background-image:
     radial-gradient(1400px 700px at 85% -300px, rgba(214,139,60,0.035), transparent 70%),
     radial-gradient(1000px 600px at -100px 50%, rgba(138,79,28,0.025), transparent 70%);
+  transition: background-color 0.7s ease, background-image 0.7s ease;
+}
+
+/* === Ambiance globale qui change selon le mode survolé === */
+body.mode-hover-five {
+  background-image:
+    radial-gradient(80% 60% at 50% 100%, rgba(58, 127, 181, 0.20), transparent 65%),
+    radial-gradient(1400px 700px at 85% -300px, rgba(58, 127, 181, 0.06), transparent 70%),
+    radial-gradient(1000px 600px at -100px 50%, rgba(110, 178, 212, 0.04), transparent 70%);
+}
+body.mode-hover-draft {
+  background-image:
+    radial-gradient(80% 60% at 50% 100%, rgba(200, 84, 47, 0.22), transparent 65%),
+    radial-gradient(1400px 700px at 85% -300px, rgba(200, 84, 47, 0.07), transparent 70%),
+    radial-gradient(1000px 600px at -100px 50%, rgba(138, 33, 38, 0.05), transparent 70%);
+}
+body.mode-hover-juste {
+  background-image:
+    radial-gradient(80% 60% at 50% 100%, rgba(224, 193, 119, 0.22), transparent 65%),
+    radial-gradient(1400px 700px at 85% -300px, rgba(224, 193, 119, 0.07), transparent 70%),
+    radial-gradient(1000px 600px at -100px 50%, rgba(184, 140, 74, 0.05), transparent 70%);
 }
 
 /* Stadium grass overlay (super subtle stripes) */
@@ -158,51 +228,97 @@ h1, h2, h3, h4 { margin: 0; font-weight: 800; letter-spacing: -0.02em; color: va
    bord glassy. Hover redresse + grandit.
    ========================================================================== */
 
-/* Mosaïque qui défile (background du hero, au-dessus du titre) */
+/* === Mosaïque qui défile (style visionneuse / grand angle) === */
 .hero-mosaic {
   position: relative;
   width: 100%;
-  height: clamp(200px, 25vw, 300px);
+  height: clamp(230px, 28vw, 340px);
   overflow: hidden;
-  margin-bottom: 32px;
-  -webkit-mask-image: linear-gradient(90deg, transparent 0%, black 12%, black 88%, transparent 100%),
-                      linear-gradient(180deg, black 0%, black 70%, transparent 100%);
+  margin-bottom: 36px;
+  /* perspective pour l'effet de visionneuse */
+  perspective: 1200px;
+  perspective-origin: 50% 50%;
+  /* masque dégradé sur les côtés + bas pour fade dans le fond */
+  -webkit-mask-image: linear-gradient(90deg,
+                        transparent 0%,
+                        black 12%, black 88%,
+                        transparent 100%),
+                      linear-gradient(180deg,
+                        black 0%, black 70%,
+                        transparent 100%);
   -webkit-mask-composite: source-in;
-          mask-image: linear-gradient(90deg, transparent 0%, black 12%, black 88%, transparent 100%),
-                      linear-gradient(180deg, black 0%, black 70%, transparent 100%);
+          mask-image: linear-gradient(90deg,
+                        transparent 0%,
+                        black 12%, black 88%,
+                        transparent 100%),
+                      linear-gradient(180deg,
+                        black 0%, black 70%,
+                        transparent 100%);
           mask-composite: intersect;
 }
+/* Gradient cuivre/nacré qui se superpose en haut (référence : ton croquis) */
+.hero-mosaic::before {
+  content: "";
+  position: absolute; left: 0; right: 0; top: 0;
+  height: 100%; z-index: 2;
+  pointer-events: none;
+  background:
+    radial-gradient(80% 60% at 50% 100%, rgba(214,139,60,0.22) 0%, transparent 60%),
+    linear-gradient(180deg, rgba(214,139,60,0.05) 0%, transparent 30%);
+  mix-blend-mode: screen;
+}
+
 .hm-row {
   position: absolute;
   left: 0; top: 0;
   display: flex;
-  gap: 14px;
+  gap: 16px;
   width: max-content;
   will-change: transform;
   animation: hmScroll linear infinite;
+  transform-style: preserve-3d;
 }
-.hm-row.r1 { top: 0;    height: 50%; animation-duration: 80s; animation-direction: normal; }
-.hm-row.r2 { bottom: 0; height: 50%; animation-duration: 95s; animation-direction: reverse; }
+.hm-row.r1 { top: 0;    height: 50%; animation-duration: 90s; animation-direction: normal; }
+.hm-row.r2 { bottom: 0; height: 50%; animation-duration: 105s; animation-direction: reverse; }
 .hero-mosaic:hover .hm-row { animation-play-state: paused; }
 @keyframes hmScroll {
   from { transform: translate3d(0, 0, 0); }
   to   { transform: translate3d(-50%, 0, 0); }
 }
+
 .hm-card {
   --glow-r: 214; --glow-g: 139; --glow-b: 60;
   flex: 0 0 auto;
-  width: clamp(80px, 9vw, 110px);
+  width: clamp(90px, 10vw, 130px);
   aspect-ratio: 4/5;
-  border-radius: 14px;
+  border-radius: 18px;
   position: relative;
   overflow: hidden;
-  background: linear-gradient(180deg, rgba(28,30,40,0.6) 0%, rgba(14,16,22,0.9) 100%);
-  border: 1px solid rgba(255,255,255,0.08);
+  background: linear-gradient(180deg, rgba(28,30,40,0.65) 0%, rgba(14,16,22,0.92) 100%);
+  /* Glow ambiant doux par card (couleur du club) */
   box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.12),
-    0 8px 24px rgba(0,0,0,0.45),
-    0 0 28px rgba(var(--glow-r), var(--glow-g), var(--glow-b), 0.22);
+    inset 0 1px 0 rgba(255,255,255,0.18),
+    inset 0 0 0 1px rgba(255,255,255,0.06),
+    0 10px 24px rgba(0,0,0,0.5),
+    0 0 32px rgba(var(--glow-r), var(--glow-g), var(--glow-b), 0.28);
   transform-style: preserve-3d;
+  transition: transform 0.4s ease;
+}
+/* Contour "glacé" — bord ciselé avec reflet supérieur et ombre intérieure inférieure */
+.hm-card::before {
+  content: "";
+  position: absolute; inset: 0; z-index: 3;
+  border-radius: inherit;
+  pointer-events: none;
+  background:
+    linear-gradient(160deg,
+      rgba(255,255,255,0.32) 0%,
+      rgba(255,255,255,0.10) 18%,
+      rgba(255,255,255,0.0) 35%,
+      rgba(0,0,0,0.0) 70%,
+      rgba(0,0,0,0.4) 100%);
+  /* simulate frosted edge */
+  mix-blend-mode: overlay;
 }
 .hm-card img {
   position: absolute; inset: 0;
@@ -212,18 +328,32 @@ h1, h2, h3, h4 { margin: 0; font-weight: 800; letter-spacing: -0.02em; color: va
 .hm-card::after {
   content: "";
   position: absolute; inset: 0;
-  background: linear-gradient(180deg, transparent 55%, rgba(0,0,0,0.85) 100%);
+  background: linear-gradient(180deg, transparent 55%, rgba(0,0,0,0.88) 100%);
   pointer-events: none;
-}
-.hm-card .hm-name {
-  position: absolute; left: 6px; right: 6px; bottom: 6px;
-  font-family: var(--mono); font-size: 8.5px;
-  color: white; opacity: 0.92;
-  text-transform: uppercase; letter-spacing: 0.04em;
-  text-shadow: 0 1px 2px rgba(0,0,0,0.8);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   z-index: 1;
 }
+.hm-card .hm-name {
+  position: absolute; left: 8px; right: 8px; bottom: 7px;
+  font-family: var(--mono); font-size: 9px;
+  color: white; opacity: 0.92;
+  text-transform: uppercase; letter-spacing: 0.04em;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.85);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  z-index: 2;
+}
+
+/* === Effet "visionneuse" (fisheye inversé / grand angle) ===
+   Les cards aux extrémités de chaque rangée sont légèrement plus petites
+   et inclinées, celles du centre plus grandes et frontales.
+   On utilise nth-child pour décliner — la mosaïque défilant en continu,
+   l'effet est subtil mais constant car les cards passent toutes par chaque position */
+.hm-card { will-change: transform; }
+/* Effet d'arc subtil sur chaque carte (le scroll horizontal donne déjà le défilement,
+   on ajoute une légère rotation Y permanente pour donner l'effet visionneuse) */
+.hm-row.r1 .hm-card:nth-child(odd)  { transform: rotateY(-4deg) translateZ(-6px); }
+.hm-row.r1 .hm-card:nth-child(even) { transform: rotateY(4deg)  translateZ(-6px); }
+.hm-row.r2 .hm-card:nth-child(odd)  { transform: rotateY(4deg)  translateZ(-6px); }
+.hm-row.r2 .hm-card:nth-child(even) { transform: rotateY(-4deg) translateZ(-6px); }
 
 /* ===== Hero shell ===== */
 .hero-v3 {
@@ -255,17 +385,20 @@ h1, h2, h3, h4 { margin: 0; font-weight: 800; letter-spacing: -0.02em; color: va
   background: var(--neon); box-shadow: 0 0 12px var(--neon);
 }
 .hero-title-v3 {
-  font-family: var(--display);
-  font-size: clamp(58px, 10vw, 132px);
-  line-height: 0.92; letter-spacing: -0.025em;
+  font-family: var(--display);  /* Instrument Serif — éditorial premium */
+  font-size: clamp(54px, 9vw, 116px);
+  line-height: 1.0; letter-spacing: -0.03em;
   color: var(--ink);
   margin: 0;
-  font-weight: 700;
+  font-weight: 400;
+  font-style: italic;
 }
 .hero-title-v3 .accent {
+  font-style: italic;
   background: var(--grad-ink);
   -webkit-background-clip: text; background-clip: text;
   color: transparent;
+  filter: drop-shadow(0 1px 0 rgba(255,255,255,0.06));
 }
 .hero-sub-v3 {
   margin-top: 22px;
@@ -283,10 +416,29 @@ h1, h2, h3, h4 { margin: 0; font-weight: 800; letter-spacing: -0.02em; color: va
   gap: clamp(8px, 1.5vw, 24px);
   justify-items: center;
   align-items: center;
-  padding: 60px 0 40px;
+  padding: 120px 0 100px;   /* + d'air pour que les ombres respirent */
   transform-style: preserve-3d;
-  perspective: 1500px;
+  perspective: 1800px;       /* perspective plus marquée */
 }
+
+/* Ombre colorée fondue sous chaque card (selon le mode) — gradient map riche */
+.mode-card::after {
+  content: "";
+  position: absolute;
+  left: 8%; right: 8%;
+  bottom: -50px;
+  height: 80px;
+  z-index: -1;
+  pointer-events: none;
+  background: var(--card-glow, radial-gradient(60% 100% at 50% 0%, rgba(214,139,60,0.6), transparent 70%));
+  filter: blur(28px);
+  opacity: 0.85;
+  transition: bottom 0.7s cubic-bezier(0.16,1,0.3,1), opacity 0.5s ease, height 0.7s ease, filter 0.5s ease;
+}
+.mode-card[data-bento="five"]  { --card-glow: radial-gradient(60% 100% at 50% 0%, #6fb1d4 0%, #3a7fb5 25%, rgba(58,127,181,0.5) 55%, transparent 80%); }
+.mode-card[data-bento="draft"] { --card-glow: radial-gradient(60% 100% at 50% 0%, #e8aa78 0%, #c8542f 25%, rgba(138,33,38,0.55) 55%, transparent 80%); }
+.mode-card[data-bento="juste"] { --card-glow: radial-gradient(60% 100% at 50% 0%, #f5e3b8 0%, #e0c177 25%, rgba(184,140,74,0.5) 55%, transparent 80%); }
+.mode-card:hover::after { bottom: -70px; height: 120px; filter: blur(34px); opacity: 1; }
 
 .mode-card {
   position: relative;
@@ -314,9 +466,10 @@ h1, h2, h3, h4 { margin: 0; font-weight: 800; letter-spacing: -0.02em; color: va
 }
 
 /* Arc 3D : gauche tournée vers le centre, droite en miroir, centre frontal */
-.mode-card[data-bento="five"]  { --tilt: 28deg;  --depth: -80px; --scale: 0.92; transform-origin: right center;  }
-.mode-card[data-bento="draft"] { --tilt: 0deg;   --depth: 60px;  --scale: 1.04; transform-origin: center center; z-index: 5; }
-.mode-card[data-bento="juste"] { --tilt: -28deg; --depth: -80px; --scale: 0.92; transform-origin: left center;  }
+/* Arc 3D plus prononcé : profondeur Z marquée pour vraiment SENTIR le détachement */
+.mode-card[data-bento="five"]  { --tilt: 32deg;  --depth: -140px; --scale: 0.88; transform-origin: right center; }
+.mode-card[data-bento="draft"] { --tilt: 0deg;   --depth: 120px;  --scale: 1.06; transform-origin: center center; z-index: 5; }
+.mode-card[data-bento="juste"] { --tilt: -32deg; --depth: -140px; --scale: 0.88; transform-origin: left center;  }
 .mode-card { transform: rotateY(var(--tilt)) translateZ(var(--depth)) scale(var(--scale)); }
 
 /* Image joueur plein cadre, cropée pour montrer tête+buste */
@@ -412,12 +565,13 @@ h1, h2, h3, h4 { margin: 0; font-weight: 800; letter-spacing: -0.02em; color: va
 }
 .mc-eyebrow svg { display: inline-block; }
 .mc-title {
-  font-family: var(--display);
-  font-size: clamp(36px, 4.2vw, 56px);
+  font-family: var(--display);   /* Instrument Serif italic */
+  font-style: italic;
+  font-size: clamp(42px, 5vw, 64px);
   line-height: 0.96; margin: 2px 0 6px;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.025em;
   color: #fff;
-  font-weight: 700;
+  font-weight: 400;
   text-shadow: 0 2px 12px rgba(0,0,0,0.7), 0 1px 0 rgba(0,0,0,0.4);
 }
 .mc-desc {
@@ -429,13 +583,12 @@ h1, h2, h3, h4 { margin: 0; font-weight: 800; letter-spacing: -0.02em; color: va
 /* HOVER : la card hover se redresse + grandit, les autres reculent */
 .mode-card:hover {
   --tilt: 0deg;
-  --depth: 140px;
-  --scale: 1.08;
+  --depth: 240px;       /* sortie franche en Z */
+  --scale: 1.12;
   box-shadow:
-    0 1px 0 rgba(255,255,255,0.15) inset,
-    0 60px 100px rgba(0,0,0,0.7),
-    0 20px 40px rgba(0,0,0,0.5),
-    0 0 40px rgba(214,139,60,0.22);
+    0 1px 0 rgba(255,255,255,0.18) inset,
+    0 80px 140px rgba(0,0,0,0.78),
+    0 30px 60px rgba(0,0,0,0.55);
   z-index: 10;
 }
 .mode-card:hover .mc-player { transform: scale(1.04); object-position: center 12%; }
@@ -478,28 +631,43 @@ h1, h2, h3, h4 { margin: 0; font-weight: 800; letter-spacing: -0.02em; color: va
   background: rgba(10,14,12,0.6);
   backdrop-filter: blur(8px);
 }
-.logo { display: flex; align-items: center; gap: 12px; transition: transform 0.25s ease; }
-.logo:hover { transform: translateY(-1px); }
-.logo-mark-svg {
-  width: 42px; height: 42px;
-  filter: drop-shadow(0 8px 18px rgba(214,139,60,0.32));
-  transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+/* === Nouveau logo "drafter" — signature serif italic + orbe nacré === */
+.logo.logo-v5 {
+  display: inline-flex; align-items: baseline;
+  gap: 4px;
+  text-decoration: none;
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
 }
-.logo:hover .logo-mark-svg { transform: rotate(-4deg) scale(1.05); }
-.logo-wordmark { display: flex; flex-direction: column; line-height: 1; }
-.logo-text {
-  font-family: var(--display); font-weight: 700; font-size: 30px;
-  letter-spacing: -0.01em; color: var(--ink);
-  line-height: 1; text-transform: lowercase;
+.logo.logo-v5:hover { transform: translateY(-1px); }
+.logo-wordmark {
+  font-family: var(--display);  /* Instrument Serif */
+  font-style: italic;
+  font-weight: 400;
+  font-size: 34px;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  text-transform: lowercase;
+  /* léger relief sur la typo */
+  text-shadow: 0 1px 0 rgba(255,255,255,0.04);
 }
-.logo-text::after {
-  content: "."; color: var(--neon);
-  margin-left: 1px;
+.logo-glyph {
+  width: 14px; height: 14px;
+  display: inline-block;
+  vertical-align: baseline;
+  filter:
+    drop-shadow(0 4px 10px rgba(214,139,60,0.5))
+    drop-shadow(0 0 18px rgba(239,180,111,0.25));
+  transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.4s ease;
+  /* aligné légèrement plus bas que la baseline pour faire "point final" */
+  margin-bottom: -1px;
 }
-.logo-sub {
-  font-family: var(--mono); font-size: 9px;
-  color: var(--slate); letter-spacing: 0.22em;
-  margin-top: 4px; text-transform: uppercase;
+.logo.logo-v5:hover .logo-glyph {
+  transform: scale(1.18) rotate(-8deg);
+  filter:
+    drop-shadow(0 6px 14px rgba(239,180,111,0.65))
+    drop-shadow(0 0 26px rgba(239,180,111,0.4));
 }
 .topbar-tagline {
   font-family: var(--mono); font-size: 12px;

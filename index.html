@@ -8,38 +8,37 @@
   <title>Drafter — Draft de joueurs de foot</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles/main.css" />
 </head>
 <body>
 
   <header class="topbar">
-    <a href="#" class="logo logo-v3" id="logoHome" aria-label="Drafter — accueil">
-      <svg class="logo-mark-svg" viewBox="0 0 56 56" aria-hidden="true">
+    <a href="#" class="logo logo-v5" id="logoHome" aria-label="Drafter — accueil">
+      <!-- Signature serif italic + glyphe gradient nacré comme accent distinctif -->
+      <span class="logo-wordmark">drafter</span>
+      <svg class="logo-glyph" viewBox="0 0 32 32" aria-hidden="true">
         <defs>
-          <linearGradient id="logoG2" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stop-color="#FF7AA5"/>
-            <stop offset="55%" stop-color="#FF5C8D"/>
-            <stop offset="100%" stop-color="#732553"/>
-          </linearGradient>
-          <linearGradient id="logoInner" x1="0%" y1="100%" x2="100%" y2="0%">
-            <stop offset="0%" stop-color="#142030"/>
-            <stop offset="100%" stop-color="#1E3442"/>
+          <radialGradient id="lgPearl" cx="35%" cy="30%" r="80%">
+            <stop offset="0%"  stop-color="#fff4dd"/>
+            <stop offset="22%" stop-color="#f6d49c"/>
+            <stop offset="55%" stop-color="#d68b3c"/>
+            <stop offset="80%" stop-color="#7a3f15"/>
+            <stop offset="100%" stop-color="#2a1305"/>
+          </radialGradient>
+          <linearGradient id="lgSheen" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%"  stop-color="rgba(255,255,255,0.85)"/>
+            <stop offset="35%" stop-color="rgba(255,255,255,0.0)"/>
+            <stop offset="100%" stop-color="rgba(255,255,255,0.0)"/>
           </linearGradient>
         </defs>
-        <!-- Hexagon-ish field -->
-        <path d="M8 6 L48 6 L54 28 L48 50 L8 50 L2 28 Z" fill="url(#logoG2)"/>
-        <!-- inner dark glyph -->
-        <path d="M14 12 L46 12 L50 28 L46 44 L14 44 L10 28 Z" fill="url(#logoInner)" opacity="0.85"/>
-        <!-- abstract D + arrow (drafter mark) -->
-        <path d="M20 17 L20 39 L29 39 C36 39 41 35 41 28 C41 21 36 17 29 17 Z M26 22 L29 22 C33 22 35 24.4 35 28 C35 31.6 33 34 29 34 L26 34 Z" fill="#FF5C8D"/>
-        <!-- pick arrow -->
-        <path d="M38 19 L46 28 L38 37 L38 31 L43 28 L38 25 Z" fill="#E9D8C8" opacity="0.95"/>
+        <!-- pearl orb -->
+        <circle cx="16" cy="16" r="13" fill="url(#lgPearl)"/>
+        <!-- highlight sheen -->
+        <circle cx="16" cy="16" r="13" fill="url(#lgSheen)"/>
+        <!-- inner ring (depth) -->
+        <circle cx="16" cy="16" r="13" fill="none" stroke="rgba(255,255,255,0.18)" stroke-width="0.6"/>
       </svg>
-      <div class="logo-wordmark">
-        <span class="logo-text">drafter</span>
-        <span class="logo-sub">v3 · 25/26</span>
-      </div>
     </a>
     <div class="topbar-tagline">/ moteur de raisonnement tactique · 2 500 joueurs</div>
   </header>

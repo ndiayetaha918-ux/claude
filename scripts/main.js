@@ -167,7 +167,7 @@
     const bento = $('#modeBento');
     if (!bento) return;
 
-    // Mouse-tracking glow par card (l'effet de halo qui suit le pointeur)
+    // Mouse-tracking glow par card (halo qui suit le pointeur)
     bento.addEventListener('pointermove', (ev) => {
       const card = ev.target.closest && ev.target.closest('.mode-card');
       if (!card) return;
@@ -176,6 +176,18 @@
       const py = ((ev.clientY - cr.top) / cr.height) * 100;
       card.style.setProperty('--mx-px', px + '%');
       card.style.setProperty('--my-px', py + '%');
+    });
+
+    // Ambiance globale : le body prend la couleur du mode survolé
+    bento.querySelectorAll('.mode-card').forEach(card => {
+      const mode = card.dataset.bento;
+      card.addEventListener('mouseenter', () => {
+        document.body.classList.remove('mode-hover-five', 'mode-hover-draft', 'mode-hover-juste');
+        document.body.classList.add('mode-hover-' + mode);
+      });
+      card.addEventListener('mouseleave', () => {
+        document.body.classList.remove('mode-hover-' + mode);
+      });
     });
 
     bento.addEventListener('click', (ev) => {
