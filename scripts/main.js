@@ -3122,7 +3122,7 @@
       p.innerHTML = l.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
       card.appendChild(p);
     });
-    // stats
+    // Stats classiques
     const st = el('div', { class:'sr-stats' });
     st.innerHTML =
       `<div><span>${r.stats.A.possession}%</span><label>Possession</label><span>${r.stats.B.possession}%</span></div>` +
@@ -3131,8 +3131,90 @@
       `<div><span>${r.stats.A.xg}</span><label>xG</label><span>${r.stats.B.xg}</span></div>` +
       `<div><span>${r.stats.A.corners}</span><label>Corners</label><span>${r.stats.B.corners}</span></div>`;
     card.appendChild(st);
+
+    // Deep stats supplémentaires (calculés à partir de l'engagement déjà disponible)
+    const deepA = computeDeepStats(r, tpA, 'A');
+    const deepB = computeDeepStats(r, tpB, 'B');
+    const deep = el('div', { class:'sr-stats sr-deep' });
+    deep.innerHTML =
+      `<div><span>${deepA.passes}</span><label>Passes réussies</label><span>${deepB.passes}</span></div>` +
+      `<div><span>${deepA.passAcc}%</span><label>% de passes</label><span>${deepB.passAcc}%</span></div>` +
+      `<div><span>${deepA.duels}</span><label>Duels gagnés</label><span>${deepB.duels}</span></div>` +
+      `<div><span>${deepA.thirdFinal}%</span><label>Possession 30m adverse</label><span>${deepB.thirdFinal}%</span></div>` +
+      `<div><span>${deepA.fouls}</span><label>Fautes</label><span>${deepB.fouls}</span></div>`;
+    card.appendChild(deep);
+
+    // === Notes individuelles par joueur (1.0 à 10.0 style FootMercato) ===
+    const ratingsTitle = el('div', { class: 'sr-rating-title' }, 'Notes individuelles');
+    card.appendChild(ratingsTitle);
+    const ratingsBox = el('div', { class: 'sr-ratings' });
+    [partA, partB].forEach((part, idx) => {
+      const tp = idx === 0 ? tpA : tpB;
+      const col = el('div', { class: 'sr-rating-col' });
+      col.appendChild(el('div', { class: 'sr-rating-team', style: 'color:' + part.color }, part.name));
+      const players = computePlayerRatings(part, tp, r, idx === 0 ? 'A' : 'B');
+      players.forEach(p => {
+        const row = el('div', { class: 'sr-rating-row' });
+        row.appendChild(el('span', { class: 'sr-rp-pos' }, p.slotType));
+        row.appendChild(el('span', { class: 'sr-rp-name' }, p.name));
+        const noteClass = p.rating >= 7.5 ? 'great' : p.rating >= 6.5 ? 'good' : p.rating >= 5.5 ? 'mid' : 'bad';
+        row.appendChild(el('span', { class: 'sr-rp-note ' + noteClass }, p.rating.toFixed(1)));
+        col.appendChild(row);
+      });
+      ratingsBox.appendChild(col);
+    });
+    card.appendChild(ratingsBox);
+
     log.appendChild(card);
     log.scrollTop = log.scrollHeight;
+  }
+
+  // Calcule des stats avancées à partir du résultat de la sim
+  function computeDeepStats(r, tp, side) {
+    const possession = r.stats[side].possession;
+    const shots = r.stats[side].shots;
+    const xg = parseFloat(r.stats[side].xg) || 0;
+    // Passes : proportionnel à possession × niveau de jeu
+    const passQuality = tp ? (tp.midControl || 50) : 50;
+    const totalPasses = Math.round(possession * (5 + passQuality / 20));
+    const accuracy = Math.round(78 + (passQuality - 50) * 0.18);
+    const duels = Math.round(20 + Math.random() * 20 + (tp && tp.defense ? (tp.defense - 60) * 0.3 : 0));
+    const thirdFinal = Math.min(95, Math.round(possession * 0.45 + xg * 8));
+    const fouls = Math.round(8 + Math.random() * 8);
+    return { passes: totalPasses, passAcc: accuracy, duels, thirdFinal, fouls };
+  }
+
+  // Calcule des notes individuelles 1-10 par joueur
+  function computePlayerRatings(participant, tp, result, side) {
+    if (!tp || !tp.players) return [];
+    const won = side === 'A' ? result.scoreA > result.scoreB : result.scoreB > result.scoreA;
+    const draw = result.scoreA === result.scoreB;
+    return tp.players.map(p => {
+      const base = 6.0;
+      // Boost si joueur naturellement bon
+      const skillBoost = (((p.att||60) + (p.cre||60) + (p.def||60) + (p.tec||60)) / 4 - 60) / 12;
+      // Bonus victoire / nul
+      const resBonus = won ? 0.4 : draw ? 0 : -0.4;
+      // Pénalité hors poste
+      const fitPenalty = p.fitMode === 'sec' ? -0.8 : p.fitMode === 'off' ? -1.6 : 0;
+      // Bruit
+      const noise = (Math.random() - 0.5) * 1.4;
+      let rating = base + skillBoost + resBonus + fitPenalty + noise;
+      // Bonus si participe aux buts (heuristique : attaquant et équipe a marqué)
+      const teamScore = side === 'A' ? result.scoreA : result.scoreB;
+      if (['ST','CF','SS','LW','RW','AM'].includes(p.slotType) && teamScore > 0) rating += 0.4 + Math.random() * 0.6;
+      // GK : note inverse du nombre de buts encaissés
+      if (p.slotType === 'GK') {
+        const ga = side === 'A' ? result.scoreB : result.scoreA;
+        rating = 7.0 - ga * 0.6 + (Math.random() - 0.5) * 0.5;
+      }
+      rating = Math.max(3.0, Math.min(9.5, rating));
+      return {
+        name: (p.player && p.player.name || '—').split(' ').slice(-1)[0],
+        slotType: p.slotType,
+        rating,
+      };
+    }).sort((a, b) => b.rating - a.rating);
   }
 
   function svg(tag, attrs) {
@@ -3852,6 +3934,82 @@
     renderWarningsSummary(i);
   }
 
+  // Heatmap visuelle d'un rôle : mini-pitch SVG avec blob radial centré sur la position
+  // calculée à partir du slot + posDx/posDy du rôle. Les sliders aggr/off élargissent la zone.
+  function buildHeatmap(slot, role, sliders, opts) {
+    opts = opts || {};
+    const big = opts.size === 'big';
+    const W = big ? 200 : 56;
+    const H = big ? Math.round(W * 1.45) : Math.round(W * 1.45);
+    const wrap = el('div', { class: 'heatmap ' + (big ? 'heatmap-big' : 'heatmap-mini') });
+    const ns = 'http://www.w3.org/2000/svg';
+    const svgEl = document.createElementNS(ns, 'svg');
+    svgEl.setAttribute('viewBox', '0 0 100 145');
+    svgEl.setAttribute('width', W); svgEl.setAttribute('height', H);
+    svgEl.style.display = 'block';
+
+    // Terrain de fond
+    const bg = document.createElementNS(ns, 'rect');
+    bg.setAttribute('x', 0); bg.setAttribute('y', 0); bg.setAttribute('width', 100); bg.setAttribute('height', 145);
+    bg.setAttribute('rx', 6); bg.setAttribute('fill', 'rgba(20,40,32,0.4)');
+    bg.setAttribute('stroke', 'rgba(255,255,255,0.18)'); bg.setAttribute('stroke-width', 0.5);
+    svgEl.appendChild(bg);
+
+    // Lignes : médiane + cercle central + surfaces
+    const lineColor = 'rgba(255,255,255,0.22)';
+    function line(x1,y1,x2,y2){const l=document.createElementNS(ns,'line');l.setAttribute('x1',x1);l.setAttribute('y1',y1);l.setAttribute('x2',x2);l.setAttribute('y2',y2);l.setAttribute('stroke',lineColor);l.setAttribute('stroke-width',0.5);svgEl.appendChild(l);}
+    function rect(x,y,w,h){const r=document.createElementNS(ns,'rect');r.setAttribute('x',x);r.setAttribute('y',y);r.setAttribute('width',w);r.setAttribute('height',h);r.setAttribute('fill','none');r.setAttribute('stroke',lineColor);r.setAttribute('stroke-width',0.5);svgEl.appendChild(r);}
+    function circ(cx,cy,r){const c=document.createElementNS(ns,'circle');c.setAttribute('cx',cx);c.setAttribute('cy',cy);c.setAttribute('r',r);c.setAttribute('fill','none');c.setAttribute('stroke',lineColor);c.setAttribute('stroke-width',0.5);svgEl.appendChild(c);}
+    line(4,72.5,96,72.5);
+    circ(50,72.5,12);
+    rect(30,4, 40, 18);
+    rect(30,123, 40, 18);
+
+    // Position cible du rôle : slot.x (0-100) + posDx, slot.y (0-100) + posDy
+    // (les coords slot sont déjà en %, on les map en viewBox 100×145)
+    const tx = Math.max(8, Math.min(92, slot.x + (sliders.posDx || 0) * 0.7));
+    const ty = Math.max(8, Math.min(137, (slot.y / 100) * 145 + (sliders.posDy || 0) * 1.1));
+
+    // Rayon influencé par implication / agressivité
+    const aggr = sliders.aggr != null ? sliders.aggr : 50;
+    const off  = sliders.off  != null ? sliders.off  : 50;
+    const radius = 16 + (aggr - 50) * 0.18 + (off - 50) * 0.14;
+
+    // Définition du gradient de chaleur
+    const defs = document.createElementNS(ns, 'defs');
+    const grad = document.createElementNS(ns, 'radialGradient');
+    grad.setAttribute('id', 'hm-' + Math.random().toString(36).slice(2, 8));
+    grad.setAttribute('cx', '50%'); grad.setAttribute('cy', '50%'); grad.setAttribute('r', '50%');
+    [['0%', 'rgba(239,180,111,0.85)'], ['45%', 'rgba(214,139,60,0.55)'], ['80%', 'rgba(138,79,28,0.18)'], ['100%', 'rgba(0,0,0,0)']].forEach(s => {
+      const st = document.createElementNS(ns, 'stop');
+      st.setAttribute('offset', s[0]); st.setAttribute('stop-color', s[1]);
+      grad.appendChild(st);
+    });
+    defs.appendChild(grad);
+    svgEl.appendChild(defs);
+
+    // Blob de chaleur (ellipse pour donner orientation)
+    const blob = document.createElementNS(ns, 'ellipse');
+    blob.setAttribute('cx', tx);
+    blob.setAttribute('cy', ty);
+    blob.setAttribute('rx', radius);
+    blob.setAttribute('ry', radius * 1.25);
+    blob.setAttribute('fill', 'url(#' + grad.getAttribute('id') + ')');
+    blob.setAttribute('opacity', '0.9');
+    blob.setAttribute('filter', 'blur(0.5)');
+    svgEl.appendChild(blob);
+
+    // Point central du rôle
+    const dot = document.createElementNS(ns, 'circle');
+    dot.setAttribute('cx', tx); dot.setAttribute('cy', ty);
+    dot.setAttribute('r', big ? 2 : 1.6);
+    dot.setAttribute('fill', '#fff'); dot.setAttribute('opacity', '0.9');
+    svgEl.appendChild(dot);
+
+    wrap.appendChild(svgEl);
+    return wrap;
+  }
+
   function renderRolePanel(i) {
     const part = state.participants[i];
     const ts = tacticsState.byParticipant[i];
@@ -3884,19 +4042,32 @@
     // Section rôles
     const sec1 = el('div', { class: 'trp-section' });
     sec1.appendChild(el('h5', {}, 'Rôle'));
+
+    // Heatmap principale du rôle sélectionné (gros affichage)
+    if (slotPlayer.role) {
+      const r = window.Tactics.ROLES[slotPlayer.role];
+      const heatBig = buildHeatmap(slot, r, slotPlayer.sliders, { size: 'big' });
+      sec1.appendChild(heatBig);
+    }
+
     const opts = el('div', { class: 'role-options' });
     const roles = window.Tactics.rolesForSlot(slot.type);
-    const slotPlayer = ts.players[sid];
+    const slotPlayer2 = slotPlayer; // alias
     roles.forEach(r => {
-      const isActive = slotPlayer.role === r.key;
+      const isActive = slotPlayer2.role === r.key;
       const div = el('div', { class: 'role-option' + (isActive ? ' active' : '') });
-      div.appendChild(el('div', { class: 'role-name' }, r.label));
-      div.appendChild(el('div', { class: 'role-summary' }, r.summary));
+      // mini heatmap à gauche
+      const mini = buildHeatmap(slot, r, r.preset, { size: 'mini' });
+      div.appendChild(mini);
+      const info = el('div', { class: 'role-info' });
+      info.appendChild(el('div', { class: 'role-name' }, r.label));
+      info.appendChild(el('div', { class: 'role-summary' }, r.summary));
       const w = window.Tactics.incompatibility(pl, r.key);
-      if (w) div.appendChild(el('div', { class: 'role-warn' }, '⚠ ' + w[0]));
+      if (w) info.appendChild(el('div', { class: 'role-warn' }, '⚠ ' + w[0]));
+      div.appendChild(info);
       div.addEventListener('click', () => {
-        slotPlayer.role = r.key;
-        slotPlayer.sliders = Object.assign({}, r.preset);
+        slotPlayer2.role = r.key;
+        slotPlayer2.sliders = Object.assign({}, r.preset);
         syncTacticsToStadium(i);
         renderTacticsBoard();
       });

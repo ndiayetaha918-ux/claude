@@ -106,7 +106,7 @@
         if (sl.aggr != null) { prof.phy = Math.round(prof.phy * (0.95 + (sl.aggr-50)/500)); prof.def = Math.round(prof.def * (0.92 + (sl.aggr-50)/700)); }
         if (sl.risk != null) { prof.cre = Math.round(prof.cre * (0.92 + (sl.risk-50)/500)); prof.def = Math.round(prof.def * (1 - Math.max(0, sl.risk-65)/400)); }
       }
-      return Object.assign(prof, { slotType: s.slot.type, x: s.slot.x, y: s.slot.y, slotId: s.slot.id, fitMode, role: role ? role.role : null, sliders: role ? role.sliders : null });
+      return Object.assign(prof, { player: pl, slotType: s.slot.type, x: s.slot.x, y: s.slot.y, slotId: s.slot.id, fitMode, role: role ? role.role : null, sliders: role ? role.sliders : null });
     }).filter(Boolean);
 
     const gk  = players.filter(p => p.slotType === 'GK');
