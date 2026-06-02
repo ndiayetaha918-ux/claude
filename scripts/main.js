@@ -156,22 +156,39 @@
   // HERO POLAROID SCROLLER
   // ============================================================
   function buildHero() {
-    // Hero v3 : 3 cards bento (Draft / Five / Juste Prix)
+    // Hero v4 : spatial arc 3 cards (Five / Draft / Juste)
     const bento = $('#modeBento');
     if (!bento) return;
-    // mouse glow tracking per card
+
+    // Parallax au niveau du stage (l'ensemble bouge subtilement avec la souris)
+    let rafParallax = null;
+    function setParallax(mx, my) {
+      bento.style.setProperty('--mx', mx);
+      bento.style.setProperty('--my', my);
+    }
     bento.addEventListener('pointermove', (ev) => {
+      const r = bento.getBoundingClientRect();
+      const mx = ((ev.clientX - r.left) / r.width - 0.5) * 2;   // -1..1
+      const my = ((ev.clientY - r.top) / r.height - 0.5) * 2;
+      if (rafParallax) return;
+      rafParallax = requestAnimationFrame(() => {
+        rafParallax = null;
+        setParallax(mx.toFixed(3), my.toFixed(3));
+      });
+      // glow per card
       const card = ev.target.closest && ev.target.closest('.mode-card');
-      if (!card) return;
-      const r = card.getBoundingClientRect();
-      card.style.setProperty('--mx', ((ev.clientX - r.left) / r.width * 100) + '%');
-      card.style.setProperty('--my', ((ev.clientY - r.top) / r.height * 100) + '%');
+      if (card) {
+        const cr = card.getBoundingClientRect();
+        card.style.setProperty('--mx-px', (ev.clientX - cr.left) + 'px');
+        card.style.setProperty('--my-px', (ev.clientY - cr.top) + 'px');
+      }
     });
+    bento.addEventListener('pointerleave', () => setParallax(0, 0));
+
     bento.addEventListener('click', (ev) => {
       const card = ev.target.closest('.mode-card');
       if (!card) return;
-      const mode = card.dataset.bento;
-      routeMode(mode);
+      routeMode(card.dataset.bento);
     });
   }
 
@@ -722,9 +739,9 @@
     const tgtPl = participant.slots[tgtSid] ? playerById(participant.slots[tgtSid]) : null;
     if (!srcPl) return false;
     // src joueur doit pouvoir jouer au poste cible
-    const srcOk = (SLOT_RULES[tgtSlot.type] || []).some(p => srcPl.positions.includes(p));
+    const srcOk = slotMatch(srcPl, tgtSlot.type) !== null;
     // si cible occupée, ce joueur doit pouvoir jouer au poste source
-    const tgtOk = !tgtPl || (SLOT_RULES[srcSlot.type] || []).some(p => tgtPl.positions.includes(p));
+    const tgtOk = !tgtPl || slotMatch(tgtPl, srcSlot.type) !== null;
     return srcOk && tgtOk;
   }
 
@@ -783,10 +800,22 @@
     return FORMATIONS[p.formation].slots.filter(s => !p.slots[s.id]);
   }
 
+  // Helper central : retourne 'main' (poste naturel), 'sec' (poste secondaire,
+  // joueur reste éligible mais avec un malus dans la sim), ou null (impossible).
+  function slotMatch(player, slotType) {
+    if (!player) return null;
+    const accepted = SLOT_RULES[slotType] || [];
+    const main = player.posMain || (player.positions || []).slice(0, 1);
+    const sec  = player.posSec  || (player.positions || []).slice(1);
+    if (main.some(p => accepted.includes(p))) return 'main';
+    if (sec.some(p => accepted.includes(p)))  return 'sec';
+    return null;
+  }
+  // expose pour les autres modules
+  window.slotMatch = slotMatch;
+
   function eligibleSlotsFor(player, participant) {
-    return openSlotsForParticipant(participant).filter(slot =>
-      SLOT_RULES[slot.type].some(pos => player.positions.includes(pos))
-    );
+    return openSlotsForParticipant(participant).filter(slot => slotMatch(player, slot.type) !== null);
   }
 
   // Modal d'échange : pour un slot rempli, propose les autres slots où on
@@ -795,7 +824,7 @@
     const F = FORMATIONS[participant.formation];
     // Slots cibles : tout slot DIFFÉRENT où sourcePlayer peut jouer
     const targets = F.slots.filter(s => s.id !== sourceSlot.id &&
-      SLOT_RULES[s.type].some(pos => sourcePlayer.positions.includes(pos))
+      slotMatch(sourcePlayer, s.type) !== null
     );
     if (targets.length === 0) {
       return toast('Pas d\'échange possible', `${sourcePlayer.name} ne peut jouer qu'au poste ${sourceSlot.type}.`);
@@ -820,7 +849,7 @@
       const occupant = occupantId ? playerById(occupantId) : null;
       // Si occupant existe, on doit aussi vérifier qu'il peut jouer au slot source
       if (occupant) {
-        const canSwap = SLOT_RULES[sourceSlot.type].some(pos => occupant.positions.includes(pos));
+        const canSwap = slotMatch(occupant, sourceSlot.type) !== null;
         if (!canSwap) return; // ce swap n'est pas valide
       }
       const row = el('div', { class: 'player-row glow' });
@@ -1020,16 +1049,15 @@
   // Construit une ligne compacte pour la liste du picker
   function buildPlayerRow(p, cur) {
     const slot = pickerState.slot;
-    const eligible = !slot || (slot.id !== '_shortlist'
-      ? SLOT_RULES[slot.type].some(pos => p.positions.includes(pos))
-      : true);
+    const matchKind = slot && slot.id !== '_shortlist' ? slotMatch(p, slot.type) : 'main';
+    const eligible = matchKind !== null;
     const me = state.mode === 'online' ? state.participants.find(x => x.isMe) : cur;
     const affordable = !me || p.value <= state.budget - me.spent;
     const blocked = !eligible || !affordable;
 
     const row = el('div', {
-      class: 'player-row glow' + (blocked ? ' ineligible' : ''),
-      title: !eligible ? 'Mauvais poste pour ce slot' : (!affordable ? 'Hors budget' : 'Cliquer pour drafter'),
+      class: 'player-row glow' + (blocked ? ' ineligible' : '') + (matchKind === 'sec' ? ' is-sec' : ''),
+      title: !eligible ? 'Mauvais poste pour ce slot' : (!affordable ? 'Hors budget' : (matchKind === 'sec' ? 'Poste secondaire — performera moins bien' : 'Cliquer pour drafter')),
     });
     row.addEventListener('click', () => openConfirmPick(p));
 
@@ -1043,10 +1071,17 @@
     const info = el('div', { class: 'pr-info' });
     info.appendChild(el('div', { class: 'pr-name' }, p.name));
     const meta = el('div', { class: 'pr-meta' });
-    p.positions.forEach(pos => {
-      const matches = slot && slot.id !== '_shortlist' && SLOT_RULES[slot.type].includes(pos);
-      meta.appendChild(el('span', { class: 'pos' + (matches ? ' match' : '') }, pos));
+    const mainPos = p.posMain || p.positions.slice(0, 1);
+    const secPos  = p.posSec  || p.positions.slice(1);
+    mainPos.forEach(pos => {
+      const matches = slot && slot.id !== '_shortlist' && (SLOT_RULES[slot.type] || []).includes(pos);
+      meta.appendChild(el('span', { class: 'pos pos-main' + (matches ? ' match' : '') }, pos));
     });
+    secPos.forEach(pos => {
+      const matches = slot && slot.id !== '_shortlist' && (SLOT_RULES[slot.type] || []).includes(pos);
+      meta.appendChild(el('span', { class: 'pos pos-sec' + (matches ? ' match' : '') }, pos));
+    });
+    if (matchKind === 'sec') meta.appendChild(el('span', { class: 'pos-warn' }, '⚠ secondaire'));
     meta.appendChild(el('span', { class: 'age' }, p.age + ' ans'));
     meta.appendChild(el('span', { class: 'club' }, '· ' + p.club));
     info.appendChild(meta);
@@ -1133,7 +1168,7 @@
       // Slot fixe (le picker a été ouvert pour CE slot)
       const slotDef = pickerState.slot;
       eligible = [slotDef].filter(s =>
-        SLOT_RULES[s.type].some(pos => player.positions.includes(pos)) &&
+        slotMatch(player, s.type) !== null &&
         !cur.slots[s.id]
       );
     } else {
@@ -1143,7 +1178,7 @@
       if (pickerState.slot && pickerState.slot.id && pickerState.slot.id !== '_shortlist') {
         const slotDef = pickerState.slot;
         eligible = [slotDef].filter(s =>
-          SLOT_RULES[s.type].some(pos => player.positions.includes(pos)) &&
+          slotMatch(player, s.type) !== null &&
           !cur.slots[s.id]
         );
       } else {
@@ -1409,7 +1444,7 @@
     candidates.sort((a, b) => b.value - a.value);
     for (const player of candidates) {
       const openSlots = openSlotsForParticipant(receiver);
-      const targetSlot = openSlots.find(s => SLOT_RULES[s.type].some(pos => player.positions.includes(pos)));
+      const targetSlot = openSlots.find(s => slotMatch(player, s.type) !== null);
       if (targetSlot) return { player, targetSlot };
     }
     return null;
@@ -2061,24 +2096,42 @@
   };
 
   function recomputeScores() {
-    stadiumState.scores = state.participants.map((p, i) =>
-      window.Sim.computeTeamScore(p, FORMATIONS, SLOT_RULES, playerById, stadiumState.tactics[i]));
-    stadiumState.profiles = state.participants.map((p, i) =>
-      window.Sim.teamProfile(p, FORMATIONS, playerById, stadiumState.tactics[i]));
+    stadiumState.scores = state.participants.map((p, i) => {
+      const roles = (tacticsState.byParticipant[i] && tacticsState.byParticipant[i].players) || null;
+      return window.Sim.computeTeamScore(p, FORMATIONS, SLOT_RULES, playerById, stadiumState.tactics[i], roles);
+    });
+    stadiumState.profiles = state.participants.map((p, i) => {
+      const roles = (tacticsState.byParticipant[i] && tacticsState.byParticipant[i].players) || null;
+      return window.Sim.teamProfile(p, FORMATIONS, playerById, stadiumState.tactics[i], roles);
+    });
   }
 
   function goToStadium() {
-    stadiumState.styles = state.participants.map(() => null);
-    stadiumState.tactics = state.participants.map(() => null);
+    const fromBoard = stadiumState._tacticsFromBoard;
+    stadiumState._tacticsFromBoard = false;
+    if (!fromBoard) {
+      stadiumState.styles = state.participants.map(() => null);
+      stadiumState.tactics = state.participants.map(() => null);
+      stadiumState.pendingStyleIdx = 0;
+    } else {
+      // Tactics déjà définies par le board, on garde
+      stadiumState.pendingStyleIdx = state.participants.length;
+    }
     stadiumState.matches = [];
-    stadiumState.pendingStyleIdx = 0;
+    ensureTacticsState();
     recomputeScores();
 
     showScreen('stadium');
     renderTeamScores();
     renderTournament();
 
-    setTimeout(askNextStyle, 400);
+    if (!fromBoard) {
+      setTimeout(askNextStyle, 400);
+    } else {
+      // Build bracket direct
+      buildBracketAndRender();
+      renderAiAnalysis();
+    }
   }
 
   function askNextStyle() {
@@ -2207,78 +2260,111 @@
     // 1) Toujours rendre le raisonnement déterministe en premier (instantané)
     renderDeterministicAnalysis(area, status);
     // 2) Si une clé est posée, on enrichit avec l'analyse LLM par-dessus
-    let key = null;
-    try { key = localStorage.getItem('drafter_ai_key'); } catch (e) {}
-    if (!key) return;
-    status.textContent = 'enrichissement Claude...';
+    let aiConfig = null;
+    try { aiConfig = localStorage.getItem('drafter_ai_key'); } catch (e) {}
+    if (!aiConfig) return;
+    const isWorker = aiConfig.startsWith('http');
+    status.textContent = isWorker ? 'enrichissement via worker...' : 'enrichissement Claude...';
     const enrichBox = el('div', { class: 'ai-loading' });
-    enrichBox.textContent = '⏳ Claude approfondit l\'analyse...';
+    enrichBox.textContent = '⏳ ' + (isWorker ? 'Worker' : 'Claude') + ' approfondit l\'analyse...';
     area.appendChild(enrichBox);
 
     const teams = state.participants.map((p, i) => {
       const score = stadiumState.scores[i];
-      const style = stadiumState.styles[i];
+      const ts = tacticsState.byParticipant && tacticsState.byParticipant[i];
       const lineup = FORMATIONS[p.formation].slots.map(slot => {
         const pid = p.slots[slot.id];
         const player = pid ? playerById(pid) : null;
-        return slot.type + ' : ' + (player ? player.name + ' (' + player.value + 'M)' : '—');
+        const tp = ts && ts.players && ts.players[slot.id];
+        const role = tp && tp.role ? window.Tactics.ROLES[tp.role] : null;
+        return {
+          slot: slot.type,
+          player: player ? player.name + ' (' + player.value + 'M, ' + (player.posMain||[]).join('/') + ')' : '—',
+          role: role ? role.label : '—',
+        };
       });
       return {
         drafter: p.name,
         formation: FORMATIONS[p.formation].label,
-        style: style ? window.Sim.STYLES[style].label : '—',
+        phases: ts ? ts.phases : {},
         overall: score.overall,
-        breakdown: { qualite: score.quality, chimie: score.chemistry, adequation: score.fit },
+        breakdown: { qualite: score.quality, chimie: score.chemistry, adequation: score.fit, equilibre: score.balance, tactique: score.tactic },
         lineup,
       };
     });
 
-    const prompt = 'Tu es un analyste tactique de foot expérimenté. Voici ' + teams.length + ' équipes draftées par des amis :\\n\\n' +
-      teams.map((t, i) => '### Équipe ' + (i+1) + ' — ' + t.drafter + '\\n' +
-        'Formation : ' + t.formation + '\\n' +
-        'Style déclaré : ' + t.style + '\\n' +
-        'Note globale : ' + t.overall + ' (qualité ' + t.breakdown.qualite + ', chimie ' + t.breakdown.chimie + ', adéquation poste ' + t.breakdown.adequation + ')\\n' +
-        'Compo :\\n' + t.lineup.map(l => '- ' + l).join('\\n')
-      ).join('\\n\\n') +
-      '\\n\\nPour CHAQUE équipe : 3-5 phrases d\'analyse tactique CONCRÈTE qui couvre forces, faiblesses tactiques (couvertures, redondances de rôle, écarts de niveau), et comment elle pourrait jouer face aux autres. Sois critique, pas générique. Format : ## Équipe X — pseudo puis le paragraphe.';
-
     try {
-      const res = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'x-api-key': key,
-          'anthropic-version': '2023-06-01',
-          'anthropic-dangerous-direct-browser-access': 'true',
-          'content-type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-6',
-          max_tokens: 2000,
-          messages: [{ role: 'user', content: prompt }],
-        }),
-      });
+      let res, data, text;
+      if (isWorker) {
+        // Mode worker : on POST direct sur l'URL
+        const url = aiConfig.replace(/\/+$/, '') + '/ai/analyze';
+        res = await fetch(url, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ teams, context: {} }),
+        });
+        if (res.ok) {
+          data = await res.json();
+          text = data.text || '';
+        }
+      } else {
+        // Mode clé directe (insecure, mais le user a accepté)
+        const prompt = buildPromptFromTeams(teams);
+        res = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: {
+            'x-api-key': aiConfig,
+            'anthropic-version': '2023-06-01',
+            'anthropic-dangerous-direct-browser-access': 'true',
+            'content-type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'claude-sonnet-4-6',
+            max_tokens: 2400,
+            messages: [{ role: 'user', content: prompt }],
+          }),
+        });
+        if (res.ok) {
+          data = await res.json();
+          text = (data.content || []).map(c => c.text || '').join('\n');
+        }
+      }
       enrichBox.remove();
       if (!res.ok) {
-        const errTxt = await res.text();
         const errEl = el('p', { class: 'muted ai-error' });
-        errEl.textContent = 'Enrichissement Claude indisponible (HTTP ' + res.status + '). Analyse heuristique conservée.';
+        errEl.textContent = 'Enrichissement IA indisponible (HTTP ' + res.status + ').';
         area.appendChild(errEl);
         status.textContent = 'heuristique seul';
         return;
       }
-      const data = await res.json();
-      const text = (data.content || []).map(c => c.text || '').join('\n');
       const div = el('div', { class: 'ai-output ai-llm' });
-      div.innerHTML = '<h3 class="ai-h">🤖 Approfondissement Claude</h3>' + renderMarkdown(text);
+      div.innerHTML = '<h3 class="ai-h">🤖 Analyse approfondie</h3>' + renderMarkdown(text);
       area.appendChild(div);
-      status.textContent = '✓ enrichi par Claude';
+      status.textContent = isWorker ? '✓ enrichi via worker' : '✓ enrichi par Claude';
+      return;
     } catch (e) {
       enrichBox.remove();
       const errEl = el('p', { class: 'muted ai-error' });
-      errEl.textContent = 'Réseau Claude inaccessible : ' + e.message;
+      errEl.textContent = 'Réseau IA inaccessible : ' + e.message;
       area.appendChild(errEl);
       status.textContent = 'heuristique seul';
+      return;
     }
+
+  }
+
+  function buildPromptFromTeams(teams) {
+    let p = 'Tu es un analyste tactique de football professionnel. Voici ' + teams.length + ' équipes draftées qui vont s\'affronter.\n\n';
+    teams.forEach((t, i) => {
+      p += '## Équipe ' + (i+1) + ' — ' + t.drafter + '\n';
+      p += 'Formation : ' + t.formation + '\n';
+      p += 'Tactique : possession=' + (t.phases.possession||'?') + ', transition=' + (t.phases.transition||'?') + ', défense=' + (t.phases.defense||'?') + '\n';
+      p += 'Compo :\n';
+      t.lineup.forEach(l => { p += '- ' + l.slot + ' : ' + l.player + ' — rôle ' + l.role + '\n'; });
+      p += '\n';
+    });
+    p += '\nPour chaque équipe :\n1) Identité tactique en 1 phrase\n2) 2-3 forces réelles (joueurs clés et rôles qui se complètent)\n3) 2-3 failles concrètes que l\'adversaire peut exploiter\n4) Un joueur dont le rôle assigné ne lui convient PAS, et pourquoi.\n\nPuis : pour chaque MATCHUP, 3 phrases sur le déroulé probable du match. Format markdown ## Équipe X.';
+    return p;
   }
 
   function renderDeterministicAnalysis(area, status) {
@@ -2642,28 +2728,40 @@
     const numA = assignJerseyNumbers(partA), numB = assignJerseyNumbers(partB);
     const pawnById = {};
     const allPawns = [];
-    function buildPawns(part, side, kit, nums) {
+    function buildPawns(part, side, kit, nums, partIdx) {
+      const ts = tacticsState.byParticipant && tacticsState.byParticipant[partIdx];
       FORMATIONS[part.formation].slots.forEach(slot => {
         const pid = part.slots[slot.id];
         const pl = pid ? playerById(pid) : null;
+        // Position ajustée selon le rôle (posDx en largeur, posDy en profondeur)
+        let adj = { x: 0, y: 0 };
+        if (ts && ts.players && ts.players[slot.id] && ts.players[slot.id].sliders) {
+          const sl = ts.players[slot.id].sliders;
+          // posDy : -20..20 → décalage en profondeur (négatif = plus haut = vers but adverse)
+          // posDx : -20..20 → décalage en largeur
+          const profSign = side === 'A' ? 1 : -1;
+          adj.x = (sl.posDy || 0) * 2.2 * profSign;       // profondeur en X paysage
+          adj.y = (sl.posDx || 0) * 1.6;                  // largeur en Y paysage
+        }
         const base = pawnXY(slot, side);
+        const adjBase = { x: base.x + adj.x, y: base.y + adj.y };
         const g = svg('g', { class: 'sim-pawn-group' });
-        const ring = svg('circle', { class:'sim-pawn', cx:base.x, cy:base.y, r:13, fill:kit, stroke:'rgba(0,0,0,0.55)', 'stroke-width':1.5 });
-        const num = svg('text', { x:base.x, y:base.y+4.5, 'text-anchor':'middle', 'font-family':'Bebas Neue, sans-serif',
+        const ring = svg('circle', { class:'sim-pawn', cx:adjBase.x, cy:adjBase.y, r:13, fill:kit, stroke:'rgba(0,0,0,0.55)', 'stroke-width':1.5 });
+        const num = svg('text', { x:adjBase.x, y:adjBase.y+4.5, 'text-anchor':'middle', 'font-family':'Bebas Neue, sans-serif',
           'font-size':14, fill: kit === '#eef2f6' ? '#10131a' : '#fff', style:'pointer-events:none' });
         num.textContent = nums[slot.id];
-        const nm = svg('text', { x:base.x, y:base.y+26, 'text-anchor':'middle', 'font-family':'JetBrains Mono, monospace',
+        const nm = svg('text', { x:adjBase.x, y:adjBase.y+26, 'text-anchor':'middle', 'font-family':'JetBrains Mono, monospace',
           'font-size':9, fill:'#fff', style:'pointer-events:none; text-shadow:0 1px 2px rgba(0,0,0,0.9)' });
         nm.textContent = pl ? pl.name.split(' ').slice(-1)[0].slice(0,11).toUpperCase() : slot.type;
         g.appendChild(ring); g.appendChild(num); g.appendChild(nm);
         pitch.appendChild(g);
-        const obj = { side, base, x:base.x, y:base.y, ring, num, nm, g, pid };
+        const obj = { side, base: adjBase, x: adjBase.x, y: adjBase.y, ring, num, nm, g, pid };
         allPawns.push(obj);
         if (pl) pawnById[pl.id] = obj;
       });
     }
-    buildPawns(partA, 'A', kits.a, numA);
-    buildPawns(partB, 'B', kits.b, numB);
+    buildPawns(partA, 'A', kits.a, numA, m.a);
+    buildPawns(partB, 'B', kits.b, numB, m.b);
 
     const ball = svg('circle', { class:'sim-ball', cx:SIMW/2, cy:SIMH/2, r:6.5, fill:'#fff', stroke:'#111', 'stroke-width':1.2 });
     pitch.appendChild(ball);
@@ -3330,6 +3428,251 @@
     });
   }
 
+  // ============================================================
+  // TACTICS BOARD (FM-like)
+  // ============================================================
+  const tacticsState = {
+    currentIdx: 0,
+    selectedSlotId: null,
+    // par participant : { phases:{possession,transition,defense}, players:{slotId: { role, sliders }} }
+    byParticipant: [],
+  };
+
+  function ensureTacticsState() {
+    state.participants.forEach((p, i) => {
+      if (tacticsState.byParticipant[i]) return;
+      const init = {
+        phases: { possession: 'mixed', transition: 'rest', defense: 'mid' },
+        players: {},
+      };
+      const F = FORMATIONS[p.formation];
+      F.slots.forEach(slot => {
+        const pid = p.slots[slot.id];
+        const pl = pid ? playerById(pid) : null;
+        if (!pl) return;
+        const roleKey = window.Tactics.defaultRoleFor(pl, slot.type);
+        const role = roleKey ? window.Tactics.ROLES[roleKey] : null;
+        init.players[slot.id] = {
+          role: roleKey,
+          sliders: role ? Object.assign({}, role.preset) : { posDx:0, posDy:0, aggr:50, risk:50, off:50 },
+        };
+      });
+      tacticsState.byParticipant[i] = init;
+    });
+  }
+
+  function goToTactics() {
+    if (!state.participants.length) return;
+    ensureTacticsState();
+    tacticsState.currentIdx = 0;
+    tacticsState.selectedSlotId = null;
+    showScreen('tactics');
+    renderTacticsBoard();
+  }
+
+  function renderTacticsBoard() {
+    const i = tacticsState.currentIdx;
+    const part = state.participants[i];
+    if (!part) return;
+    const ts = tacticsState.byParticipant[i];
+
+    // Participant tabs
+    const tabs = $('#tacticsParticipantTabs');
+    tabs.innerHTML = '';
+    state.participants.forEach((p, idx) => {
+      const b = el('button', { class: idx === i ? 'active' : '' }, p.name || ('J' + (idx+1)));
+      b.addEventListener('click', () => { tacticsState.currentIdx = idx; tacticsState.selectedSlotId = null; renderTacticsBoard(); });
+      tabs.appendChild(b);
+    });
+    $('#tacticsParticipantName').textContent = part.name;
+
+    // Phase options
+    const PS = window.Tactics.PHASE_STYLES;
+    Object.keys(PS).forEach(phase => {
+      const opt = $('.phase-options[data-phase-opts="' + phase + '"]');
+      opt.innerHTML = '';
+      PS[phase].options.forEach(o => {
+        const b = el('button', { class: ts.phases[phase] === o.key ? 'active' : '' });
+        b.appendChild(el('strong', {}, o.label));
+        b.appendChild(document.createTextNode(o.desc));
+        b.addEventListener('click', () => {
+          ts.phases[phase] = o.key;
+          // Propager au stadium tactics
+          syncTacticsToStadium(i);
+          renderTacticsBoard();
+        });
+        opt.appendChild(b);
+      });
+    });
+
+    // Pitch with player chips
+    const pitch = $('#tacticsPitch');
+    pitch.innerHTML = '';
+    pitch.appendChild(el('div', { class: 'pitch-circle' }));
+    FORMATIONS[part.formation].slots.forEach(slot => {
+      const pid = part.slots[slot.id];
+      const pl = pid ? playerById(pid) : null;
+      const slotPlayer = ts.players[slot.id];
+      const role = slotPlayer && slotPlayer.role ? window.Tactics.ROLES[slotPlayer.role] : null;
+      const warn = pl && slotPlayer && slotPlayer.role ? window.Tactics.incompatibility(pl, slotPlayer.role) : null;
+      const sel = tacticsState.selectedSlotId === slot.id;
+      const slotEl = el('div', {
+        class: 'slot' + (pl ? ' filled' : '') + (sel ? ' selected' : '') + (warn ? ' warn' : ''),
+        style: `left:${slot.x}%; top:${slot.y}%`,
+      });
+      const bubble = el('div', { class: 'slot-bubble' });
+      if (pl) {
+        const ph = el('div', { class: 'slot-photo', style: `background:${gradientFor(pl)}` });
+        attachPhoto(ph, pl, 'slot-photo-img');
+        ph.appendChild(el('span', { class: 'slot-photo-fb' }, initials(pl)));
+        bubble.appendChild(ph);
+      } else bubble.appendChild(el('span', {}, slot.type));
+      slotEl.appendChild(bubble);
+      slotEl.appendChild(el('div', { class: 'slot-name' },
+        pl ? (role ? role.label.split(' ')[0].toUpperCase() : pl.name.split(' ').slice(-1)[0].toUpperCase()) : slot.type));
+      slotEl.addEventListener('click', () => {
+        tacticsState.selectedSlotId = slot.id;
+        renderTacticsBoard();
+      });
+      pitch.appendChild(slotEl);
+    });
+
+    renderRolePanel(i);
+    renderWarningsSummary(i);
+  }
+
+  function renderRolePanel(i) {
+    const part = state.participants[i];
+    const ts = tacticsState.byParticipant[i];
+    const panel = $('#tacticsRolePanel');
+    const sid = tacticsState.selectedSlotId;
+    if (!sid) {
+      panel.innerHTML = '<div class="trp-empty">Sélectionne un joueur pour voir et modifier son rôle.</div>';
+      return;
+    }
+    const slot = FORMATIONS[part.formation].slots.find(s => s.id === sid);
+    const pid = part.slots[sid];
+    const pl = pid ? playerById(pid) : null;
+    if (!pl) {
+      panel.innerHTML = '<div class="trp-empty">Slot vide — assigne d\'abord un joueur dans le draft.</div>';
+      return;
+    }
+    panel.innerHTML = '';
+    // Head
+    const head = el('div', { class: 'trp-head' });
+    const ph = el('div', { class: 'trp-photo', style: `background:${gradientFor(pl)}` });
+    attachPhoto(ph, pl, '');
+    ph.appendChild(el('span', {}, initials(pl)));
+    head.appendChild(ph);
+    head.appendChild(el('div', {},
+      el('div', { class: 'trp-name' }, pl.name),
+      el('div', { class: 'trp-pos' }, (pl.posMain || []).join('/') + ' · ' + slot.type + ' · ' + pl.value + ' M€')
+    ));
+    panel.appendChild(head);
+
+    // Section rôles
+    const sec1 = el('div', { class: 'trp-section' });
+    sec1.appendChild(el('h5', {}, 'Rôle'));
+    const opts = el('div', { class: 'role-options' });
+    const roles = window.Tactics.rolesForSlot(slot.type);
+    const slotPlayer = ts.players[sid];
+    roles.forEach(r => {
+      const isActive = slotPlayer.role === r.key;
+      const div = el('div', { class: 'role-option' + (isActive ? ' active' : '') });
+      div.appendChild(el('div', { class: 'role-name' }, r.label));
+      div.appendChild(el('div', { class: 'role-summary' }, r.summary));
+      const w = window.Tactics.incompatibility(pl, r.key);
+      if (w) div.appendChild(el('div', { class: 'role-warn' }, '⚠ ' + w[0]));
+      div.addEventListener('click', () => {
+        slotPlayer.role = r.key;
+        slotPlayer.sliders = Object.assign({}, r.preset);
+        syncTacticsToStadium(i);
+        renderTacticsBoard();
+      });
+      opts.appendChild(div);
+    });
+    sec1.appendChild(opts);
+    panel.appendChild(sec1);
+
+    // Section sliders
+    const sec2 = el('div', { class: 'trp-section' });
+    sec2.appendChild(el('h5', {}, 'Comportement'));
+    const SL = [
+      ['aggr', 'Agressivité', 'Calme', 'Engagé'],
+      ['risk', 'Prise de risque', 'Sûr', 'Aventureux'],
+      ['off',  'Implication offensive', 'Replié', 'Décisif'],
+      ['posDy', 'Profondeur (+ haut / − bas)', 'Bas', 'Haut'],
+    ];
+    SL.forEach(([k, lbl]) => {
+      const row = el('div', { class: 'role-slider' });
+      const labelDiv = el('label', {});
+      labelDiv.appendChild(document.createTextNode(lbl));
+      labelDiv.appendChild(el('span', { 'data-k': k }, '' + (slotPlayer.sliders[k] || 0)));
+      row.appendChild(labelDiv);
+      const min = (k === 'posDy' || k === 'posDx') ? -20 : 0;
+      const max = (k === 'posDy' || k === 'posDx') ? 20 : 100;
+      const inp = el('input', { type: 'range', min: String(min), max: String(max), step: '1', value: String(slotPlayer.sliders[k] || 0) });
+      inp.addEventListener('input', () => {
+        slotPlayer.sliders[k] = +inp.value;
+        row.querySelector('span[data-k="' + k + '"]').textContent = inp.value;
+        syncTacticsToStadium(i);
+      });
+      row.appendChild(inp);
+      sec2.appendChild(row);
+    });
+    panel.appendChild(sec2);
+  }
+
+  function renderWarningsSummary(i) {
+    const part = state.participants[i];
+    const ts = tacticsState.byParticipant[i];
+    const wrap = $('#tacticsWarnings');
+    const issues = [];
+    FORMATIONS[part.formation].slots.forEach(slot => {
+      const pid = part.slots[slot.id];
+      const pl = pid ? playerById(pid) : null;
+      const sp = ts.players[slot.id];
+      if (!pl || !sp || !sp.role) return;
+      const w = window.Tactics.incompatibility(pl, sp.role);
+      if (w) issues.push(pl.name + ' : ' + w[0]);
+    });
+    if (issues.length === 0) {
+      wrap.innerHTML = '';
+    } else {
+      wrap.innerHTML = '<strong>⚠ Alertes IA</strong><br>' + issues.map(i => '• ' + i).join('<br>');
+    }
+  }
+
+  // Mappe les phases tactiques → curseurs Sim (utilisés par le moteur)
+  function syncTacticsToStadium(i) {
+    const ts = tacticsState.byParticipant[i];
+    if (!ts) return;
+    // Fold les choix de phases en tactique Sim
+    const SP = window.Tactics.PHASE_STYLES;
+    let lineHeight = 50, tempo = 55, press = 55, width = 55, directness = 50;
+    if (ts.phases.defense === 'high') { lineHeight = 75; press = 80; }
+    else if (ts.phases.defense === 'mid') { lineHeight = 50; press = 55; }
+    else if (ts.phases.defense === 'low') { lineHeight = 28; press = 30; }
+    if (ts.phases.transition === 'counter') { tempo = 75; directness = 75; }
+    else if (ts.phases.transition === 'gegen') { press = Math.min(95, press + 15); }
+    else if (ts.phases.transition === 'rest') { tempo = 45; }
+    if (ts.phases.possession === 'short') { directness = 25; tempo = Math.max(40, tempo - 10); }
+    else if (ts.phases.possession === 'mixed') { directness = 50; }
+    else if (ts.phases.possession === 'direct') { directness = 78; }
+    else if (ts.phases.possession === 'wing') { width = 75; }
+
+    // Stocker dans stadiumState pour la sim
+    if (!stadiumState.tactics) stadiumState.tactics = [];
+    stadiumState.tactics[i] = { lineHeight, tempo, press, width, directness };
+    if (!stadiumState.styles) stadiumState.styles = [];
+    stadiumState.styles[i] = 'equilibre';
+  }
+
+  // Synchroniser au chargement du tactics board
+  function syncAllTacticsToStadium() {
+    state.participants.forEach((_, i) => syncTacticsToStadium(i));
+  }
+
   function init() {
     const note = $('#datasetNote');
     if (note) note.textContent = `${PLAYERS.length} joueurs · données Transfermarkt saison 2025-26 · valeurs marchandes en temps réel`;
@@ -3348,7 +3691,13 @@
     $('#startGame').addEventListener('click', startGame);
     $('#restartBtn').addEventListener('click', restart);
     $('#restartBtn2') && $('#restartBtn2').addEventListener('click', restart);
-    $('#toStadium') && $('#toStadium').addEventListener('click', goToStadium);
+    $('#toStadium') && $('#toStadium').addEventListener('click', goToTactics);
+    $('#tacticsValidate') && $('#tacticsValidate').addEventListener('click', () => {
+      syncAllTacticsToStadium();
+      // Skip le modal askNextStyle puisque déjà configuré
+      stadiumState._tacticsFromBoard = true;
+      goToStadium();
+    });
     $('#simSkip') && $('#simSkip').addEventListener('click', () => {
       simAnim.skipping = true;
       clearSimAnim();

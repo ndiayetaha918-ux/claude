@@ -62,36 +62,42 @@
         </div>
 
         <div class="mode-bento" id="modeBento">
-          <button class="mode-card mode-draft" data-bento="draft" aria-label="Mode Draft">
-            <div class="mc-bg"></div>
-            <div class="mc-glow"></div>
-            <img class="mc-player" src="assets/IMG_2575.webp" alt="Mbappé" loading="eager" decoding="async" />
-            <div class="mc-body">
-              <div class="mc-eyebrow">★ MODE PHARE</div>
-              <h2 class="mc-title">Draft</h2>
-              <p class="mc-desc">Snake draft 2-4, budget réglable, simulation positionnelle.</p>
+          <button class="mode-card mode-five" data-bento="five" aria-label="Mode Five">
+            <div class="mc-inner">
+              <div class="mc-bg"></div>
+              <div class="mc-glow"></div>
+              <img class="mc-player" src="assets/IMG_2576.webp" alt="Cherki" loading="eager" decoding="async" />
+              <div class="mc-body">
+                <div class="mc-eyebrow">◐ Five 5 vs 5</div>
+                <h2 class="mc-title">Five</h2>
+                <p class="mc-desc">Espaces réduits, technique décisive.</p>
+              </div>
             </div>
           </button>
 
-          <button class="mode-card mode-five" data-bento="five" aria-label="Mode Five">
-            <div class="mc-bg"></div>
-            <div class="mc-glow"></div>
-            <img class="mc-player" src="assets/IMG_2576.webp" alt="Cherki" loading="eager" decoding="async" />
-            <div class="mc-body">
-              <div class="mc-eyebrow">◐ NOUVEAU</div>
-              <h2 class="mc-title">Five</h2>
-              <p class="mc-desc">5 contre 5. Espaces réduits, techniques décisives.</p>
+          <button class="mode-card mode-draft" data-bento="draft" aria-label="Mode Draft">
+            <div class="mc-inner">
+              <div class="mc-bg"></div>
+              <div class="mc-glow"></div>
+              <img class="mc-player" src="assets/IMG_2575.webp" alt="Mbappé" loading="eager" decoding="async" />
+              <div class="mc-body">
+                <div class="mc-eyebrow">★ Mode phare</div>
+                <h2 class="mc-title">Draft</h2>
+                <p class="mc-desc">Snake draft 2-4, budget réglable, simulation positionnelle.</p>
+              </div>
             </div>
           </button>
 
           <button class="mode-card mode-juste" data-bento="juste" aria-label="Mode Juste Prix">
-            <div class="mc-bg"></div>
-            <div class="mc-glow"></div>
-            <img class="mc-player" src="assets/IMG_2577.webp" alt="Yamal" loading="eager" decoding="async" />
-            <div class="mc-body">
-              <div class="mc-eyebrow">★ PARTY GAME</div>
-              <h2 class="mc-title">Juste Prix</h2>
-              <p class="mc-desc">Plus ou Moins · estimer la valeur. Seul ou à plusieurs.</p>
+            <div class="mc-inner">
+              <div class="mc-bg"></div>
+              <div class="mc-glow"></div>
+              <img class="mc-player" src="assets/IMG_2577.webp" alt="Yamal" loading="eager" decoding="async" />
+              <div class="mc-body">
+                <div class="mc-eyebrow">★ Party game</div>
+                <h2 class="mc-title">Juste Prix</h2>
+                <p class="mc-desc">Plus ou moins · estimer la valeur.</p>
+              </div>
             </div>
           </button>
         </div>
@@ -251,10 +257,10 @@
             <div class="setup-field setup-field-wide">
               <label>Analyse IA en fin de draft <span class="age-label">facultatif</span></label>
               <div class="ai-key-row">
-                <input type="password" id="aiApiKey" class="line-input" placeholder="Colle ta clé Claude API (sk-ant-...) pour activer une critique tactique IA"/>
+                <input type="password" id="aiApiKey" class="line-input" placeholder="URL de ton worker Cloudflare (recommandé) ou clé sk-ant-..."/>
                 <button class="btn btn-ghost" id="btnSaveAiKey">Enregistrer</button>
               </div>
-              <p class="muted" style="margin-top:6px;font-size:11px">La clé reste dans ton navigateur (localStorage). Sans clé → analyse heuristique uniquement.</p>
+              <p class="muted" style="margin-top:6px;font-size:11px">Sans rien → moteur déterministe (instantané). URL de worker → Claude derrière. Clé directe → marche aussi mais clé exposée. Setup worker : <code>worker/README.md</code>.</p>
             </div>
 
             <div class="setup-field setup-field-wide">
@@ -394,6 +400,56 @@
           <span>Au stade — Verdict &amp; Simulation</span>
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>
         </button>
+      </div>
+    </section>
+
+    <!-- ============= SCREEN 4a — TACTICS BOARD (FM-like) ============= -->
+    <section class="screen screen-tactics" id="screen-tactics">
+      <div class="screen-pad">
+        <div class="hero-intro" style="margin-bottom:32px">
+          <div class="hero-eyebrow">PHASE TACTIQUE · ÉQUIPE PAR ÉQUIPE</div>
+          <h1 class="hero-title-v3"><span class="accent">Board</span> tactique</h1>
+          <p class="hero-sub-v3">
+            Définis comment ton équipe joue en possession, en transition et en défense. Puis clique sur chaque joueur pour lui assigner un <strong>rôle</strong> et ajuster son comportement. L'IA t'alerte si une consigne est incohérente avec son profil.
+          </p>
+        </div>
+
+        <div class="tactics-shell">
+          <aside class="tactics-side">
+            <h3>Joueurs <span id="tacticsParticipantName">—</span></h3>
+            <div class="tactics-tabs" id="tacticsParticipantTabs"></div>
+            <div class="tactics-warnings" id="tacticsWarnings"></div>
+            <div class="tactics-side-actions">
+              <button class="btn btn-primary" id="tacticsValidate">Valider et passer au stade</button>
+            </div>
+          </aside>
+
+          <main class="tactics-board">
+            <div class="tactics-phases">
+              <div class="phase-card" data-phase="possession">
+                <h4>● En possession</h4>
+                <div class="phase-options" data-phase-opts="possession"></div>
+              </div>
+              <div class="phase-card" data-phase="transition">
+                <h4>↯ En transition</h4>
+                <div class="phase-options" data-phase-opts="transition"></div>
+              </div>
+              <div class="phase-card" data-phase="defense">
+                <h4>▤ En défense</h4>
+                <div class="phase-options" data-phase-opts="defense"></div>
+              </div>
+            </div>
+
+            <div class="tactics-pitch-wrap">
+              <div class="pitch pitch-large pitch-tactics" id="tacticsPitch"></div>
+              <div class="tactics-hint">Clique sur un pion pour lui assigner un rôle</div>
+            </div>
+          </main>
+
+          <aside class="tactics-role-panel" id="tacticsRolePanel">
+            <div class="trp-empty">Sélectionne un joueur pour voir et modifier son rôle.</div>
+          </aside>
+        </div>
       </div>
     </section>
 
@@ -742,6 +798,7 @@
   <script src="scripts/animals.js"></script>
   <script src="scripts/online.js"></script>
   <script src="scripts/sim.js"></script>
+  <script src="scripts/tactics.js"></script>
   <script src="scripts/ai_reasoner.js"></script>
   <script src="scripts/juste.js"></script>
   <script src="scripts/season.js"></script>

@@ -38,7 +38,7 @@
   function profile(player) {
     const v = player.value || 5;
     const base = Math.max(46, Math.min(94, 44 + Math.log10(v + 1) * 16));
-    const pos = (player.positions && player.positions[0]) || 'CM';
+    const pos = (player.posMain && player.posMain[0]) || (player.positions && player.positions[0]) || 'CM';
     // poids par poste : [att, cre, pac, def, phy, tec]
     const W = {
       GK:[10,30,20,80,70,40], CB:[18,35,45,90,82,52], LB:[40,52,78,74,62,64],
@@ -67,12 +67,46 @@
   function avg(arr, key) { return arr.length ? arr.reduce((s, p) => s + p[key], 0) / arr.length : 50; }
 
   // ---- Forces d'équipe par ligne (raisonnement zonal) ----
-  function teamProfile(participant, FORMATIONS, playerById, tactics) {
+  // tactics : curseurs équipe (lineHeight, tempo, press, width, directness)
+  // playerRoles : optionnel, { slotId: { role: roleKey, sliders: {aggr, risk, off, posDx, posDy} } }
+  function teamProfile(participant, FORMATIONS, playerById, tactics, playerRoles) {
     const F = FORMATIONS[participant.formation];
     const slots = F.slots.map(s => ({ slot: s, pid: participant.slots[s.id] }));
     const players = slots.filter(s => s.pid).map(s => {
       const pl = playerById(s.pid);
-      return pl ? Object.assign(profile(pl), { slotType: s.slot.type, x: s.slot.x, y: s.slot.y, slotId: s.slot.id }) : null;
+      if (!pl) return null;
+      const prof = profile(pl);
+      // Malus poste secondaire / hors poste
+      const accepted = (window.SLOT_RULES || {})[s.slot.type] || [];
+      const main = pl.posMain || (pl.positions || []).slice(0,1);
+      const sec  = pl.posSec  || (pl.positions || []).slice(1);
+      let fitMode = 'main';
+      if (!main.some(p => accepted.includes(p))) {
+        fitMode = sec.some(p => accepted.includes(p)) ? 'sec' : 'off';
+      }
+      if (fitMode === 'sec') {
+        // -15% sur att/cre/def/tec, mais physique conservé
+        ['att','cre','def','tec'].forEach(k => { prof[k] = Math.round(prof[k] * 0.85); });
+      } else if (fitMode === 'off') {
+        ['att','cre','def','tec','pac'].forEach(k => { prof[k] = Math.round(prof[k] * 0.6); });
+      }
+      // Adapter le rôle de l'archetype au poste joué (sinon un 9 mis en DM garde stats d'attaquant)
+      // → on recalcule un profile fictif au slot type, on prend la moyenne avec celui d'origine pour éviter caricature
+      const proxy = profile(Object.assign({}, pl, { posMain: [s.slot.type] }));
+      ['att','cre','def','phy','tec'].forEach(k => {
+        // 70% du naturel, 30% du proxy au slot — sauf si fitMode === 'main' où on garde tout
+        if (fitMode !== 'main') prof[k] = Math.round(prof[k] * 0.7 + proxy[k] * 0.3);
+      });
+      // Application des sliders individuels (rôles)
+      const role = playerRoles && playerRoles[s.slot.id];
+      if (role && role.sliders) {
+        const sl = role.sliders;
+        // off > 60 booste l'attaque (légèrement), aggr > 65 booste phy/def, risk > 60 augmente créativité au prix de def
+        if (sl.off  != null) prof.att = Math.round(prof.att * (0.92 + (sl.off-50) / 500));
+        if (sl.aggr != null) { prof.phy = Math.round(prof.phy * (0.95 + (sl.aggr-50)/500)); prof.def = Math.round(prof.def * (0.92 + (sl.aggr-50)/700)); }
+        if (sl.risk != null) { prof.cre = Math.round(prof.cre * (0.92 + (sl.risk-50)/500)); prof.def = Math.round(prof.def * (1 - Math.max(0, sl.risk-65)/400)); }
+      }
+      return Object.assign(prof, { slotType: s.slot.type, x: s.slot.x, y: s.slot.y, slotId: s.slot.id, fitMode, role: role ? role.role : null, sliders: role ? role.sliders : null });
     }).filter(Boolean);
 
     const gk  = players.filter(p => p.slotType === 'GK');
@@ -113,11 +147,11 @@
   // ============================================================
   // SCORING d'équipe (raisonné, pas juste somme des valeurs)
   // ============================================================
-  function computeTeamScore(participant, FORMATIONS, SLOT_RULES, playerById, tactics) {
+  function computeTeamScore(participant, FORMATIONS, SLOT_RULES, playerById, tactics, playerRoles) {
     const players = Object.values(participant.slots).filter(Boolean).map(id => playerById(id)).filter(Boolean);
     if (!players.length) return { quality:0, chemistry:0, fit:0, balance:0, tactic:0, overall:0, players:[], topPlayers:[], totalValue:0, avgAge:0, filled:0, tp:null };
 
-    const tp = teamProfile(participant, FORMATIONS, playerById, tactics);
+    const tp = teamProfile(participant, FORMATIONS, playerById, tactics, playerRoles);
     const totalValue = players.reduce((s, p) => s + (p.value || 0), 0);
     const avgValue = totalValue / players.length;
 
@@ -135,7 +169,7 @@
     const maxPairs = players.length * (players.length - 1) / 2 || 1;
     const chemistry = Math.min(99, Math.max(20, 38 + (sameL / maxPairs) * 40 + (sameN / maxPairs) * 28));
 
-    // Adéquation : poste joué vs poste naturel
+    // Adéquation : poste joué vs poste naturel (système main/sec/inadapté)
     const F = FORMATIONS[participant.formation];
     let fitPts = 0, slotsCount = 0;
     F.slots.forEach(slot => {
@@ -143,11 +177,11 @@
       const pl = playerById(pid); if (!pl) return;
       slotsCount++;
       const acc = SLOT_RULES[slot.type] || [];
-      if (pl.positions[0] === slot.type) fitPts += 3;
-      else if (acc.indexOf(pl.positions[0]) === 0) fitPts += 2.6;
-      else if (acc.includes(pl.positions[0])) fitPts += 2.1;
-      else if (pl.positions.some(p => acc.includes(p))) fitPts += 1.4;
-      else fitPts += 0.4;
+      const main = pl.posMain || (pl.positions || []).slice(0,1);
+      const sec  = pl.posSec  || (pl.positions || []).slice(1);
+      if (main.some(p => acc.includes(p))) fitPts += 3;          // poste naturel
+      else if (sec.some(p => acc.includes(p))) fitPts += 1.8;    // poste secondaire (malus)
+      else fitPts += 0.3;                                         // hors profil
     });
     const fit = slotsCount ? Math.min(99, (fitPts / (slotsCount * 3)) * 100) : 0;
 
