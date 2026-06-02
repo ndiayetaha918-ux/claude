@@ -17,6 +17,13 @@
   };
   const SLOT_RULES = window.SLOT_RULES;
   const FORMATIONS = window.FORMATIONS;
+  // Sauvegarde de la liste 11v11 originale pour pouvoir y revenir
+  window.FORMATIONS_11 = window.FORMATIONS_11 || Object.assign({}, FORMATIONS);
+  function applyFormationSet(set) {
+    // mute le contenu de FORMATIONS sans casser la référence
+    Object.keys(FORMATIONS).forEach(k => delete FORMATIONS[k]);
+    Object.assign(FORMATIONS, set);
+  }
 
   // ---------- Couleurs des participants & gradients par poste ----------
   const TEAM_COLORS = [
@@ -194,15 +201,35 @@
 
   function routeMode(mode) {
     if (mode === 'draft') {
-      // setup classique — scroll vers le panneau
+      state.fiveMode = false;
+      refreshFormationDropdown();
       $('#setupSection').scrollIntoView({ behavior: 'smooth' });
     } else if (mode === 'five') {
-      showScreen('five');
-      initFiveScreen();
+      // Five = draft multi-joueurs MAIS avec formations 5v5 + budget réduit
+      state.fiveMode = true;
+      refreshFormationDropdown();
+      // budget par défaut plus petit pour le 5v5
+      const budget = $('#budgetInput'); if (budget) budget.value = '120';
+      const eyebrow = $('#setupEyebrow'); if (eyebrow) eyebrow.textContent = '/ MODE FIVE · 5 vs 5';
+      $('#setupSection').scrollIntoView({ behavior: 'smooth' });
     } else if (mode === 'juste') {
       showScreen('juste');
       initJusteScreen();
     }
+  }
+
+  function refreshFormationDropdown() {
+    const sel = $('#formationSelect');
+    if (!sel) return;
+    const FORMS = state.fiveMode ? (window.FIVE_FORMATIONS || {}) : (window.FORMATIONS_11 || window.FORMATIONS);
+    sel.innerHTML = '';
+    Object.keys(FORMS).forEach((k, i) => {
+      const opt = el('option', { value: k }, FORMS[k].label);
+      if (i === 0) opt.selected = true;
+      sel.appendChild(opt);
+    });
+    // Bascule le contenu de FORMATIONS sans casser les références
+    applyFormationSet(state.fiveMode ? window.FIVE_FORMATIONS : window.FORMATIONS_11);
   }
 
   // ============================================================
@@ -603,11 +630,24 @@
   })();
   const playerById = (id) => ALL_INDEX.get(id);
 
+  function appendPitchFeatures(mountEl) {
+    // Surfaces + petites surfaces + points pen + arcs de coin + rond central
+    mountEl.appendChild(el('div', { class: 'pitch-features' }));
+    mountEl.appendChild(el('div', { class: 'pitch-features-inner' }));
+    mountEl.appendChild(el('div', { class: 'pitch-pen top' }));
+    mountEl.appendChild(el('div', { class: 'pitch-pen bot' }));
+    mountEl.appendChild(el('div', { class: 'pitch-corner tl' }));
+    mountEl.appendChild(el('div', { class: 'pitch-corner tr' }));
+    mountEl.appendChild(el('div', { class: 'pitch-corner bl' }));
+    mountEl.appendChild(el('div', { class: 'pitch-corner br' }));
+    mountEl.appendChild(el('div', { class: 'pitch-circle' }));
+  }
+
   function renderPitch(participant, mountEl, opts) {
     opts = opts || {};
     const F = FORMATIONS[participant.formation];
     mountEl.innerHTML = '';
-    mountEl.appendChild(el('div', { class: 'pitch-circle' }));
+    appendPitchFeatures(mountEl);
     F.slots.forEach(slot => {
       const filledId = participant.slots[slot.id];
       const filledP = filledId ? playerById(filledId) : null;
@@ -2785,8 +2825,49 @@
         p.nm.setAttribute('x', p.base.x); p.nm.setAttribute('y', p.base.y+26);
       });
     }
-    function moveBallTo(x, y) { ball.setAttribute('cx', x); ball.setAttribute('cy', y); }
+    function moveBallTo(x, y) {
+      ball.setAttribute('cx', x); ball.setAttribute('cy', y);
+    }
     function ballToPawn(pid) { const p = pawnById[pid]; if (p) moveBallTo(p.x, p.y); }
+
+    // Bouge un pion physiquement vers (x,y) avec une transition fluide
+    function movePawnTo(pawn, x, y) {
+      pawn.x = x; pawn.y = y;
+      pawn.ring.setAttribute('cx', x); pawn.ring.setAttribute('cy', y);
+      pawn.num.setAttribute('x', x);   pawn.num.setAttribute('y', y + 4.5);
+      pawn.nm.setAttribute('x', x);    pawn.nm.setAttribute('y', y + 26);
+    }
+    // Le porteur du ballon fait un petit appel vers l'avant
+    function pulsePawn(pid, side) {
+      const p = pawnById[pid]; if (!p) return;
+      const dir = side === 'A' ? 1 : -1;
+      const tx = p.x + 18 * dir + (Math.random() * 12 - 6);
+      const ty = p.y + (Math.random() * 16 - 8);
+      movePawnTo(p, tx, ty);
+      p.ring.classList.add('pawn-on-ball');
+      setTimeout(() => p.ring.classList.remove('pawn-on-ball'), 500);
+    }
+    // L'adversaire le plus proche du porteur va le presser
+    function chaseToward(carrierId, defSide) {
+      const c = pawnById[carrierId]; if (!c) return;
+      const defenders = allPawns.filter(p => p.side === defSide);
+      if (!defenders.length) return;
+      // 2 plus proches : pressing à 2
+      const sorted = defenders.slice().sort((x, y) => {
+        const dx1 = x.x - c.x, dy1 = x.y - c.y;
+        const dx2 = y.x - c.x, dy2 = y.y - c.y;
+        return (dx1*dx1+dy1*dy1) - (dx2*dx2+dy2*dy2);
+      });
+      sorted.slice(0, 2).forEach((d, i) => {
+        // se rapproche à ~30px du porteur (sans le toucher)
+        const dx = c.x - d.x, dy = c.y - d.y;
+        const dist = Math.sqrt(dx*dx + dy*dy) || 1;
+        const t = Math.max(0, dist - 28 - i * 14);
+        const nx = d.x + (dx / dist) * t * 0.55;
+        const ny = d.y + (dy / dist) * t * 0.55;
+        movePawnTo(d, nx, ny);
+      });
+    }
 
     // ---- Construire la séquence d'animation (hops) à partir des moments ----
     const HOP = 560 / simAnim.speed;       // durée par passe
@@ -2796,21 +2877,39 @@
 
     function schedule(fn, dur) { const t = setTimeout(() => { if(!simAnim.skipping) fn(); }, cum); simAnim.timeouts.push(t); cum += dur; }
 
+    // Helper d'update du timer + horloge fluide entre moments
+    function setMinute(t) { $('#simMinute').textContent = (t|0) + "'"; }
+    let lastMinute = 0;
+    function rampMinuteTo(target, dur) {
+      const from = lastMinute;
+      const start = performance.now();
+      const step = (now) => {
+        if (simAnim.skipping) return;
+        const k = Math.min(1, (now - start) / dur);
+        const cur = from + (target - from) * k;
+        setMinute(cur);
+        if (k < 1) requestAnimationFrame(step);
+      };
+      requestAnimationFrame(step);
+      lastMinute = target;
+    }
+
     r.moments.forEach(mo => {
       if (mo.type === 'kickoff') {
-        schedule(() => { $('#simEvent').textContent = "Coup d'envoi"; resetShape(); moveBallTo(SIMW/2, SIMH/2); }, HOP);
+        schedule(() => { $('#simEvent').textContent = "Coup d'envoi"; setMinute(0); lastMinute = 0; resetShape(); moveBallTo(SIMW/2, SIMH/2); }, HOP);
         return;
       }
       if (mo.type === 'half') {
-        schedule(() => { $('#simEvent').textContent = '⏸ Mi-temps'; pushLog(mo); resetShape(); moveBallTo(SIMW/2, SIMH/2); }, HOP*2.2);
+        schedule(() => { $('#simEvent').textContent = 'Mi-temps'; rampMinuteTo(mo.t, HOP*1.6); pushLog(mo); resetShape(); moveBallTo(SIMW/2, SIMH/2); }, HOP*2.2);
         return;
       }
       if (mo.type === 'end') {
-        schedule(() => { $('#simEvent').textContent = '🏁 Terminé'; pushLog(mo); renderTournament(); }, HOP);
+        schedule(() => { $('#simEvent').textContent = 'Terminé'; rampMinuteTo(mo.t, HOP*0.8); pushLog(mo); renderTournament(); }, HOP);
         return;
       }
       if (mo.type === 'foul' || mo.type === 'card' || mo.type === 'corner' || mo.type === 'freekick') {
         schedule(() => {
+          rampMinuteTo(mo.t, HOP*0.9);
           $('#simEvent').textContent = (mo.type==='card'?(mo.card==='red'?'🟥 ':'🟨 '):mo.type==='corner'?'⛳ ':'⚑ ') + mo.text;
           pushLog(mo);
         }, HOP*1.4);
@@ -2819,8 +2918,9 @@
 
       const side = mo.team; // 'A'|'B'
       const attackDepth = mo.type === 'goal' ? 0.95 : mo.type === 'save' || mo.type === 'miss' ? 0.82 : 0.62;
-      // pousser le bloc attaquant, reculer le bloc défenseur
+      // pousser le bloc attaquant, reculer le bloc défenseur, update timer
       schedule(() => {
+        rampMinuteTo(mo.t, HOP * 0.8);
         $('#simEvent').textContent = mo.text;
         shiftTeam(side, attackDepth);
         shiftTeam(side === 'A' ? 'B' : 'A', 1 - attackDepth*0.85);
@@ -2831,6 +2931,9 @@
       path.forEach((pt, idx) => {
         schedule(() => {
           ballToPawn(pt.id);
+          // Le porteur s'avance, l'adversaire le plus proche le presse
+          pulsePawn(pt.id, side);
+          chaseToward(pt.id, side === 'A' ? 'B' : 'A');
           // trace de passe
           drawPassTrace(pawnById, path, idx, side, kits);
         }, HOP);
@@ -3000,7 +3103,7 @@
   function renderFivePitch() {
     const mount = $('#fivePitch');
     mount.innerHTML = '';
-    mount.appendChild(el('div', { class: 'pitch-circle' }));
+    appendPitchFeatures(mount);
     const F = FIVE_FORMATIONS[fiveTeam.formation];
     F.slots.forEach(slot => {
       const pid = fiveTeam.slots[slot.id];
@@ -3193,7 +3296,15 @@
   function renderUpDown(s) {
     fillJusteCard('#justeA', s.current, false);
     fillJusteCard('#justeB', s.next, true);
-    $('#justeLives').textContent = '❤'.repeat(s.lives) + '🖤'.repeat(3 - s.lives);
+    const livesEl = $('#justeLives');
+    livesEl.innerHTML = '';
+    const HEART = '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M12 21s-7-4.5-9.5-9.5C0.5 7 3.5 3 7 3c2 0 3.5 1.2 5 3 1.5-1.8 3-3 5-3 3.5 0 6.5 4 4.5 8.5C19 16.5 12 21 12 21z"/></svg>';
+    for (let i = 0; i < 3; i++) {
+      const span = document.createElement('span');
+      span.className = 'life' + (i < s.lives ? ' on' : ' off');
+      span.innerHTML = HEART;
+      livesEl.appendChild(span);
+    }
     $('#justeScore').textContent = String(s.score);
     $('#justeFeedback').textContent = '';
     $('#justeFeedback').className = 'juste-feedback';
@@ -3216,6 +3327,42 @@
     } else {
       card.querySelector('.jp-value-known').textContent = player.value + ' M€';
     }
+    // Glow ambiant : couleur dérivée du club / nation
+    const rgb = glowColorFor(player);
+    card.style.setProperty('--glow-r', rgb[0]);
+    card.style.setProperty('--glow-g', rgb[1]);
+    card.style.setProperty('--glow-b', rgb[2]);
+    card.classList.add('flash');
+    setTimeout(() => card.classList.remove('flash'), 800);
+  }
+
+  // Couleur de glow par joueur : hash déterministe sur le nom du club
+  function glowColorFor(player) {
+    const PRESETS = {
+      'Real Madrid':[230,225,180], 'Paris SG':[60,90,180], 'Manchester City':[120,180,220],
+      'Manchester United':[230,80,80], 'Liverpool':[230,80,80], 'Arsenal':[230,90,90],
+      'Chelsea':[80,130,220], 'Tottenham':[200,220,240],
+      'FC Barcelona':[180,80,120], 'Barcelona':[180,80,120], 'Atlético Madrid':[230,80,80],
+      'Bayern Munich':[230,80,80], 'Bayern München':[230,80,80], 'Borussia Dortmund':[240,200,40],
+      'Inter':[80,120,230], 'Juventus':[200,210,220], 'AC Milan':[230,80,80], 'AS Roma':[210,100,90], 'Napoli':[80,170,230],
+    };
+    if (PRESETS[player.club]) return PRESETS[player.club];
+    // hash sur club
+    let h = 0; const s = String(player.club || '');
+    for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+    const hue = ((h >>> 0) % 360);
+    return hslToRgb(hue / 360, 0.55, 0.6);
+  }
+  function hslToRgb(h, s, l) {
+    let r, g, b;
+    if (s === 0) { r = g = b = l; }
+    else {
+      const hue2 = (p, q, t) => { if (t<0) t+=1; if (t>1) t-=1; if (t<1/6) return p+(q-p)*6*t; if (t<1/2) return q; if (t<2/3) return p+(q-p)*(2/3-t)*6; return p; };
+      const q = l < 0.5 ? l * (1+s) : l+s-l*s;
+      const p = 2*l - q;
+      r = hue2(p, q, h+1/3); g = hue2(p, q, h); b = hue2(p, q, h-1/3);
+    }
+    return [Math.round(r*255), Math.round(g*255), Math.round(b*255)];
   }
   function answerUp(dir) {
     const r = window.JustePrix.answerUpDown(dir);
@@ -3508,7 +3655,7 @@
     // Pitch with player chips
     const pitch = $('#tacticsPitch');
     pitch.innerHTML = '';
-    pitch.appendChild(el('div', { class: 'pitch-circle' }));
+    appendPitchFeatures(pitch);
     FORMATIONS[part.formation].slots.forEach(slot => {
       const pid = part.slots[slot.id];
       const pl = pid ? playerById(pid) : null;

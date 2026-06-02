@@ -62,10 +62,21 @@
 
   --font: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
   --display: 'Bebas Neue', 'Inter', sans-serif;
+  --display-2: 'Space Grotesk', 'Inter', sans-serif;
   --mono: 'JetBrains Mono', ui-monospace, monospace;
 }
 
 * { box-sizing: border-box; }
+body {
+  font-feature-settings: 'cv11', 'ss01', 'ss03';
+  font-variation-settings: 'opsz' 14;
+  -webkit-font-smoothing: antialiased;
+}
+/* Tabular nums sur tout ce qui affiche des chiffres clés */
+.jp-value-known, .jp-value-hidden, #simMinute, #simScoreA, #simScoreB,
+.pr-price, .mc-title, .hero-title-v3 {
+  font-variant-numeric: tabular-nums;
+}
 
 /* ==========================================================================
    SPOTLIGHT BORDER — gradient au contour qui suit la souris
@@ -339,11 +350,13 @@ h1, h2, h3, h4 { margin: 0; font-weight: 800; letter-spacing: -0.02em; color: va
 .mode-five  .mc-body { color: #07101a; background: rgba(187,212,224,0.36); border-color: rgba(220,236,245,0.42); }
 .mode-juste .mc-body { color: #1a0508; background: rgba(212,168,168,0.34); border-color: rgba(238,196,196,0.42); }
 .mc-eyebrow {
+  display: inline-flex; align-items: center; gap: 6px;
   font-family: var(--mono); font-size: 10px;
-  letter-spacing: 0.22em; opacity: 0.6;
+  letter-spacing: 0.22em; opacity: 0.7;
   text-transform: uppercase;
   margin-bottom: 4px;
 }
+.mc-eyebrow svg { display: inline-block; }
 .mc-title {
   font-family: var(--display);
   font-size: clamp(38px, 4.4vw, 60px);
@@ -1779,64 +1792,169 @@ h1, h2, h3, h4 { margin: 0; font-weight: 800; letter-spacing: -0.02em; color: va
 
 /* Pitch */
 .pitch-wrap { margin-top: 16px; }
+/* ==========================================================================
+   PITCH PREMIUM — herbe rayée fine, surfaces ciselées, halo doux
+   ========================================================================== */
 .pitch {
   position: relative;
   aspect-ratio: 3 / 4.4;
   background:
+    /* fines rayures d'herbe (24px de période) */
     repeating-linear-gradient(0deg,
-      rgba(255,255,255,0.04) 0,
-      rgba(255,255,255,0.04) 28px,
-      transparent 28px, transparent 56px),
+      rgba(255,255,255,0.025) 0,
+      rgba(255,255,255,0.025) 22px,
+      rgba(0,0,0,0.05) 22px, rgba(0,0,0,0.05) 44px),
+    /* halo central */
+    radial-gradient(140% 100% at 50% 50%, rgba(255,255,255,0.06) 0%, transparent 60%),
     var(--grad-pitch);
-  border-radius: 16px;
+  border-radius: 22px;
   overflow: hidden;
-  box-shadow: inset 0 0 0 2px rgba(255,255,255,0.18), inset 0 0 60px rgba(0,0,0,0.4), 0 8px 30px rgba(0,0,0,0.45);
+  box-shadow:
+    inset 0 0 0 1.5px rgba(255,255,255,0.16),
+    inset 0 0 80px rgba(0,0,0,0.55),
+    inset 0 0 200px rgba(0,0,0,0.35),
+    0 30px 70px rgba(0,0,0,0.55),
+    0 8px 22px rgba(0,0,0,0.4);
+  --line: rgba(255,255,255,0.36);
+  --line-soft: rgba(255,255,255,0.22);
 }
+/* contour intérieur (touche) */
 .pitch::before {
   content: "";
-  position: absolute; left: 6%; right: 6%; top: 6%; bottom: 6%;
-  border: 2px solid rgba(255,255,255,0.32);
-  border-radius: 6px;
+  position: absolute; left: 4.2%; right: 4.2%; top: 3.2%; bottom: 3.2%;
+  border: 1.6px solid var(--line);
+  border-radius: 10px;
+  pointer-events: none;
 }
+/* ligne médiane */
 .pitch::after {
   content: "";
-  position: absolute; left: 6%; right: 6%; top: 50%;
-  height: 0; border-top: 2px solid rgba(255,255,255,0.32);
-}
-
-.pitch-circle {
-  position: absolute;
-  left: 50%; top: 50%; transform: translate(-50%, -50%);
-  width: 22%; aspect-ratio: 1; border-radius: 50%;
-  border: 2px solid rgba(255,255,255,0.32);
+  position: absolute; left: 4.2%; right: 4.2%; top: 50%;
+  height: 0; border-top: 1.6px solid var(--line);
   pointer-events: none;
 }
 
+/* rond central */
+.pitch-circle {
+  position: absolute;
+  left: 50%; top: 50%; transform: translate(-50%, -50%);
+  width: 20%; aspect-ratio: 1; border-radius: 50%;
+  border: 1.6px solid var(--line);
+  pointer-events: none;
+}
+.pitch-circle::after {
+  content: "";
+  position: absolute; left: 50%; top: 50%;
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--line);
+  transform: translate(-50%, -50%);
+}
+
+/* surfaces de réparation (haut + bas) */
+.pitch::after, .pitch-zones {}
+.pitch-surfaces {
+  position: absolute; inset: 0; pointer-events: none;
+}
+/* On les ajoute via pseudo-élément stacking : on crée un wrapper interne */
+.pitch > .pitch-features {
+  position: absolute; inset: 0; pointer-events: none;
+}
+/* surface haute (côté A) */
+.pitch > .pitch-features::before {
+  content: "";
+  position: absolute; left: 26%; right: 26%; top: 3.2%;
+  height: 14%;
+  border: 1.6px solid var(--line);
+  border-top: none;
+  border-radius: 0 0 4px 4px;
+}
+/* surface basse (côté B) */
+.pitch > .pitch-features::after {
+  content: "";
+  position: absolute; left: 26%; right: 26%; bottom: 3.2%;
+  height: 14%;
+  border: 1.6px solid var(--line);
+  border-bottom: none;
+  border-radius: 4px 4px 0 0;
+}
+/* petites surfaces (6 yards) + points de penalty */
+.pitch-features-inner {
+  position: absolute; inset: 0; pointer-events: none;
+}
+.pitch-features-inner::before {
+  content: "";
+  position: absolute; left: 38%; right: 38%; top: 3.2%;
+  height: 6%;
+  border: 1.6px solid var(--line-soft);
+  border-top: none;
+}
+.pitch-features-inner::after {
+  content: "";
+  position: absolute; left: 38%; right: 38%; bottom: 3.2%;
+  height: 6%;
+  border: 1.6px solid var(--line-soft);
+  border-bottom: none;
+}
+/* points de penalty (deux petits dots) */
+.pitch-pen {
+  position: absolute; left: 50%; width: 5px; height: 5px;
+  border-radius: 50%; background: var(--line);
+  transform: translate(-50%, -50%);
+}
+.pitch-pen.top { top: 13%; }
+.pitch-pen.bot { top: 87%; }
+/* arcs de coin (4) */
+.pitch-corner {
+  position: absolute; width: 16px; height: 16px;
+  border: 1.6px solid var(--line-soft);
+}
+.pitch-corner.tl { top: 3.2%; left: 4.2%; border-right:none; border-top:none; border-radius: 0 0 0 100%; }
+.pitch-corner.tr { top: 3.2%; right: 4.2%; border-left:none; border-top:none; border-radius: 0 0 100% 0; }
+.pitch-corner.bl { bottom: 3.2%; left: 4.2%; border-right:none; border-bottom:none; border-radius: 0 100% 0 0; }
+.pitch-corner.br { bottom: 3.2%; right: 4.2%; border-left:none; border-bottom:none; border-radius: 100% 0 0 0; }
+
 .slot {
   position: absolute;
-  width: 18%;
+  width: 17%;
   transform: translate(-50%, -50%);
   display: flex; flex-direction: column; align-items: center;
   text-align: center;
+  z-index: 2;
 }
 .slot-bubble {
   width: 100%; aspect-ratio: 1;
   border-radius: 50%;
-  background: rgba(0,0,0,0.18);
-  border: 2px dashed rgba(255,255,255,0.55);
+  background: rgba(8,12,18,0.55);
+  border: 1.5px dashed rgba(255,255,255,0.45);
   display: grid; place-items: center;
   color: white; font-family: var(--mono); font-weight: 800; font-size: 10px;
-  letter-spacing: 0.06em;
-  transition: all 0.25s;
+  letter-spacing: 0.08em;
+  backdrop-filter: blur(4px);
+  transition: all 0.25s ease;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.18),
+    0 8px 18px rgba(0,0,0,0.45);
+}
+.slot:hover .slot-bubble {
+  border-color: var(--neon);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.18),
+    0 0 0 1px var(--neon),
+    0 0 24px rgba(214,139,60,0.35),
+    0 10px 26px rgba(0,0,0,0.5);
 }
 .slot.filled .slot-bubble {
-  background: white;
-  border: 2px solid white;
+  background: linear-gradient(180deg, #f7f4ee 0%, #ddd6c8 100%);
+  border: 1.5px solid rgba(255,255,255,0.55);
   border-style: solid;
   color: var(--ink);
   font-size: 11px;
   overflow: hidden;
   padding: 0;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.8),
+    0 0 0 2px rgba(0,0,0,0.2),
+    0 14px 26px rgba(0,0,0,0.55);
 }
 .slot-photo {
   width: 100%; height: 100%;
@@ -2462,52 +2580,81 @@ h1, h2, h3, h4 { margin: 0; font-weight: 800; letter-spacing: -0.02em; color: va
 }
 .sim-sep { color: var(--slate-d); }
 .sim-clock {
-  text-align: center;
-  font-family: var(--mono); font-size: 13px;
-  color: var(--ink-soft); letter-spacing: 0.1em;
-  margin: 8px 0 14px;
-  text-transform: uppercase;
+  display: flex; align-items: center; justify-content: center; gap: 14px;
+  margin: 12px 0 16px;
 }
-.sim-divider { color: var(--slate-d); margin: 0 6px; }
+.sim-clock #simMinute {
+  font-family: var(--display); font-size: 26px;
+  color: var(--neon);
+  background: rgba(214,139,60,0.08);
+  border: 1px solid rgba(214,139,60,0.32);
+  padding: 4px 14px; border-radius: 999px;
+  letter-spacing: 0.04em;
+  min-width: 60px; text-align: center;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 0 12px rgba(214,139,60,0.4);
+}
+.sim-clock #simEvent {
+  font-family: var(--mono); font-size: 12.5px;
+  color: var(--ink-soft); letter-spacing: 0.08em;
+  text-transform: uppercase;
+  max-width: 60%;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.sim-divider { display: none; }
 .sim-pitch-wrap {
   width: 100%;
   margin-bottom: 12px;
   position: relative;
   overflow: hidden;
-  border-radius: 12px;
+  border-radius: 16px;
 }
 .sim-pitch {
   width: 100%;
   aspect-ratio: 760 / 480;
   background:
+    /* rayures d'herbe verticales */
     repeating-linear-gradient(90deg,
-      rgba(255,255,255,0.045) 0,
-      rgba(255,255,255,0.045) 48px,
-      transparent 48px, transparent 96px),
+      rgba(255,255,255,0.025) 0,
+      rgba(255,255,255,0.025) 40px,
+      rgba(0,0,0,0.06) 40px, rgba(0,0,0,0.06) 80px),
+    radial-gradient(140% 100% at 50% 50%, rgba(255,255,255,0.06) 0%, transparent 60%),
     var(--grad-pitch);
-  border-radius: 12px;
-  box-shadow: inset 0 0 0 2px rgba(255,255,255,0.2), inset 0 0 70px rgba(0,0,0,0.45);
+  border-radius: 16px;
+  box-shadow:
+    inset 0 0 0 1.5px rgba(255,255,255,0.18),
+    inset 0 0 100px rgba(0,0,0,0.55),
+    0 0 0 1px rgba(0,0,0,0.4);
   display: block;
 }
 .sim-pawn {
-  /* fill défini par attribut inline pour ne pas écraser la couleur d'équipe */
-  transition: cx 0.5s cubic-bezier(0.4, 0, 0.2, 1), cy 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: cx 0.55s cubic-bezier(0.34, 1.2, 0.64, 1), cy 0.55s cubic-bezier(0.34, 1.2, 0.64, 1), r 0.3s ease;
   filter: drop-shadow(0 2px 3px rgba(0,0,0,0.5));
 }
+.sim-pawn.pawn-on-ball {
+  filter: drop-shadow(0 0 8px var(--neon)) drop-shadow(0 2px 3px rgba(0,0,0,0.5));
+  r: 15;
+}
 .sim-pawn-group text {
-  transition: x 0.5s cubic-bezier(0.4, 0, 0.2, 1), y 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: x 0.55s cubic-bezier(0.34, 1.2, 0.64, 1), y 0.55s cubic-bezier(0.34, 1.2, 0.64, 1);
   user-select: none;
 }
 .sim-ball {
-  transition: cx 0.5s cubic-bezier(0.45, 0, 0.25, 1), cy 0.5s cubic-bezier(0.45, 0, 0.25, 1);
-  filter: drop-shadow(0 2px 5px rgba(0,0,0,0.7));
+  transition: cx 0.55s cubic-bezier(0.45, 0, 0.25, 1), cy 0.55s cubic-bezier(0.45, 0, 0.25, 1);
+  filter: drop-shadow(0 3px 6px rgba(0,0,0,0.8)) drop-shadow(0 0 6px rgba(255,255,255,0.4));
 }
 .sim-pawn-group { pointer-events: none; }
 .sim-pass-line {
   fill: none;
-  opacity: 0.9;
-  stroke-dasharray: 5 4;
-  animation: passDash 0.7s linear forwards;
+  opacity: 0.95;
+  stroke-linecap: round;
+  stroke-dasharray: 6 4;
+  animation: passDash 0.9s linear forwards;
+  filter: drop-shadow(0 0 4px currentColor);
+}
+@keyframes passDash {
+  from { stroke-dashoffset: 0; opacity: 0.95; }
+  to   { stroke-dashoffset: -40; opacity: 0; }
 }
 @keyframes passDash { from { stroke-dashoffset: 40; opacity: 0.9; } to { stroke-dashoffset: 0; opacity: 0; } }
 
@@ -2795,40 +2942,89 @@ h1, h2, h3, h4 { margin: 0; font-weight: 800; letter-spacing: -0.02em; color: va
   border-radius: var(--r); padding: 14px 20px; margin-bottom: 22px;
   font-family: var(--mono); font-size: 13px; letter-spacing: 0.08em;
 }
-.jh-lives { font-size: 22px; }
+.jh-lives { display: inline-flex; gap: 6px; }
+.jh-lives .life { display: inline-grid; place-items: center; transition: transform 0.3s, opacity 0.3s; }
+.jh-lives .life.on { color: var(--neon); filter: drop-shadow(0 0 8px rgba(214,139,60,0.45)); }
+.jh-lives .life.off { color: rgba(255,255,255,0.12); transform: scale(0.85); }
 .jh-score { color: var(--neon); font-weight: 800; }
+
+/* ===== JUSTE PRIX cards — glassmorphism + glow ambiant ===== */
 .juste-cards {
-  display: grid; grid-template-columns: 1fr 80px 1fr; gap: 18px;
+  display: grid; grid-template-columns: 1fr 80px 1fr; gap: 22px;
   align-items: stretch;
+  perspective: 1400px;
 }
 .juste-pcard {
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--r-lg);
-  padding: 24px;
+  --glow-r: 214; --glow-g: 139; --glow-b: 60;
+  position: relative;
+  border-radius: 24px;
+  padding: 26px 22px 22px;
   display: flex; flex-direction: column; align-items: center; text-align: center;
-  position: relative; overflow: hidden;
+  overflow: hidden;
+  /* glassmorphism : fond translucide + flou */
+  background:
+    radial-gradient(120% 100% at 50% -10%, rgba(var(--glow-r),var(--glow-g),var(--glow-b),0.32) 0%, transparent 55%),
+    linear-gradient(180deg, rgba(24,28,38,0.78) 0%, rgba(14,18,26,0.92) 100%);
+  border: 1px solid rgba(255,255,255,0.09);
+  backdrop-filter: blur(18px) saturate(1.4);
+  -webkit-backdrop-filter: blur(18px) saturate(1.4);
+  box-shadow:
+    0 0 0 1px rgba(var(--glow-r),var(--glow-g),var(--glow-b),0.12) inset,
+    0 30px 80px rgba(0,0,0,0.55),
+    0 6px 18px rgba(0,0,0,0.4),
+    0 0 40px rgba(var(--glow-r),var(--glow-g),var(--glow-b),0.18);
+  transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.4s;
 }
+.juste-pcard::before {
+  content: "";
+  position: absolute; inset: 0;
+  background: linear-gradient(115deg, transparent 35%, rgba(255,255,255,0.07) 50%, transparent 65%);
+  pointer-events: none;
+  opacity: 0; transition: opacity 0.5s;
+}
+.juste-pcard.flash::before { opacity: 1; animation: jpFlash 0.7s ease; }
+@keyframes jpFlash { 0%{background-position:-30% 0} 100%{background-position:130% 0} }
+
+/* Photo : carré aux bords arrondis */
 .jp-photo {
-  width: 180px; height: 180px;
-  border-radius: 50%;
-  background: var(--grad-card); border: 3px solid var(--line-2);
+  width: 200px; height: 200px;
+  border-radius: 22px;
+  background: var(--grad-card);
+  border: 1px solid rgba(255,255,255,0.12);
   display: grid; place-items: center;
   margin-bottom: 18px;
   overflow: hidden;
+  position: relative;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.15),
+    0 14px 30px rgba(0,0,0,0.45);
+}
+.jp-photo::after {
+  content: ""; position: absolute; inset: 0;
+  background: linear-gradient(180deg, transparent 55%, rgba(0,0,0,0.55) 100%);
+  pointer-events: none;
 }
 .jp-photo img { width: 100%; height: 100%; object-fit: cover; object-position: top center; }
-.jp-name { font-family: var(--display); font-size: 28px; text-transform: uppercase; letter-spacing: 0.02em; color: var(--ink); margin-bottom: 4px; }
-.jp-club { font-family: var(--mono); font-size: 11px; color: var(--slate); margin-bottom: 16px; }
+.jp-name { font-family: var(--display); font-size: 30px; text-transform: uppercase; letter-spacing: 0.01em; color: var(--ink); margin-bottom: 2px; line-height: 1.05; }
+.jp-club { font-family: var(--mono); font-size: 11px; color: var(--ink-soft); margin-bottom: 16px; letter-spacing: 0.06em; opacity: 0.7; }
 .jp-value-known {
-  font-family: var(--display); font-size: 44px;
+  font-family: var(--display); font-size: 50px;
   background: var(--grad-ink); -webkit-background-clip: text; background-clip: text; color: transparent;
+  letter-spacing: -0.01em;
 }
 .jp-value-hidden {
-  font-family: var(--display); font-size: 72px; color: var(--slate-d);
+  font-family: var(--display); font-size: 80px;
+  color: rgba(255,255,255,0.08);
+  letter-spacing: -0.02em;
 }
-.jp-buttons { display: flex; gap: 10px; margin-top: 18px; width: 100%; justify-content: center; }
-.juste-vs { display: grid; place-items: center; font-family: var(--display); font-size: 38px; color: var(--neon); }
+.jp-buttons { display: flex; gap: 10px; margin-top: 18px; width: 100%; justify-content: center; flex-wrap: wrap; }
+.jp-buttons .btn { display: inline-flex; align-items: center; gap: 6px; }
+.juste-vs {
+  display: grid; place-items: center;
+  font-family: var(--display); font-size: 30px;
+  color: var(--ink-soft); opacity: 0.5;
+  letter-spacing: 0.1em;
+}
 .juste-feedback {
   text-align: center; margin-top: 22px;
   font-family: var(--display); font-size: 22px;

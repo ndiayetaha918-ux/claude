@@ -8,7 +8,7 @@
   <title>Drafter — Draft de joueurs de foot</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles/main.css" />
 </head>
 <body>
@@ -68,7 +68,7 @@
               <div class="mc-glow"></div>
               <img class="mc-player" src="assets/IMG_2576.webp" alt="Cherki" loading="eager" decoding="async" />
               <div class="mc-body">
-                <div class="mc-eyebrow">◐ Five 5 vs 5</div>
+                <div class="mc-eyebrow"><svg viewBox="0 0 12 12" width="10" height="10" fill="currentColor"><circle cx="6" cy="6" r="5"/><path d="M6 1 A5 5 0 0 1 6 11 Z" fill="rgba(255,255,255,0.4)"/></svg>Five 5 vs 5</div>
                 <h2 class="mc-title">Five</h2>
                 <p class="mc-desc">Espaces réduits, technique décisive.</p>
               </div>
@@ -81,7 +81,7 @@
               <div class="mc-glow"></div>
               <img class="mc-player" src="assets/IMG_2575.webp" alt="Mbappé" loading="eager" decoding="async" />
               <div class="mc-body">
-                <div class="mc-eyebrow">★ Mode phare</div>
+                <div class="mc-eyebrow"><svg viewBox="0 0 12 12" width="10" height="10" fill="currentColor"><path d="M6 0.5 L7.5 4.2 L11.5 4.5 L8.4 7 L9.4 11 L6 8.8 L2.6 11 L3.6 7 L0.5 4.5 L4.5 4.2 Z"/></svg>Mode phare</div>
                 <h2 class="mc-title">Draft</h2>
                 <p class="mc-desc">Snake draft 2-4, budget réglable, simulation positionnelle.</p>
               </div>
@@ -94,7 +94,7 @@
               <div class="mc-glow"></div>
               <img class="mc-player" src="assets/IMG_2577.webp" alt="Yamal" loading="eager" decoding="async" />
               <div class="mc-body">
-                <div class="mc-eyebrow">★ Party game</div>
+                <div class="mc-eyebrow"><svg viewBox="0 0 12 12" width="10" height="10" fill="currentColor"><circle cx="6" cy="6" r="5" opacity="0.3"/><circle cx="6" cy="6" r="3" opacity="0.6"/><circle cx="6" cy="6" r="1"/></svg>Party game</div>
                 <h2 class="mc-title">Juste Prix</h2>
                 <p class="mc-desc">Plus ou moins · estimer la valeur.</p>
               </div>
@@ -558,12 +558,24 @@
         <div class="juste-variant-grid">
           <button class="juste-variant" data-variant="updown">
             <div class="jv-head">PLUS OU MOINS</div>
-            <div class="jv-icon">⇕</div>
+            <div class="jv-icon" aria-hidden="true">
+              <svg viewBox="0 0 64 64" width="48" height="48" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M32 8 L32 56" />
+                <path d="M20 18 L32 8 L44 18" />
+                <path d="M20 46 L32 56 L44 46" />
+              </svg>
+            </div>
             <div class="jv-desc">Solo · 3 vies. Le joueur suivant vaut-il plus ou moins ? Bonne réponse → série continue.</div>
           </button>
           <button class="juste-variant" data-variant="multi">
             <div class="jv-head">ESTIMATION MULTI</div>
-            <div class="jv-icon">🎯</div>
+            <div class="jv-icon" aria-hidden="true">
+              <svg viewBox="0 0 64 64" width="48" height="48" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="32" cy="32" r="22" />
+                <circle cx="32" cy="32" r="14" />
+                <circle cx="32" cy="32" r="6" fill="currentColor" stroke="none" />
+              </svg>
+            </div>
             <div class="jv-desc">2-4 joueurs. Chacun donne son prix, le plus proche prend le point. 7 manches.</div>
           </button>
         </div>
@@ -571,7 +583,7 @@
         <!-- Plus ou Moins game area -->
         <div class="juste-stage" id="justeUpDown" style="display:none">
           <div class="juste-hud">
-            <div class="jh-lives" id="justeLives">❤❤❤</div>
+            <div class="jh-lives" id="justeLives"></div>
             <div class="jh-score">SÉRIE · <span id="justeScore">0</span></div>
           </div>
           <div class="juste-cards">
@@ -588,8 +600,14 @@
               <div class="jp-club">—</div>
               <div class="jp-value-hidden">?</div>
               <div class="jp-buttons">
-                <button class="btn btn-ghost juste-lower" id="justeLower">↓ Moins cher</button>
-                <button class="btn btn-primary juste-higher" id="justeHigher">↑ Plus cher</button>
+                <button class="btn btn-ghost juste-lower" id="justeLower">
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9 L12 15 L18 9"/></svg>
+                  Moins cher
+                </button>
+                <button class="btn btn-primary juste-higher" id="justeHigher">
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15 L12 9 L18 15"/></svg>
+                  Plus cher
+                </button>
               </div>
             </div>
           </div>
