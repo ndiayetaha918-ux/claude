@@ -178,15 +178,19 @@
       card.style.setProperty('--my-px', py + '%');
     });
 
-    // Ambiance globale : le body prend la couleur du mode survolé
+    // Ambiance globale + CAROUSEL : la card hovered devient frontale (en grand),
+    // les deux autres se décalent vers le côté opposé et s'inclinent vers elle.
     bento.querySelectorAll('.mode-card').forEach(card => {
       const mode = card.dataset.bento;
       card.addEventListener('mouseenter', () => {
         document.body.classList.remove('mode-hover-five', 'mode-hover-draft', 'mode-hover-juste');
         document.body.classList.add('mode-hover-' + mode);
+        // Marque le carousel : la card focus est annoncée au container
+        bento.setAttribute('data-focus', mode);
       });
       card.addEventListener('mouseleave', () => {
         document.body.classList.remove('mode-hover-' + mode);
+        bento.removeAttribute('data-focus');
       });
     });
 
@@ -236,21 +240,55 @@
   }
 
   function routeMode(mode) {
+    // ===== Pas de redirection vers d'autres pages =====
+    // Tous les modes scrollent vers le setup, qui se reconfigure visuellement
+    state.activeMode = mode;
+    document.body.setAttribute('data-mode', mode);
+
     if (mode === 'draft') {
       state.fiveMode = false;
+      state.justeMode = false;
       refreshFormationDropdown();
-      $('#setupSection').scrollIntoView({ behavior: 'smooth' });
+      showModeSetup('draft');
     } else if (mode === 'five') {
-      // Five = draft multi-joueurs MAIS avec formations 5v5 + budget réduit
       state.fiveMode = true;
+      state.justeMode = false;
       refreshFormationDropdown();
-      // budget par défaut plus petit pour le 5v5
       const budget = $('#budgetInput'); if (budget) budget.value = '120';
-      const eyebrow = $('#setupEyebrow'); if (eyebrow) eyebrow.textContent = '/ MODE FIVE · 5 vs 5';
-      $('#setupSection').scrollIntoView({ behavior: 'smooth' });
+      showModeSetup('five');
     } else if (mode === 'juste') {
-      showScreen('juste');
-      initJusteScreen();
+      state.fiveMode = false;
+      state.justeMode = true;
+      showModeSetup('juste');
+    }
+
+    // Scroll vers le setup avec délai pour laisser le DOM se mettre à jour
+    requestAnimationFrame(() => {
+      $('#setupSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }
+
+  function showModeSetup(mode) {
+    // Affiche le bon panel setup selon le mode et le décore avec le bon "nuage"
+    const draftPanel = $('#setupDraftPanel');
+    const justePanel = $('#setupJustePanel');
+    if (draftPanel) draftPanel.style.display = (mode === 'juste') ? 'none' : '';
+    if (justePanel) justePanel.style.display = (mode === 'juste') ? '' : 'none';
+
+    // Eyebrow + titre adaptés
+    const eyebrow = $('#setupEyebrow');
+    const title = $('#setupTitle');
+    if (eyebrow && title) {
+      if (mode === 'five') {
+        eyebrow.textContent = '/ MODE FIVE · 5 vs 5';
+        title.textContent = 'Compose ton 5';
+      } else if (mode === 'juste') {
+        eyebrow.textContent = '/ JUSTE PRIX · Estimation';
+        title.textContent = 'Choisis ta variante';
+      } else {
+        eyebrow.textContent = '/ MODE DRAFT · Snake draft';
+        title.textContent = 'Compose, simule, analyse';
+      }
     }
   }
 
@@ -2831,7 +2869,7 @@
         nm.textContent = pl ? pl.name.split(' ').slice(-1)[0].slice(0,11).toUpperCase() : slot.type;
         g.appendChild(ring); g.appendChild(num); g.appendChild(nm);
         pitch.appendChild(g);
-        const obj = { side, base: adjBase, x: adjBase.x, y: adjBase.y, ring, num, nm, g, pid };
+        const obj = { side, base: adjBase, x: adjBase.x, y: adjBase.y, ring, num, nm, g, pid, slotType: slot.type };
         allPawns.push(obj);
         if (pl) pawnById[pl.id] = obj;
       });
@@ -2877,37 +2915,70 @@
     function pulsePawn(pid, side) {
       const p = pawnById[pid]; if (!p) return;
       const dir = side === 'A' ? 1 : -1;
-      const tx = p.x + 18 * dir + (Math.random() * 12 - 6);
-      const ty = p.y + (Math.random() * 16 - 8);
+      // Course plus marquée — le porteur avance vraiment vers le but adverse
+      const tx = p.x + 35 * dir + (Math.random() * 20 - 10);
+      const ty = p.y + (Math.random() * 24 - 12);
       movePawnTo(p, tx, ty);
       p.ring.classList.add('pawn-on-ball');
-      setTimeout(() => p.ring.classList.remove('pawn-on-ball'), 500);
+      setTimeout(() => p.ring.classList.remove('pawn-on-ball'), 700);
     }
-    // L'adversaire le plus proche du porteur va le presser
+    // L'adversaire le plus proche du porteur va le presser AGRESSIVEMENT
     function chaseToward(carrierId, defSide) {
       const c = pawnById[carrierId]; if (!c) return;
-      const defenders = allPawns.filter(p => p.side === defSide);
+      const defenders = allPawns.filter(p => p.side === defSide && p.slotType !== 'GK');
       if (!defenders.length) return;
-      // 2 plus proches : pressing à 2
+      // 2 plus proches pressing serré, 1 troisième de couverture
       const sorted = defenders.slice().sort((x, y) => {
         const dx1 = x.x - c.x, dy1 = x.y - c.y;
         const dx2 = y.x - c.x, dy2 = y.y - c.y;
         return (dx1*dx1+dy1*dy1) - (dx2*dx2+dy2*dy2);
       });
-      sorted.slice(0, 2).forEach((d, i) => {
-        // se rapproche à ~30px du porteur (sans le toucher)
+      sorted.slice(0, 3).forEach((d, i) => {
         const dx = c.x - d.x, dy = c.y - d.y;
         const dist = Math.sqrt(dx*dx + dy*dy) || 1;
-        const t = Math.max(0, dist - 28 - i * 14);
-        const nx = d.x + (dx / dist) * t * 0.55;
-        const ny = d.y + (dy / dist) * t * 0.55;
+        // i=0 : se rapproche à 22px (duel), i=1 : 40px (soutien), i=2 : 65px (couverture)
+        const targetDist = 22 + i * 18;
+        const t = Math.max(0, dist - targetDist);
+        const nx = d.x + (dx / dist) * t * 0.7;
+        const ny = d.y + (dy / dist) * t * 0.7;
         movePawnTo(d, nx, ny);
       });
     }
+    // Les coéquipiers du porteur se positionnent en soutien (offrent solutions de passe)
+    function supportFor(carrierId, attSide) {
+      const c = pawnById[carrierId]; if (!c) return;
+      const dir = attSide === 'A' ? 1 : -1;
+      const mates = allPawns.filter(p => p.side === attSide && p.pid !== carrierId && p.slotType !== 'GK');
+      if (!mates.length) return;
+      // 2 coéquipiers les plus proches → se proposent à 60px en avant + sur les côtés
+      const sorted = mates.slice().sort((x, y) => {
+        const dx1 = x.x - c.x, dy1 = x.y - c.y;
+        const dx2 = y.x - c.x, dy2 = y.y - c.y;
+        return (dx1*dx1+dy1*dy1) - (dx2*dx2+dy2*dy2);
+      });
+      sorted.slice(0, 2).forEach((m, i) => {
+        const lateral = (i === 0 ? 1 : -1) * (40 + Math.random() * 20);
+        const forward = 30 + Math.random() * 25;
+        const nx = c.x + forward * dir;
+        const ny = c.y + lateral;
+        movePawnTo(m, nx, ny);
+      });
+    }
+    // Le gardien suit la trajectoire de l'attaque (latéralement)
+    function gkTrack(attSide) {
+      const defSide = attSide === 'A' ? 'B' : 'A';
+      const gk = allPawns.find(p => p.side === defSide && p.slotType === 'GK');
+      if (!gk) return;
+      const carrier = ball ? { x: +ball.getAttribute('cx'), y: +ball.getAttribute('cy') } : null;
+      if (!carrier) return;
+      // GK reste sur sa ligne mais suit le ballon latéralement (±20px max)
+      const dy = Math.max(-22, Math.min(22, carrier.y - gk.base.y));
+      movePawnTo(gk, gk.base.x, gk.base.y + dy);
+    }
 
     // ---- Construire la séquence d'animation (hops) à partir des moments ----
-    const HOP = 560 / simAnim.speed;       // durée par passe
-    const PAUSE = 360 / simAnim.speed;
+    const HOP = 920 / simAnim.speed;       // ralenti — vraiment voir l'action
+    const PAUSE = 580 / simAnim.speed;
     let cum = 0;
     let liveScore = { a:0, b:0 };
 
@@ -2967,10 +3038,12 @@
       path.forEach((pt, idx) => {
         schedule(() => {
           ballToPawn(pt.id);
-          // Le porteur s'avance, l'adversaire le plus proche le presse
+          // Le porteur s'avance, les adversaires les plus proches le pressent,
+          // les coéquipiers se proposent en soutien, le GK suit latéralement
           pulsePawn(pt.id, side);
           chaseToward(pt.id, side === 'A' ? 'B' : 'A');
-          // trace de passe
+          supportFor(pt.id, side);
+          gkTrack(side);
           drawPassTrace(pawnById, path, idx, side, kits);
         }, HOP);
       });
@@ -3087,7 +3160,7 @@
     if (!m.result) return 8000;
     let hops = 0;
     m.result.moments.forEach(mo => { hops += 1 + ((mo.path||[]).length); if (mo.type==='goal') hops += 3; });
-    return Math.min(110000, hops * (560 / simAnim.speed) + 4000);
+    return Math.min(180000, hops * (920 / simAnim.speed) + 5000);
   }
 
   // ============================================================
@@ -3313,12 +3386,34 @@
   // ============================================================
   function initJusteScreen() {
     window.JustePrix.init(REAL_PLAYERS);
-    $('#justeBack').onclick = () => showScreen('setup');
-    $$('.juste-variant').forEach(b => b.onclick = () => {
+    $('#justeBack').onclick = () => { showScreen('setup'); routeMode('juste'); };
+    // Buttons sur l'ECRAN juste (post-bascule)
+    $$('#screen-juste .juste-variant').forEach(b => b.onclick = () => {
       const v = b.dataset.variant;
       if (v === 'updown') startUpDownGame();
       else if (v === 'multi') showMultiSetup();
     });
+  }
+
+  // Buttons INLINE depuis le setup
+  function bindInlineJusteSetup() {
+    if (!window.JustePrix) return;
+    window.JustePrix.init(REAL_PLAYERS || PLAYERS);
+    $$('#setupJustePanel .juste-variant').forEach(b => {
+      b.onclick = () => {
+        const v = b.dataset.variant;
+        // bascule sur l'écran juste prix et démarre
+        showScreen('juste');
+        if (v === 'updown') startUpDownGame();
+        else if (v === 'multi') showMultiSetup();
+      };
+    });
+    // Bouton "Lancer" optionnel : lance la dernière variante choisie ou updown par défaut
+    const startBtn = $('#justeStartInline');
+    if (startBtn) startBtn.onclick = () => {
+      showScreen('juste');
+      startUpDownGame();
+    };
   }
 
   function startUpDownGame() {
@@ -3349,23 +3444,37 @@
     const card = $(sel);
     const photoBox = card.querySelector('.jp-photo');
     photoBox.innerHTML = '';
-    // Cascade haute résolution : HQ primaire → HQ secondaire → SD → initiales
-    const urlHQ = window.photoUrlHQ && window.photoUrlHQ(player);
-    const urlHQ2 = window.photoUrlHQFallback && window.photoUrlHQFallback(player);
-    const urlSD = window.photoUrl && window.photoUrl(player);
-    const candidates = [urlHQ, urlHQ2, urlSD].filter((u, i, a) => u && a.indexOf(u) === i);
+    // Cascade FIABLE : Sofifa _240 (toujours dispo) → Fotmob → TM medium → initiales
+    // (Sofascore et TM /header/ sont parfois bloqués par CORS, on les évite ici)
+    const candidates = [];
+    if (player.sofifa) candidates.push(player.sofifa.replace(/_120\.png$/, '_240.png'));
+    if (player.sofifa) candidates.push(player.sofifa);  // fallback _120 si _240 manque
+    if (player.fot)    candidates.push('https://images.fotmob.com/image_resources/playerimages/' + player.fot + '.png');
+    if (player.tmid)   candidates.push('https://img.a.transfermarkt.technology/portrait/medium/' + player.tmid + '-1.jpg');
+    if (player.photo)  candidates.push(player.photo);
+    // dédoublonne
+    const seen = new Set();
+    const dedup = candidates.filter(u => u && !seen.has(u) && seen.add(u));
+    // Affiche l'initiale tout de suite (placeholder visible immédiat)
+    const initialsEl = document.createElement('span');
+    initialsEl.className = 'jp-initials';
+    initialsEl.textContent = initials(player);
+    photoBox.appendChild(initialsEl);
+    // Essaie la cascade en arrière-plan
     function tryNext(idx) {
-      if (idx >= candidates.length) { photoBox.textContent = initials(player); return; }
+      if (idx >= dedup.length) return;  // garde l'initiale
       const img = new Image();
-      img.src = candidates[idx];
       img.referrerPolicy = 'no-referrer';
       img.decoding = 'async';
-      img.loading = 'eager';
-      img.onerror = () => { img.remove(); tryNext(idx + 1); };
-      photoBox.appendChild(img);
+      img.onload = () => {
+        // succès : remplace l'initiale par l'image
+        photoBox.innerHTML = '';
+        photoBox.appendChild(img);
+      };
+      img.onerror = () => tryNext(idx + 1);
+      img.src = dedup[idx];
     }
-    if (candidates.length) tryNext(0);
-    else photoBox.textContent = initials(player);
+    tryNext(0);
     card.querySelector('.jp-name').textContent = player.name;
     card.querySelector('.jp-club').textContent = player.club + ' · ' + (player.league || '');
     if (hidden) {
@@ -3881,6 +3990,7 @@
 
     buildHero();
     bindSetup();
+    bindInlineJusteSetup();
     bindModeTabs();
     bindLobby();
     populateOnlineFormations();

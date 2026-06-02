@@ -108,9 +108,11 @@
   --r-2xl: 40px;
 
   --font: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-  /* Polices premium éditoriales (style Anthropic) — Instrument Serif est très proche de Tiempos */
-  --display: 'Instrument Serif', 'Times New Roman', serif;
-  --display-impact: 'Bebas Neue', 'Inter', sans-serif;   /* pour les titres très très impact uniquement */
+  /* Display sobre (style Söhne / Anthropic) : Inter en weight 500/600, jamais extravagant */
+  --display: 'Inter', system-ui, -apple-system, sans-serif;
+  /* Serif éditorial réservé aux .accent + italiques distinctifs */
+  --display-serif: 'Instrument Serif', Georgia, serif;
+  --display-impact: 'Bebas Neue', 'Inter', sans-serif;   /* à éviter au max */
   --display-2: 'Space Grotesk', 'Inter', sans-serif;
   --mono: 'JetBrains Mono', ui-monospace, monospace;
 }
@@ -385,16 +387,18 @@ h1, h2, h3, h4 { margin: 0; font-weight: 800; letter-spacing: -0.02em; color: va
   background: var(--neon); box-shadow: 0 0 12px var(--neon);
 }
 .hero-title-v3 {
-  font-family: var(--display);  /* Instrument Serif — éditorial premium */
-  font-size: clamp(54px, 9vw, 116px);
-  line-height: 1.0; letter-spacing: -0.03em;
+  font-family: var(--display);  /* Inter sobre */
+  font-size: clamp(50px, 8.5vw, 108px);
+  line-height: 1.02; letter-spacing: -0.035em;
   color: var(--ink);
   margin: 0;
-  font-weight: 400;
-  font-style: italic;
+  font-weight: 500;
 }
 .hero-title-v3 .accent {
+  /* Touche de personnalité : serif italic uniquement pour l'accent */
+  font-family: var(--display-serif);
   font-style: italic;
+  font-weight: 400;
   background: var(--grad-ink);
   -webkit-background-clip: text; background-clip: text;
   color: transparent;
@@ -466,11 +470,32 @@ h1, h2, h3, h4 { margin: 0; font-weight: 800; letter-spacing: -0.02em; color: va
 }
 
 /* Arc 3D : gauche tournée vers le centre, droite en miroir, centre frontal */
-/* Arc 3D plus prononcé : profondeur Z marquée pour vraiment SENTIR le détachement */
-.mode-card[data-bento="five"]  { --tilt: 32deg;  --depth: -140px; --scale: 0.88; transform-origin: right center; }
-.mode-card[data-bento="draft"] { --tilt: 0deg;   --depth: 120px;  --scale: 1.06; transform-origin: center center; z-index: 5; }
-.mode-card[data-bento="juste"] { --tilt: -32deg; --depth: -140px; --scale: 0.88; transform-origin: left center;  }
-.mode-card { transform: rotateY(var(--tilt)) translateZ(var(--depth)) scale(var(--scale)); }
+/* ===== ARC 3D + CAROUSEL ===== */
+/* État par défaut (rien de hover) = card centrale (draft) frontale, latérales inclinées vers le centre */
+.mode-card[data-bento="five"]  { --tilt: 32deg;  --depth: -140px; --scale: 0.88; --shift: 0px;  transform-origin: right center;  }
+.mode-card[data-bento="draft"] { --tilt: 0deg;   --depth: 120px;  --scale: 1.06; --shift: 0px;  transform-origin: center center; z-index: 5; }
+.mode-card[data-bento="juste"] { --tilt: -32deg; --depth: -140px; --scale: 0.88; --shift: 0px;  transform-origin: left center;   }
+.mode-card {
+  transform: translateX(var(--shift)) rotateY(var(--tilt)) translateZ(var(--depth)) scale(var(--scale));
+}
+
+/* === CAROUSEL : la card focus devient grande/frontale, les autres se décalent === */
+/* FIVE focus (gauche) : Five devient frontale au CENTRE visuel,
+   draft + juste glissent vers la droite et s'inclinent vers la gauche */
+.mode-bento[data-focus="five"] .mode-card[data-bento="five"]  { --tilt: 0deg;   --depth: 240px;  --scale: 1.12; --shift: 36%;  z-index: 12; }
+.mode-bento[data-focus="five"] .mode-card[data-bento="draft"] { --tilt: -38deg; --depth: -160px; --scale: 0.84; --shift: 36%;  z-index: 4; }
+.mode-bento[data-focus="five"] .mode-card[data-bento="juste"] { --tilt: -38deg; --depth: -160px; --scale: 0.78; --shift: 36%;  z-index: 1; }
+
+/* DRAFT focus (centre) : draft grandit, latérales gardent leur place mais plus inclinées vers elle */
+.mode-bento[data-focus="draft"] .mode-card[data-bento="draft"] { --tilt: 0deg;   --depth: 260px; --scale: 1.14; --shift: 0;  z-index: 12; }
+.mode-bento[data-focus="draft"] .mode-card[data-bento="five"]  { --tilt: 42deg;  --depth: -180px; --scale: 0.82; --shift: 0; z-index: 4; }
+.mode-bento[data-focus="draft"] .mode-card[data-bento="juste"] { --tilt: -42deg; --depth: -180px; --scale: 0.82; --shift: 0; z-index: 4; }
+
+/* JUSTE focus (droite) : juste devient frontale au CENTRE visuel,
+   draft + five glissent vers la gauche et s'inclinent vers la droite */
+.mode-bento[data-focus="juste"] .mode-card[data-bento="juste"] { --tilt: 0deg;   --depth: 240px;  --scale: 1.12; --shift: -36%; z-index: 12; }
+.mode-bento[data-focus="juste"] .mode-card[data-bento="draft"] { --tilt: 38deg;  --depth: -160px; --scale: 0.84; --shift: -36%; z-index: 4; }
+.mode-bento[data-focus="juste"] .mode-card[data-bento="five"]  { --tilt: 38deg;  --depth: -160px; --scale: 0.78; --shift: -36%; z-index: 1; }
 
 /* Image joueur plein cadre, cropée pour montrer tête+buste */
 .mc-inner { width: 100%; height: 100%; position: relative; border-radius: inherit; overflow: hidden; }
@@ -508,18 +533,47 @@ h1, h2, h3, h4 { margin: 0; font-weight: 800; letter-spacing: -0.02em; color: va
 }
 .mode-card:hover .mc-glow { opacity: 1; }
 
-/* Gradient noir vers le bas (uniquement) pour la lisibilité du texte */
+/* ===== AURORA gradient éclaté multi-couleurs en bas (style références) =====
+   Plusieurs blobs radiaux colorés flous superposés, par-dessus un voile sombre léger
+   pour que le texte blanc reste lisible. La couleur dépend du mode. */
 .mc-inner::after {
   content: "";
   position: absolute; left: 0; right: 0; bottom: 0;
-  height: 55%; z-index: 1;
-  background: linear-gradient(180deg,
-    transparent 0%,
-    rgba(0,0,0,0.05) 25%,
-    rgba(0,0,0,0.45) 55%,
-    rgba(0,0,0,0.86) 90%,
-    rgba(0,0,0,0.94) 100%);
+  height: 70%; z-index: 1;
   pointer-events: none;
+  filter: blur(28px);
+  opacity: 0.9;
+  background: var(--mc-aurora);
+  mix-blend-mode: screen;
+}
+/* Voile sombre fin en bas — sépare le texte de l'image (mais léger, pas opaque) */
+.mc-inner > .mc-veil {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  height: 50%; z-index: 2;
+  pointer-events: none;
+  background: linear-gradient(180deg, transparent 0%, rgba(8,10,14,0.35) 65%, rgba(8,10,14,0.7) 100%);
+}
+/* Auroras par mode : explosion de blobs colorés */
+.mode-five .mc-inner {
+  --mc-aurora:
+    radial-gradient(60% 50% at 30% 100%, #6fb1d4 0%, transparent 60%),
+    radial-gradient(45% 40% at 70% 90%, #ffffff 0%, transparent 55%),
+    radial-gradient(55% 60% at 50% 110%, #3a7fb5 0%, transparent 60%),
+    radial-gradient(40% 35% at 20% 90%, #b6dce8 0%, transparent 55%);
+}
+.mode-draft .mc-inner {
+  --mc-aurora:
+    radial-gradient(60% 50% at 30% 100%, #c8542f 0%, transparent 60%),
+    radial-gradient(45% 40% at 70% 90%, #f5d4a8 0%, transparent 55%),
+    radial-gradient(55% 60% at 50% 110%, #8a2126 0%, transparent 60%),
+    radial-gradient(40% 35% at 80% 95%, #ffeac0 0%, transparent 55%);
+}
+.mode-juste .mc-inner {
+  --mc-aurora:
+    radial-gradient(60% 50% at 30% 100%, #e0c177 0%, transparent 60%),
+    radial-gradient(45% 40% at 70% 90%, #fff8e8 0%, transparent 55%),
+    radial-gradient(55% 60% at 50% 110%, #b88c4a 0%, transparent 60%),
+    radial-gradient(40% 35% at 80% 95%, #fff0c8 0%, transparent 55%);
 }
 
 /* Reflet glassy ciselé sur le bord supérieur */
@@ -565,13 +619,12 @@ h1, h2, h3, h4 { margin: 0; font-weight: 800; letter-spacing: -0.02em; color: va
 }
 .mc-eyebrow svg { display: inline-block; }
 .mc-title {
-  font-family: var(--display);   /* Instrument Serif italic */
-  font-style: italic;
-  font-size: clamp(42px, 5vw, 64px);
-  line-height: 0.96; margin: 2px 0 6px;
-  letter-spacing: -0.025em;
+  font-family: var(--display);   /* Inter sobre */
+  font-size: clamp(40px, 4.8vw, 58px);
+  line-height: 1; margin: 2px 0 6px;
+  letter-spacing: -0.035em;
   color: #fff;
-  font-weight: 400;
+  font-weight: 500;
   text-shadow: 0 2px 12px rgba(0,0,0,0.7), 0 1px 0 rgba(0,0,0,0.4);
 }
 .mc-desc {
@@ -581,22 +634,23 @@ h1, h2, h3, h4 { margin: 0; font-weight: 800; letter-spacing: -0.02em; color: va
 }
 
 /* HOVER : la card hover se redresse + grandit, les autres reculent */
-.mode-card:hover {
-  --tilt: 0deg;
-  --depth: 240px;       /* sortie franche en Z */
-  --scale: 1.12;
+/* Box-shadow renforcée sur la card focus (gérée par data-focus) */
+.mode-bento[data-focus] .mode-card[data-bento]:where([data-bento]) { /* placeholder */ }
+.mode-bento[data-focus="five"]  .mode-card[data-bento="five"],
+.mode-bento[data-focus="draft"] .mode-card[data-bento="draft"],
+.mode-bento[data-focus="juste"] .mode-card[data-bento="juste"] {
   box-shadow:
-    0 1px 0 rgba(255,255,255,0.18) inset,
-    0 80px 140px rgba(0,0,0,0.78),
-    0 30px 60px rgba(0,0,0,0.55);
-  z-index: 10;
+    0 1px 0 rgba(255,255,255,0.22) inset,
+    0 90px 160px rgba(0,0,0,0.8),
+    0 35px 70px rgba(0,0,0,0.6);
 }
-.mode-card:hover .mc-player { transform: scale(1.04); object-position: center 12%; }
-
-/* Quand un voisin est hover, les autres s'inclinent plus */
-.mode-bento:hover .mode-card:not(:hover)[data-bento="five"]  { --tilt: 38deg;  --depth: -130px; --scale: 0.86; }
-.mode-bento:hover .mode-card:not(:hover)[data-bento="draft"] { --tilt: 0deg;   --depth: 0px;    --scale: 0.94; z-index: 1; }
-.mode-bento:hover .mode-card:not(:hover)[data-bento="juste"] { --tilt: -38deg; --depth: -130px; --scale: 0.86; }
+/* Léger zoom de l'image quand la card est focus */
+.mode-bento[data-focus="five"]  .mode-card[data-bento="five"]  .mc-player,
+.mode-bento[data-focus="draft"] .mode-card[data-bento="draft"] .mc-player,
+.mode-bento[data-focus="juste"] .mode-card[data-bento="juste"] .mc-player {
+  transform: scale(1.04);
+  object-position: center 12%;
+}
 
 /* Mobile : on aplatit l'arc et on empile */
 @media (max-width: 760px) {
@@ -610,12 +664,11 @@ h1, h2, h3, h4 { margin: 0; font-weight: 800; letter-spacing: -0.02em; color: va
     max-width: min(420px, 92vw);
     aspect-ratio: 5 / 6.2;
   }
-  .mode-card[data-bento="five"]  { --tilt: 12deg;  --depth: -30px; --scale: 0.96; }
-  .mode-card[data-bento="draft"] { --tilt: 0deg;   --depth: 20px;  --scale: 1; }
-  .mode-card[data-bento="juste"] { --tilt: -12deg; --depth: -30px; --scale: 0.96; }
-  .mode-bento:hover .mode-card:not(:hover)[data-bento="five"]  { --tilt: 14deg; --depth: -40px; --scale: 0.94; }
-  .mode-bento:hover .mode-card:not(:hover)[data-bento="juste"] { --tilt: -14deg; --depth: -40px; --scale: 0.94; }
-  .mode-card:hover { --tilt: 0deg; --depth: 60px; --scale: 1.03; }
+  .mode-card[data-bento="five"]  { --tilt: 12deg;  --depth: -30px; --scale: 0.96; --shift: 0; }
+  .mode-card[data-bento="draft"] { --tilt: 0deg;   --depth: 20px;  --scale: 1;    --shift: 0; }
+  .mode-card[data-bento="juste"] { --tilt: -12deg; --depth: -30px; --scale: 0.96; --shift: 0; }
+  /* Mobile : on neutralise le carousel (les cards sont empilées) */
+  .mode-bento[data-focus] .mode-card { --shift: 0 !important; }
   .mc-title { font-size: 44px; }
   .mc-body  { left: 18px; right: 18px; bottom: 18px; }
 }
@@ -641,16 +694,13 @@ h1, h2, h3, h4 { margin: 0; font-weight: 800; letter-spacing: -0.02em; color: va
 }
 .logo.logo-v5:hover { transform: translateY(-1px); }
 .logo-wordmark {
-  font-family: var(--display);  /* Instrument Serif */
-  font-style: italic;
-  font-weight: 400;
-  font-size: 34px;
+  font-family: var(--display);  /* Inter sobre */
+  font-weight: 500;
+  font-size: 30px;
   line-height: 1;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.035em;
   color: var(--ink);
   text-transform: lowercase;
-  /* léger relief sur la typo */
-  text-shadow: 0 1px 0 rgba(255,255,255,0.04);
 }
 .logo-glyph {
   width: 14px; height: 14px;
@@ -879,6 +929,60 @@ h1, h2, h3, h4 { margin: 0; font-weight: 800; letter-spacing: -0.02em; color: va
 .setup-section {
   max-width: 1080px; margin: 0 auto;
   padding: 0 32px;
+  position: relative;
+}
+
+/* === Nuage gradient en haut du setup — couleur change avec le mode actif === */
+.mode-cloud {
+  position: absolute;
+  left: 50%; top: -80px;
+  transform: translateX(-50%);
+  width: min(900px, 90vw);
+  height: 280px;
+  pointer-events: none;
+  z-index: 0;
+  filter: blur(60px);
+  opacity: 0;
+  transition: opacity 0.7s ease, background 0.7s ease;
+  border-radius: 50%;
+}
+body[data-mode="draft"] .mode-cloud {
+  opacity: 0.75;
+  background:
+    radial-gradient(60% 70% at 30% 50%, #c8542f 0%, transparent 60%),
+    radial-gradient(50% 60% at 70% 60%, #ffd0a0 0%, transparent 55%),
+    radial-gradient(50% 60% at 50% 40%, #8a2126 0%, transparent 65%);
+}
+body[data-mode="five"] .mode-cloud {
+  opacity: 0.7;
+  background:
+    radial-gradient(60% 70% at 30% 50%, #3a7fb5 0%, transparent 60%),
+    radial-gradient(50% 60% at 70% 60%, #e8f4fa 0%, transparent 55%),
+    radial-gradient(50% 60% at 50% 40%, #6fb1d4 0%, transparent 65%);
+}
+body[data-mode="juste"] .mode-cloud {
+  opacity: 0.7;
+  background:
+    radial-gradient(60% 70% at 30% 50%, #b88c4a 0%, transparent 60%),
+    radial-gradient(50% 60% at 70% 60%, #ffffff 0%, transparent 55%),
+    radial-gradient(50% 60% at 50% 40%, #e0c177 0%, transparent 65%);
+}
+
+.setup-header {
+  text-align: center;
+  position: relative;
+  z-index: 1;
+  margin-bottom: 32px;
+}
+.setup-header .hero-eyebrow { margin-bottom: 14px; }
+.setup-title {
+  font-family: var(--display);   /* Inter sobre */
+  font-weight: 500;
+  font-size: clamp(32px, 4.8vw, 52px);
+  line-height: 1.05;
+  letter-spacing: -0.035em;
+  color: var(--ink);
+  margin: 0;
 }
 .setup-card {
   background: var(--grad-card);

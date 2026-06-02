@@ -69,6 +69,7 @@
             <div class="mc-inner">
               <div class="mc-bg"></div>
               <div class="mc-glow"></div>
+              <div class="mc-veil"></div>
               <img class="mc-player" src="assets/IMG_2576.webp" alt="Cherki" loading="eager" decoding="async" />
               <div class="mc-body">
                 <div class="mc-eyebrow"><svg viewBox="0 0 12 12" width="10" height="10" fill="currentColor"><circle cx="6" cy="6" r="5"/><path d="M6 1 A5 5 0 0 1 6 11 Z" fill="rgba(255,255,255,0.4)"/></svg>Five 5 vs 5</div>
@@ -82,6 +83,7 @@
             <div class="mc-inner">
               <div class="mc-bg"></div>
               <div class="mc-glow"></div>
+              <div class="mc-veil"></div>
               <img class="mc-player" src="assets/IMG_2575.webp" alt="Mbappé" loading="eager" decoding="async" />
               <div class="mc-body">
                 <div class="mc-eyebrow"><svg viewBox="0 0 12 12" width="10" height="10" fill="currentColor"><path d="M6 0.5 L7.5 4.2 L11.5 4.5 L8.4 7 L9.4 11 L6 8.8 L2.6 11 L3.6 7 L0.5 4.5 L4.5 4.2 Z"/></svg>Mode phare</div>
@@ -95,6 +97,7 @@
             <div class="mc-inner">
               <div class="mc-bg"></div>
               <div class="mc-glow"></div>
+              <div class="mc-veil"></div>
               <img class="mc-player" src="assets/IMG_2577.webp" alt="Yamal" loading="eager" decoding="async" />
               <div class="mc-body">
                 <div class="mc-eyebrow"><svg viewBox="0 0 12 12" width="10" height="10" fill="currentColor"><circle cx="6" cy="6" r="5" opacity="0.3"/><circle cx="6" cy="6" r="3" opacity="0.6"/><circle cx="6" cy="6" r="1"/></svg>Party game</div>
@@ -107,6 +110,20 @@
       </div>
 
       <div class="setup-section" id="setupSection">
+
+        <!-- Nuage gradient en haut du setup (couleur du mode actif) -->
+        <div class="mode-cloud" id="modeCloud" aria-hidden="true"></div>
+
+        <!-- En-tête du setup adaptatif -->
+        <div class="setup-header">
+          <div class="hero-eyebrow" id="setupEyebrow">/ MODE DRAFT · Snake draft</div>
+          <h1 class="setup-title" id="setupTitle">Compose, simule, analyse</h1>
+        </div>
+
+        <!-- ============================================== -->
+        <!-- PANEL : Setup Draft / Five (compo + paramètres) -->
+        <!-- ============================================== -->
+        <div id="setupDraftPanel">
 
         <!-- Mode toggle -->
         <div class="mode-tabs" id="modeTabs">
@@ -292,7 +309,44 @@
         </div>
 
         <p class="dataset-note" id="datasetNote">4000+ joueurs · données Transfermarkt saison 2025-26 · valeurs marchandes en temps réel</p>
-      </div>
+
+        </div><!-- /#setupDraftPanel -->
+
+        <!-- =================================== -->
+        <!-- PANEL : Setup Juste Prix (in-page) -->
+        <!-- =================================== -->
+        <div id="setupJustePanel" style="display:none">
+
+          <div class="juste-variant-grid" id="justeVariantInline">
+            <button class="juste-variant" data-variant="updown">
+              <div class="jv-head">PLUS OU MOINS</div>
+              <div class="jv-icon" aria-hidden="true">
+                <svg viewBox="0 0 64 64" width="48" height="48" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M32 8 L32 56"/><path d="M20 18 L32 8 L44 18"/><path d="M20 46 L32 56 L44 46"/>
+                </svg>
+              </div>
+              <div class="jv-desc">Solo · 3 vies. Le joueur suivant vaut-il plus ou moins ?</div>
+            </button>
+            <button class="juste-variant" data-variant="multi">
+              <div class="jv-head">ESTIMATION MULTI</div>
+              <div class="jv-icon" aria-hidden="true">
+                <svg viewBox="0 0 64 64" width="48" height="48" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="32" cy="32" r="22"/><circle cx="32" cy="32" r="14"/><circle cx="32" cy="32" r="6" fill="currentColor" stroke="none"/>
+                </svg>
+              </div>
+              <div class="jv-desc">2-4 joueurs. Chacun donne son prix, le plus proche prend le point.</div>
+            </button>
+          </div>
+
+          <div class="setup-actions">
+            <button class="btn btn-primary btn-lg" id="justeStartInline">
+              <span>Lancer Juste Prix</span>
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>
+            </button>
+          </div>
+        </div><!-- /#setupJustePanel -->
+
+      </div><!-- /#setupSection (now contains both panels) -->
 
       <div class="features">
         <div class="feature">
