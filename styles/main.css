@@ -3368,23 +3368,100 @@ body[data-mode="juste"] .mode-cloud {
 /* ==========================================================================
    JUSTE PRIX
    ========================================================================== */
+/* ============================================================
+   JUSTE PRIX — Cards variantes style Noah aurora (premium)
+   ============================================================ */
 .juste-variant-grid {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 18px;
-  max-width: 880px; margin: 0 auto 32px;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 20px;
+  max-width: 900px; margin: 0 auto 32px;
+  perspective: 1400px;
 }
 .juste-variant {
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--r-lg);
-  padding: 28px; text-align: left;
+  position: relative;
+  background: #050608;       /* noir profond comme Noah */
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 24px;
+  padding: 28px 24px;
+  text-align: left;
   cursor: pointer;
-  transition: all 0.25s;
-  color: var(--ink);
+  overflow: hidden;
+  min-height: 280px;
+  transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1),
+              box-shadow 0.4s, border-color 0.3s;
+  color: rgba(255,255,255,0.92);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.08),
+    0 24px 50px rgba(0,0,0,0.5);
+  display: flex; flex-direction: column;
+  justify-content: space-between;
 }
-.juste-variant:hover { border-color: var(--neon); transform: translateY(-3px); box-shadow: 0 12px 30px rgba(0,0,0,0.4); }
-.jv-head { font-family: var(--mono); font-size: 11px; letter-spacing: 0.2em; color: var(--neon); margin-bottom: 12px; }
-.jv-icon { font-size: 48px; line-height: 1; margin-bottom: 16px; }
-.jv-desc { color: var(--ink-soft); font-size: 13px; line-height: 1.5; }
+/* Aurora subtle au fond, couleur différente par variant */
+.juste-variant::before {
+  content: "";
+  position: absolute;
+  left: -10%; right: -10%; bottom: -10%;
+  height: 65%;
+  pointer-events: none;
+  filter: blur(50px);
+  opacity: 0.85;
+  border-radius: 50% 50% 0 0 / 35% 35% 0 0;
+  background: linear-gradient(180deg,
+    transparent 0%,
+    transparent 30%,
+    var(--juv-color, rgba(214,139,60,0.7)) 55%,
+    rgba(255,255,255,0.95) 100%);
+  transition: opacity 0.4s, transform 0.5s;
+}
+.juste-variant[data-variant="updown"] { --juv-color: rgba(58, 127, 181, 0.78); }
+.juste-variant[data-variant="multi"]  { --juv-color: rgba(184, 140, 74, 0.78); }
+.juste-variant:hover {
+  transform: translateY(-4px) scale(1.01);
+  border-color: rgba(255,255,255,0.16);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.12),
+    0 36px 70px rgba(0,0,0,0.6),
+    0 0 30px rgba(214,139,60,0.10);
+}
+.juste-variant:hover::before { opacity: 1; transform: scale(1.05); }
+
+.jv-head {
+  position: relative;
+  font-family: var(--mono); font-size: 10px;
+  letter-spacing: 0.26em;
+  color: rgba(255,255,255,0.45);
+  margin-bottom: 12px;
+  text-transform: uppercase;
+}
+.jv-icon {
+  position: relative;
+  width: 56px; height: 56px;
+  border-radius: 16px;
+  display: grid; place-items: center;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.10);
+  color: rgba(255,255,255,0.92);
+  margin-bottom: 18px;
+  backdrop-filter: blur(8px);
+}
+.jv-icon svg { width: 28px; height: 28px; }
+
+.juste-variant h3,
+.juste-variant .jv-title {
+  position: relative;
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: 28px;
+  letter-spacing: -0.03em;
+  margin: 0 0 8px;
+  color: white;
+}
+.jv-desc {
+  position: relative;
+  color: rgba(255,255,255,0.65);
+  font-size: 13px; line-height: 1.5;
+  letter-spacing: -0.005em;
+  margin-top: auto;
+}
 @media (max-width: 720px) { .juste-variant-grid { grid-template-columns: 1fr; } }
 
 .juste-stage { max-width: 1000px; margin: 0 auto; }
@@ -3410,32 +3487,50 @@ body[data-mode="juste"] .mode-cloud {
   --glow-r: 214; --glow-g: 139; --glow-b: 60;
   position: relative;
   border-radius: 24px;
-  padding: 26px 22px 22px;
+  padding: 28px 22px 22px;
   display: flex; flex-direction: column; align-items: center; text-align: center;
   overflow: hidden;
-  /* glassmorphism : fond translucide + flou */
-  background:
-    radial-gradient(120% 100% at 50% -10%, rgba(var(--glow-r),var(--glow-g),var(--glow-b),0.32) 0%, transparent 55%),
-    linear-gradient(180deg, rgba(24,28,38,0.78) 0%, rgba(14,18,26,0.92) 100%);
-  border: 1px solid rgba(255,255,255,0.09);
-  backdrop-filter: blur(18px) saturate(1.4);
-  -webkit-backdrop-filter: blur(18px) saturate(1.4);
+  background: #050608;
+  border: 1px solid rgba(255,255,255,0.08);
   box-shadow:
-    0 0 0 1px rgba(var(--glow-r),var(--glow-g),var(--glow-b),0.12) inset,
-    0 30px 80px rgba(0,0,0,0.55),
-    0 6px 18px rgba(0,0,0,0.4),
-    0 0 40px rgba(var(--glow-r),var(--glow-g),var(--glow-b),0.18);
-  transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.4s;
+    inset 0 1px 0 rgba(255,255,255,0.10),
+    0 30px 60px rgba(0,0,0,0.55);
+  transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.5s;
+  z-index: 1;
 }
+/* Aurora style Noah : forme courbée colorée par la couleur du club */
 .juste-pcard::before {
   content: "";
-  position: absolute; inset: 0;
-  background: linear-gradient(115deg, transparent 35%, rgba(255,255,255,0.07) 50%, transparent 65%);
+  position: absolute;
+  left: -10%; right: -10%; bottom: -10%;
+  height: 60%;
   pointer-events: none;
-  opacity: 0; transition: opacity 0.5s;
+  filter: blur(55px);
+  opacity: 0.78;
+  border-radius: 50% 50% 0 0 / 35% 35% 0 0;
+  background: linear-gradient(180deg,
+    transparent 0%,
+    transparent 30%,
+    rgba(var(--glow-r), var(--glow-g), var(--glow-b), 0.85) 55%,
+    rgba(255, 255, 255, 0.95) 100%);
+  z-index: 0;
+  transition: opacity 0.5s;
 }
-.juste-pcard.flash::before { opacity: 1; animation: jpFlash 0.7s ease; }
-@keyframes jpFlash { 0%{background-position:-30% 0} 100%{background-position:130% 0} }
+.juste-pcard.flash::before { animation: jpFlashAurora 0.9s ease; }
+@keyframes jpFlashAurora {
+  0%   { opacity: 0.78; }
+  35%  { opacity: 1; transform: scale(1.06); }
+  100% { opacity: 0.78; transform: scale(1); }
+}
+/* Reflet brillant top */
+.juste-pcard::after {
+  content: "";
+  position: absolute; top: 0; left: 0; right: 0; height: 38%;
+  background: linear-gradient(180deg, rgba(255,255,255,0.04) 0%, transparent 100%);
+  pointer-events: none; z-index: 0;
+}
+/* Le contenu doit être au-dessus de l'aurora */
+.juste-pcard > * { position: relative; z-index: 2; }
 
 /* Photo : carré aux bords arrondis, taille généreuse pour exploiter le HD */
 .jp-photo {
