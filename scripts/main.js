@@ -2743,21 +2743,25 @@
     const tacA = stadiumState.tactics[m.a] || window.Sim.STYLES.equilibre.tactics;
     const tacB = stadiumState.tactics[m.b] || window.Sim.STYLES.equilibre.tactics;
 
-    // === Nouveau moteur si dispo (engine A+B) ===
+    // === Nouveau moteur si dispo (engine A+B + Five) ===
     let result;
+    const useFive = state.fiveMode || state.matchMode === 'five';
     if (window.Drafter && window.Drafter.MatchEngine && !state.legacyEngine) {
       try {
         const teamA = adaptToEngineTeam(partA);
         const teamB = adaptToEngineTeam(partB);
-        const engineResult = window.Drafter.MatchEngine.runMatch(teamA, teamB);
+        // Engine spécifique Five si en mode 5v5
+        const engineResult = useFive && window.Drafter.FiveEngine
+          ? window.Drafter.FiveEngine.runFiveMatch(teamA, teamB)
+          : window.Drafter.MatchEngine.runMatch(teamA, teamB);
         result = convertEngineResultToLegacy(engineResult, partA, partB);
-        m.engineResult = engineResult;  // garde le résultat enrichi pour le rapport
+        m.engineResult = engineResult;
       } catch (e) {
         console.warn('MatchEngine failed, fallback legacy:', e);
-        result = window.Sim.simulateMatch(tpA, tpB, tacA, tacB, { five: state.matchMode === 'five' });
+        result = window.Sim.simulateMatch(tpA, tpB, tacA, tacB, { five: useFive });
       }
     } else {
-      result = window.Sim.simulateMatch(tpA, tpB, tacA, tacB, { five: state.matchMode === 'five' });
+      result = window.Sim.simulateMatch(tpA, tpB, tacA, tacB, { five: useFive });
     }
 
     m.result = result;
