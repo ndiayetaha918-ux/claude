@@ -395,8 +395,9 @@
     // xG estimé
     const xg = +(0.05 + Math.pow(shotQ, 1.5) * 0.65).toFixed(2);
 
-    // On-target probability (quadratique)
-    const onTargetProb = Math.max(0.10, Math.min(0.95, Math.pow(shotQ, 1.2) * 1.1));
+    // On-target probability (40-70% typique, calibré : top joueurs cadrent
+    // souvent mais pas systématiquement)
+    const onTargetProb = Math.max(0.20, Math.min(0.78, Math.pow(shotQ, 1.3) * 0.85));
     const onTarget = rng() < onTargetProb;
     if (!onTarget) return { outcome: 'miss', xg, shooter: finisher, cast, situation: sit };
 
@@ -404,9 +405,9 @@
     const gk = defendingTeamPlayers.find(p => p.slotType === 'GK');
     const gkRating = gk ? ((gk.attrs.anticipation + gk.attrs.intelligence + gk.attrs.interception) / 3) : 65;
 
-    // Goal probability (quadratique vs GK)
-    const goalProb = Math.max(0.04, Math.min(0.95,
-      Math.pow(shotQ, 1.7) * (1 - gkRating / 130) * 1.35
+    // Goal probability (calibré : ~25-50% pour les tirs cadrés top joueurs)
+    const goalProb = Math.max(0.03, Math.min(0.85,
+      Math.pow(shotQ, 1.8) * (1 - gkRating / 135) * 1.10
     ));
     const isGoal = rng() < goalProb;
 

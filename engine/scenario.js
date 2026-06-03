@@ -174,10 +174,13 @@
     const events = [];
     // Premier tirage : y a-t-il une surprise ?
     if (rng() < surpriseProb) {
-      // Choisir une phase aléatoire (privilégier les phases 3, 5, 6 = moments dramatiques)
+      // Privilégier les phases 3, 5, 6 — moments dramatiques (fin de mi-temps,
+      // tournant, finale). Jamais en phase 1 (observation).
       const dramaticPhases = [phases[2], phases[4], phases[5]];
       const phase = dramaticPhases[Math.floor(rng() * dramaticPhases.length)];
-      const minute = phase.minStart + Math.floor(rng() * (phase.minEnd - phase.minStart));
+      // Évite le tout début de phase — on laisse 30% écoulé minimum
+      const phaseDur = phase.minEnd - phase.minStart;
+      const minute = phase.minStart + Math.floor((0.3 + rng() * 0.7) * phaseDur);
       // Side : favorise l'underdog (celui qui est en désavantage)
       const underdog = forceRatioA < 0.5 ? 'A' : 'B';
       const surpriseType = pickSurpriseType(rng);
@@ -190,9 +193,12 @@
       });
     }
     // Deuxième tirage (plus rare) : un deuxième événement de surprise possible
+    // Jamais en phase 1 non plus
     if (rng() < surpriseProb * 0.3) {
-      const phase = phases[Math.floor(rng() * phases.length)];
-      const minute = phase.minStart + Math.floor(rng() * (phase.minEnd - phase.minStart));
+      const phaseIdx = 1 + Math.floor(rng() * 5);  // phases 2-6
+      const phase = phases[phaseIdx];
+      const phaseDur = phase.minEnd - phase.minStart;
+      const minute = phase.minStart + Math.floor((0.3 + rng() * 0.7) * phaseDur);
       const underdog = forceRatioA < 0.5 ? 'A' : 'B';
       events.push({
         minute,
