@@ -1,0 +1,53 @@
+name: Sync Transfermarkt values
+
+# Synchronisation automatique des valeurs joueurs depuis Transfermarkt.
+# Tourne 2× par semaine (lundi + jeudi à 6h UTC) ou manuellement.
+on:
+  schedule:
+    - cron: '0 6 * * 1,4'
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Mode (check / update200 / updateAll)'
+        required: true
+        default: 'update200'
+        type: choice
+        options:
+          - check
+          - update200
+          - updateAll
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run scraper
+        run: |
+          MODE="${{ github.event.inputs.mode || 'update200' }}"
+          if [ "$MODE" = "check" ]; then
+            node tools/scrape-tm.js --check
+          elif [ "$MODE" = "updateAll" ]; then
+            node tools/scrape-tm.js --all
+          else
+            node tools/scrape-tm.js --limit 200
+          fi
+
+      - name: Commit changes
+        if: github.event.inputs.mode != 'check'
+        run: |
+          git config user.name 'drafter-bot'
+          git config user.email 'bot@drafter'
+          if git diff --quiet scripts/players.js; then
+            echo "No changes."
+            exit 0
+          fi
+          git add scripts/players.js
+          git commit -m "chore(data): sync TM values $(date -u +%Y-%m-%d)"
+          git push
