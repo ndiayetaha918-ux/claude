@@ -91,12 +91,13 @@
     const out = {};
     ATTRIBUTE_KEYS.forEach(k => {
       const weight = profile[k] || 60;
-      // Formule additive : un top joueur dépasse 90 sur son attribut clé,
-      // tombe à ~70 sur ses faiblesses. Un joueur moyen oscille autour de 60.
+      // Formule additive contrastée :
       //   baseLevel = niveau global déduit de la valeur marchande (46..96)
       //   weight = importance de l'attribut pour le poste (typ. 30..92)
-      //   spread = (weight - 60) × 0.45 → écart entre attributs clés et faibles
-      let v = baseLevel + (weight - 60) * 0.45;
+      //   spread = (weight - 60) × 0.7 → fort écart entre attrs clés et faibles
+      //   → un top attaquant : finishing 99, interception 55 (réaliste)
+      //   → un meneur : vision 95, duel 65 (réaliste)
+      let v = baseLevel + (weight - 60) * 0.7;
       // Application âge selon famille d'attribut
       if (k === 'speed')         v *= speedFactor;
       else if (k === 'stamina')  v *= staminaFactor;
