@@ -2232,6 +2232,39 @@
       const roles = (tacticsState.byParticipant[i] && tacticsState.byParticipant[i].players) || null;
       return window.Sim.teamProfile(p, FORMATIONS, playerById, stadiumState.tactics[i], roles);
     });
+    // === Nouveau : note d'équipe intelligente engine A.5 ===
+    stadiumState.engineGrades = state.participants.map((p, i) => {
+      if (!window.Drafter || !window.Drafter.TeamGrade) return null;
+      try {
+        const teamA = adaptToEngineTeam(p);
+        return window.Drafter.TeamGrade.gradeTeam(teamA, {
+          grid: state.fiveMode ? '5v5' : '11v11',
+        });
+      } catch (e) {
+        console.warn('TeamGrade failed for participant', i, e);
+        return null;
+      }
+    });
+  }
+
+  // Cache des dossiers pré-match calculés une fois (lourd)
+  const _preMatchCache = new Map();
+  function getPreMatchAnalysis(idxA, idxB) {
+    const key = idxA + '_' + idxB;
+    if (_preMatchCache.has(key)) return _preMatchCache.get(key);
+    if (!window.Drafter || !window.Drafter.Analyzer) return null;
+    try {
+      const teamA = adaptToEngineTeam(state.participants[idxA]);
+      const teamB = adaptToEngineTeam(state.participants[idxB]);
+      const result = window.Drafter.Analyzer.analyzeMatch(teamA, teamB, {
+        grid: state.fiveMode ? '5v5' : '11v11',
+      });
+      _preMatchCache.set(key, result);
+      return result;
+    } catch (e) {
+      console.warn('getPreMatchAnalysis failed:', e);
+      return null;
+    }
   }
 
   function goToStadium() {
@@ -2598,9 +2631,24 @@
       ringWrap.appendChild(meta);
       card.appendChild(ringWrap);
 
-      // Score bars
+      // Score bars : 4 dimensions du nouveau grade si dispo, sinon legacy
+      const engineGrade = stadiumState.engineGrades && stadiumState.engineGrades[i];
       const bars = el('div', { class: 'score-bars' });
-      [['QUALITÉ', score.quality], ['CHIMIE', score.chemistry], ['ADÉQUATION', score.fit], ['ÉQUILIBRE', score.balance], ['COHÉRENCE TACTIQUE', score.tactic]].forEach(([lbl, v]) => {
+      const dims = engineGrade
+        ? [
+            ['QUALITÉ INDIVIDUELLE', engineGrade.dimensions.raw],
+            ['COHÉSION (synergies)',  engineGrade.dimensions.cohesion],
+            ['ADÉQUATION RÔLES',      engineGrade.dimensions.fit],
+            ['ÉQUILIBRE ZONAL',       engineGrade.dimensions.balance],
+          ]
+        : [
+            ['QUALITÉ', score.quality],
+            ['CHIMIE', score.chemistry],
+            ['ADÉQUATION', score.fit],
+            ['ÉQUILIBRE', score.balance],
+            ['COHÉRENCE TACTIQUE', score.tactic],
+          ];
+      dims.forEach(([lbl, v]) => {
         const bar = el('div', { class: 'score-bar' });
         bar.appendChild(el('span', { class: 'label' }, lbl));
         const barEl = el('div', { class: 'bar' });
@@ -2611,6 +2659,16 @@
         bars.appendChild(bar);
       });
       card.appendChild(bars);
+
+      // Override de la valeur du ring central avec engineGrade.grade si dispo
+      if (engineGrade) {
+        const valueSpan = ring.querySelector('.value span:first-child');
+        if (valueSpan) valueSpan.textContent = engineGrade.grade;
+        // Mise à jour aussi du dashoffset
+        const pct = engineGrade.grade / 99;
+        const fgCircle = ring.querySelector('.ring-fg');
+        if (fgCircle) fgCircle.style.strokeDashoffset = 314.16 * (1 - pct);
+      }
 
       // Top 3 players
       const topWrap = el('div', { class: 'top-players' });
@@ -2699,8 +2757,18 @@
 
     // CTA
     const cta = el('div', { class: 'match-cta' });
+    // Bouton dossier pré-match (engine A.4)
+    if (window.Drafter && window.Drafter.Analyzer) {
+      const dossier = el('button', { class: 'btn btn-ghost match-dossier' });
+      dossier.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg> Dossier';
+      dossier.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        openDossierTactique(m.a, m.b);
+      });
+      cta.appendChild(dossier);
+    }
     if (!m.played) {
-      const btn = el('button', { class: 'btn btn-ghost' }, 'Simuler ce match');
+      const btn = el('button', { class: 'btn btn-primary' }, 'Simuler');
       btn.addEventListener('click', () => playMatch(idx));
       cta.appendChild(btn);
     } else {
@@ -2711,6 +2779,132 @@
     row.appendChild(cta);
 
     return row;
+  }
+
+  /**
+   * openDossierTactique(idxA, idxB)
+   * Modal qui affiche le dossier pré-match enrichi par l'engine A.4
+   */
+  function openDossierTactique(idxA, idxB) {
+    const analysis = getPreMatchAnalysis(idxA, idxB);
+    if (!analysis) { toast('Engine non disponible'); return; }
+    const partA = state.participants[idxA], partB = state.participants[idxB];
+
+    let modal = $('#modalDossier');
+    if (!modal) {
+      modal = el('div', { class: 'modal modal-dossier', id: 'modalDossier' });
+      modal.innerHTML = '<div class="modal-card dossier-card"><button class="modal-close" data-close>×</button><div class="dossier-body"></div></div>';
+      document.body.appendChild(modal);
+      modal.addEventListener('click', (ev) => {
+        if (ev.target.matches('[data-close]') || ev.target === modal) closeModal('#modalDossier');
+      });
+    }
+
+    const body = modal.querySelector('.dossier-body');
+    body.innerHTML = '';
+
+    // Header confrontation
+    const head = el('div', { class: 'dos-head' });
+    head.appendChild(el('div', { class: 'dos-eyebrow' }, 'DOSSIER TACTIQUE PRÉ-MATCH'));
+    head.appendChild(el('h2', { class: 'dos-title' }, partA.name + ' vs ' + partB.name));
+    body.appendChild(head);
+
+    // Pronostic
+    const pron = el('div', { class: 'dos-pronostic' });
+    const winnerName = analysis.predictedWinner === 'A' ? partA.name :
+                       analysis.predictedWinner === 'B' ? partB.name :
+                       'Confrontation équilibrée';
+    pron.appendChild(el('div', { class: 'dos-pron-label' }, 'Pronostic'));
+    pron.appendChild(el('div', { class: 'dos-pron-title' }, winnerName));
+    pron.appendChild(el('div', { class: 'dos-pron-sub' }, 'Confiance : ' + analysis.confidence + ' · ' +
+      analysis.domStats.A + ' zones ' + partA.name + ' vs ' + analysis.domStats.B + ' zones ' + partB.name));
+    body.appendChild(pron);
+
+    // Narration
+    if (analysis.narrative) {
+      body.appendChild(el('p', { class: 'dos-narrative' }, analysis.narrative));
+    }
+
+    // Profils des 2 équipes
+    const profiles = el('div', { class: 'dos-profiles' });
+    [analysis.reportA, analysis.reportB].forEach((report, i) => {
+      const part = i === 0 ? partA : partB;
+      const col = el('div', { class: 'dos-col' });
+      col.appendChild(el('div', { class: 'dos-team-head', style: 'border-left-color:' + part.color.solid }, part.name));
+
+      // Identité tactique
+      if (report.primaryIdentity) {
+        const identity = el('div', { class: 'dos-block' });
+        identity.appendChild(el('div', { class: 'dos-block-label' }, 'Identité tactique'));
+        identity.appendChild(el('div', { class: 'dos-block-value' }, report.primaryIdentity.label));
+        identity.appendChild(el('div', { class: 'dos-block-desc' }, report.primaryIdentity.desc));
+        col.appendChild(identity);
+      }
+
+      // Synergies positives
+      if (report.synergies && report.synergies.positive.length) {
+        const syn = el('div', { class: 'dos-block' });
+        syn.appendChild(el('div', { class: 'dos-block-label' }, 'Synergies fortes'));
+        report.synergies.positive.slice(0, 3).forEach(s => {
+          const item = el('div', { class: 'dos-syn-pos' });
+          item.appendChild(el('span', { class: 'dos-syn-tag' }, '+' + s.score));
+          item.appendChild(el('span', {}, s.why));
+          syn.appendChild(item);
+        });
+        col.appendChild(syn);
+      }
+
+      // Contradictions / faiblesses
+      if (report.contradictions && report.contradictions.length) {
+        const contr = el('div', { class: 'dos-block' });
+        contr.appendChild(el('div', { class: 'dos-block-label dos-warn-label' }, 'Contradictions détectées'));
+        report.contradictions.slice(0, 2).forEach(c => {
+          const item = el('div', { class: 'dos-warn-item' });
+          item.appendChild(el('span', { class: 'dos-warn-icon' }, '⚠'));
+          item.appendChild(el('span', {}, c.player.name + ' en ' + c.roleLabel + ' (fit ' + c.fit + ')'));
+          contr.appendChild(item);
+        });
+        col.appendChild(contr);
+      }
+
+      // Zone forte
+      if (report.strongZones && report.strongZones.length) {
+        const zone = el('div', { class: 'dos-block' });
+        zone.appendChild(el('div', { class: 'dos-block-label' }, 'Zone forte'));
+        const z = report.strongZones[0];
+        zone.appendChild(el('div', { class: 'dos-block-value' },
+          window.Drafter.Analyzer.zoneLabel(z.zone)));
+        zone.appendChild(el('div', { class: 'dos-block-desc' },
+          'Att ' + z.attack + ' · Def ' + z.defense + ' · Vitesse ' + z.speed));
+        col.appendChild(zone);
+      }
+
+      profiles.appendChild(col);
+    });
+    body.appendChild(profiles);
+
+    // Avantages exploitables
+    if (analysis.advantagesA.length || analysis.advantagesB.length) {
+      const adv = el('div', { class: 'dos-advantages' });
+      adv.appendChild(el('h4', {}, 'Zones d\'exploitation'));
+      const advGrid = el('div', { class: 'dos-adv-grid' });
+      [['A', partA, analysis.advantagesA], ['B', partB, analysis.advantagesB]].forEach(([sideKey, part, list]) => {
+        if (!list.length) return;
+        const side = el('div', { class: 'dos-adv-side' });
+        side.appendChild(el('div', { class: 'dos-adv-name', style: 'color:' + part.color.solid }, part.name));
+        list.slice(0, 3).forEach(a => {
+          const item = el('div', { class: 'dos-adv-item' });
+          item.appendChild(el('span', { class: 'dos-adv-mag' }, '+' + a.magnitude));
+          item.appendChild(el('span', {}, window.Drafter.Analyzer.zoneLabel(a.cellId)));
+          side.appendChild(item);
+        });
+        advGrid.appendChild(side);
+      });
+      adv.appendChild(advGrid);
+      body.appendChild(adv);
+    }
+
+    openModal('#modalDossier');
   }
 
   function renderStandings(parent) {

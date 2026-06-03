@@ -3988,3 +3988,175 @@ body[data-mode="juste"] .mode-cloud {
   0%, 100% { filter: drop-shadow(0 0 12px var(--gold)) drop-shadow(0 2px 3px rgba(0,0,0,0.5)); }
   50%      { filter: drop-shadow(0 0 22px var(--gold)) drop-shadow(0 4px 6px rgba(0,0,0,0.6)); }
 }
+
+/* ============================================================
+   DOSSIER TACTIQUE (modal pré-match enrichi par engine A.4)
+   ============================================================ */
+.modal-dossier { z-index: 200; }
+.dossier-card {
+  max-width: 720px; width: 92vw;
+  max-height: 85vh; overflow-y: auto;
+  background: linear-gradient(180deg, rgba(20,24,32,0.96) 0%, rgba(8,10,14,0.98) 100%);
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 22px;
+  padding: 32px;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.dos-head { margin-bottom: 22px; text-align: center; }
+.dos-eyebrow {
+  font-family: var(--mono); font-size: 10px;
+  letter-spacing: 0.26em; color: var(--neon);
+  opacity: 0.7; margin-bottom: 8px;
+}
+.dos-title {
+  font-family: var(--display); font-weight: 600;
+  font-size: clamp(24px, 3.5vw, 34px);
+  letter-spacing: -0.025em;
+  color: white;
+}
+
+.dos-pronostic {
+  background: rgba(214,139,60,0.06);
+  border: 1px solid rgba(214,139,60,0.18);
+  border-radius: 14px;
+  padding: 18px 22px; margin-bottom: 20px;
+  text-align: center;
+}
+.dos-pron-label {
+  font-family: var(--mono); font-size: 10px;
+  letter-spacing: 0.22em; color: var(--gold);
+  opacity: 0.65; margin-bottom: 6px;
+}
+.dos-pron-title {
+  font-family: var(--display); font-weight: 600;
+  font-size: 22px; color: white; letter-spacing: -0.02em;
+}
+.dos-pron-sub {
+  font-family: var(--mono); font-size: 11px;
+  color: rgba(255,255,255,0.55); margin-top: 6px;
+  letter-spacing: 0.04em;
+}
+
+.dos-narrative {
+  font-size: 14px; line-height: 1.6;
+  color: rgba(255,255,255,0.82);
+  background: rgba(255,255,255,0.03);
+  border-radius: 12px;
+  padding: 16px 18px; margin: 0 0 22px;
+  border-left: 3px solid rgba(214,139,60,0.45);
+}
+
+.dos-profiles {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 22px;
+}
+@media (max-width: 640px) {
+  .dos-profiles { grid-template-columns: 1fr; }
+}
+
+.dos-col {
+  background: rgba(255,255,255,0.025);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 12px;
+  padding: 16px;
+}
+.dos-team-head {
+  font-family: var(--display); font-weight: 600;
+  font-size: 16px;
+  letter-spacing: -0.01em;
+  color: white;
+  padding-left: 10px;
+  border-left: 3px solid var(--neon);
+  margin-bottom: 14px;
+}
+
+.dos-block { margin-bottom: 14px; }
+.dos-block:last-child { margin-bottom: 0; }
+.dos-block-label {
+  font-family: var(--mono); font-size: 9.5px;
+  letter-spacing: 0.18em;
+  color: rgba(255,255,255,0.45);
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.dos-warn-label { color: rgba(240,138,138,0.65); }
+.dos-block-value {
+  font-family: var(--font); font-weight: 600;
+  font-size: 14px; color: white;
+  letter-spacing: -0.005em;
+}
+.dos-block-desc {
+  font-size: 11.5px;
+  color: rgba(255,255,255,0.55);
+  margin-top: 2px;
+  line-height: 1.4;
+}
+
+.dos-syn-pos {
+  display: flex; gap: 8px; align-items: flex-start;
+  font-size: 12px; line-height: 1.4;
+  color: rgba(255,255,255,0.75);
+  margin-top: 6px;
+}
+.dos-syn-tag {
+  flex-shrink: 0;
+  font-family: var(--mono); font-weight: 700;
+  color: #8fd6a4;
+  background: rgba(143,214,164,0.10);
+  padding: 1px 6px; border-radius: 4px;
+  font-size: 10.5px;
+}
+
+.dos-warn-item {
+  display: flex; gap: 8px; align-items: flex-start;
+  font-size: 12px; line-height: 1.4;
+  color: rgba(255,255,255,0.75);
+  margin-top: 6px;
+}
+.dos-warn-icon { color: var(--gold); flex-shrink: 0; }
+
+.dos-advantages h4 {
+  font-family: var(--mono); font-size: 10px;
+  letter-spacing: 0.22em; text-transform: uppercase;
+  color: rgba(255,255,255,0.55);
+  margin-bottom: 12px;
+}
+.dos-adv-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+}
+@media (max-width: 640px) {
+  .dos-adv-grid { grid-template-columns: 1fr; }
+}
+.dos-adv-side {
+  background: rgba(255,255,255,0.025);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 10px; padding: 12px;
+}
+.dos-adv-name {
+  font-family: var(--display); font-weight: 600;
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+.dos-adv-item {
+  display: flex; gap: 8px; align-items: center;
+  font-size: 12px;
+  color: rgba(255,255,255,0.75);
+  margin-top: 4px;
+}
+.dos-adv-mag {
+  font-family: var(--mono); font-weight: 700;
+  color: var(--neon);
+  background: rgba(214,139,60,0.10);
+  padding: 1px 6px; border-radius: 4px;
+  font-size: 10.5px; flex-shrink: 0;
+}
+
+.match-dossier {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12px; padding: 6px 10px;
+}
+.match-dossier svg { color: var(--neon); }
