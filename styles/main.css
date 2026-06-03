@@ -4349,3 +4349,14 @@ body[data-mode="juste"] .mode-cloud {
 }
 .mc-emblem svg { width: 50%; height: 50%; max-width: 140px; max-height: 140px; }
 .mode-card:hover .mc-emblem { color: rgba(255,255,255,0.32); transform: scale(1.05); }
+
+/* ============================================================
+   HEAT ZONE — Indicateur de zone d'action sur la sim (cercle radial)
+   Donne la sensation de zones contrôlées plutôt que pions qui s'agitent
+   ============================================================ */
+.sim-heat-zone {
+  filter: blur(18px);
+  transition: opacity 0.5s ease, r 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+  pointer-events: none;
+  mix-blend-mode: screen;
+}

@@ -3222,16 +3222,62 @@
       pawn.num.setAttribute('x', x);   pawn.num.setAttribute('y', y + 4.5);
       pawn.nm.setAttribute('x', x);    pawn.nm.setAttribute('y', y + 26);
     }
-    // Le porteur du ballon fait un petit appel vers l'avant
+    // Le porteur du ballon a juste un halo qui pulse — il NE court PAS
+    // (on ne déforme plus la formation : on respecte le placement tactique)
     function pulsePawn(pid, side) {
       const p = pawnById[pid]; if (!p) return;
-      const dir = side === 'A' ? 1 : -1;
-      // Course plus marquée — le porteur avance vraiment vers le but adverse
-      const tx = p.x + 35 * dir + (Math.random() * 20 - 10);
-      const ty = p.y + (Math.random() * 24 - 12);
-      movePawnTo(p, tx, ty);
       p.ring.classList.add('pawn-on-ball');
-      setTimeout(() => p.ring.classList.remove('pawn-on-ball'), 700);
+      setTimeout(() => p.ring.classList.remove('pawn-on-ball'), 800);
+    }
+
+    // === HEAT ZONE : illumine la zone du terrain où se passe l'action ===
+    // Map des cellId engine vers coords SVG (proportionnel)
+    const ZONE_COORDS = {
+      'axis-def':       { sx: 0.50, sy: 0.80 },
+      'axis-mid':       { sx: 0.50, sy: 0.50 },
+      'axis-att':       { sx: 0.50, sy: 0.22 },
+      'axis-box':       { sx: 0.50, sy: 0.10 },
+      'left-def':       { sx: 0.16, sy: 0.78 },
+      'left-mid':       { sx: 0.16, sy: 0.50 },
+      'left-att':       { sx: 0.16, sy: 0.22 },
+      'right-def':      { sx: 0.84, sy: 0.78 },
+      'right-mid':      { sx: 0.84, sy: 0.50 },
+      'right-att':      { sx: 0.84, sy: 0.22 },
+      'left-half-def':  { sx: 0.32, sy: 0.78 },
+      'left-half-mid':  { sx: 0.32, sy: 0.50 },
+      'left-half-att':  { sx: 0.32, sy: 0.22 },
+      'right-half-def': { sx: 0.68, sy: 0.78 },
+      'right-half-mid': { sx: 0.68, sy: 0.50 },
+      'right-half-att': { sx: 0.68, sy: 0.22 },
+    };
+    function highlightHeatZone(cellId, side, kits) {
+      const coords = ZONE_COORDS[cellId];
+      if (!coords) return;
+      const pitch = $('#simPitch');
+      if (!pitch) return;
+      // Sens : si side A, la zone "att" est à droite du SVG ; si side B, miroir gauche
+      const xPct = side === 'A' ? (1 - coords.sy) : coords.sy;
+      const yPct = side === 'A' ? coords.sx : (1 - coords.sx);
+      const cx = xPct * SIMW;
+      const cy = yPct * SIMH;
+
+      // Cercle radial coloré qui pulse
+      const heat = svg('circle', {
+        class: 'sim-heat-zone',
+        cx, cy, r: 55,
+        fill: side === 'A' ? kits.a : kits.b,
+        opacity: 0,
+      });
+      pitch.appendChild(heat);
+      // Anime via setAttribute (compat SVG)
+      requestAnimationFrame(() => {
+        heat.setAttribute('opacity', '0.32');
+        heat.setAttribute('r', '85');
+      });
+      setTimeout(() => {
+        heat.setAttribute('opacity', '0');
+        setTimeout(() => heat.remove(), 800);
+      }, 1400);
     }
     // L'adversaire le plus proche du porteur va le presser AGRESSIVEMENT
     function chaseToward(carrierId, defSide) {
@@ -3438,15 +3484,22 @@
         shiftTeam(side === 'A' ? 'B' : 'A', 1 - attackDepth * 0.85);
       }, 0);
 
-      // hops sur la trajectoire
+      // hops sur la trajectoire — modèle "intentions" plus que mouvement physique :
+      // - ballon transite vers chaque pion impliqué (passe visible)
+      // - pion porteur pulse subtilement (pas de course)
+      // - heat zone s'allume sur la zone d'action (targetZone si dispo)
+      // → finis les 22 pions qui s'agitent
       const path = (mo.path || []).filter(p => p && p.id && pawnById[p.id]);
+      // Active la heat zone correspondante AU DÉBUT de l'action
+      if (mo.targetZone || mo.originZone) {
+        schedule(() => {
+          highlightHeatZone(mo.targetZone || mo.originZone, side, kits);
+        }, 0);
+      }
       path.forEach((pt, idx) => {
         schedule(() => {
           ballToPawn(pt.id);
           pulsePawn(pt.id, side);
-          chaseToward(pt.id, side === 'A' ? 'B' : 'A');
-          supportFor(pt.id, side);
-          gkTrack(side);
           drawPassTrace(pawnById, path, idx, side, kits);
         }, HOP);
       });
