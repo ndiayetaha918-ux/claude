@@ -219,20 +219,18 @@
   function buildHeroMosaic() {
     const r1 = document.querySelector('.hm-row.r1');
     const r2 = document.querySelector('.hm-row.r2');
-    if (!r1 || !r2) return;
-    // Sélection : top 32 joueurs avec photo, mélange pour deux rows distinctes
+    const r3 = document.querySelector('.hm-row.r3');
+    if (!r1 || !r2 || !r3) return;
+    // Top 45 stars uniquement (joueurs ultra connus du moment)
     const pool = (window.PLAYERS || []).slice()
       .filter(p => (window.photoUrl && window.photoUrl(p)))
       .sort((a, b) => (b.value || 0) - (a.value || 0))
-      .slice(0, 32);
-    // Mélange déterministe pour avoir 2 lignes différentes
+      .slice(0, 45);
     function buildRow(target, offset) {
       const items = pool.slice(offset).concat(pool.slice(0, offset));
-      // On répète 2× la séquence pour permettre une boucle continue (translate -50%)
-      const cycle = items.concat(items);
+      const cycle = items.concat(items);  // ×2 pour boucle continue
       cycle.forEach(p => {
         const card = el('div', { class: 'hm-card' });
-        // glow par club
         const rgb = (typeof glowColorFor === 'function') ? glowColorFor(p) : [214, 139, 60];
         card.style.setProperty('--glow-r', rgb[0]);
         card.style.setProperty('--glow-g', rgb[1]);
@@ -249,8 +247,10 @@
         target.appendChild(card);
       });
     }
+    // 3 offsets différents pour avoir 3 séquences décalées (pas les mêmes joueurs)
     buildRow(r1, 0);
-    buildRow(r2, 20);
+    buildRow(r2, 15);
+    buildRow(r3, 30);
   }
 
   function routeMode(mode) {
