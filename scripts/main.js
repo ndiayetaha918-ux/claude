@@ -221,13 +221,14 @@
     const r2 = document.querySelector('.hm-row.r2');
     const r3 = document.querySelector('.hm-row.r3');
     if (!r1 || !r2 || !r3) return;
-    // Top 45 stars uniquement (joueurs ultra connus du moment)
+    // Top 24 stars (allégé pour perf : 8 par bande × 3 × 2 cycle = 48 cards rendus total)
     const pool = (window.PLAYERS || []).slice()
       .filter(p => (window.photoUrl && window.photoUrl(p)))
       .sort((a, b) => (b.value || 0) - (a.value || 0))
-      .slice(0, 45);
-    function buildRow(target, offset) {
-      const items = pool.slice(offset).concat(pool.slice(0, offset));
+      .slice(0, 24);
+    function buildRow(target, offset, count) {
+      const items = [];
+      for (let i = 0; i < count; i++) items.push(pool[(offset + i) % pool.length]);
       const cycle = items.concat(items);  // ×2 pour boucle continue
       cycle.forEach(p => {
         const card = el('div', { class: 'hm-card' });
@@ -247,10 +248,10 @@
         target.appendChild(card);
       });
     }
-    // 3 offsets différents pour avoir 3 séquences décalées (pas les mêmes joueurs)
-    buildRow(r1, 0);
-    buildRow(r2, 15);
-    buildRow(r3, 30);
+    // 3 bandes décalées de 8 cards chaque (24 cards × 2 cycle = 48 rendus total au lieu de 270)
+    buildRow(r1, 0, 8);
+    buildRow(r2, 8, 8);
+    buildRow(r3, 16, 8);
   }
 
   function routeMode(mode) {

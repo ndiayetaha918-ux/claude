@@ -125,6 +125,43 @@ function toSlug(name) {
     .replace(/^-|-$/g, '');
 }
 
+// -------- Search TM par nom pour les joueurs sans tmid --------
+// Parse la page de recherche TM et retourne le premier tmid + URL slug
+async function searchTMByName(name, hintClub) {
+  const q = encodeURIComponent(name);
+  const url = 'https://www.transfermarkt.com/schnellsuche/ergebnis/schnellsuche?query=' + q;
+  try {
+    const html = await fetchHTML(url);
+    // Chaque résultat est un <td> avec un <a href="/<slug>/profil/spieler/<tmid>">
+    const results = [];
+    const re = /<a href="\/([^"\/]+)\/profil\/spieler\/(\d+)"[^>]*>([^<]+)<\/a>/g;
+    let m;
+    while ((m = re.exec(html)) !== null && results.length < 8) {
+      results.push({ slug: m[1], tmid: m[2], name: m[3].trim() });
+    }
+    if (!results.length) return null;
+    // Si on a un hint sur le club, on essaie de prioriser ; sinon on prend le premier
+    if (hintClub) {
+      // Récupère un bloc plus large pour matcher le nom du club
+      const blockRe = /<a href="\/([^"\/]+)\/profil\/spieler\/(\d+)"[\s\S]{0,2000}?<\/tr>/g;
+      let bm;
+      const enriched = [];
+      while ((bm = blockRe.exec(html)) !== null && enriched.length < 8) {
+        const block = bm[0];
+        const slugRes = bm[1];
+        const tmidRes = bm[2];
+        if (block.toLowerCase().includes(hintClub.toLowerCase().split(' ')[0])) {
+          return { slug: slugRes, tmid: tmidRes };
+        }
+        enriched.push({ slug: slugRes, tmid: tmidRes });
+      }
+    }
+    return { slug: results[0].slug, tmid: results[0].tmid };
+  } catch (e) {
+    return null;
+  }
+}
+
 // -------- Main --------
 async function main() {
   // Charge la DB actuelle (window.PLAYERS via eval contextuel)
@@ -133,22 +170,46 @@ async function main() {
   const PLAYERS = global.window.PLAYERS;
   console.log('Total joueurs DB:', PLAYERS.length);
 
-  // Trie par valeur, ne traite que ceux avec un tmid (sinon on ne sait pas l'URL fiable)
-  const targets = PLAYERS
+  // Trie par valeur — d'abord ceux avec tmid (rapide), puis ceux sans (search par nom)
+  const withTmid = PLAYERS
     .filter(p => p.tmid)
-    .sort((a, b) => (b.value || 0) - (a.value || 0))
-    .slice(0, LIMIT);
+    .sort((a, b) => (b.value || 0) - (a.value || 0));
+  const noTmid = PLAYERS
+    .filter(p => !p.tmid && (p.value || 0) >= 20)  // seuil 20M pour limiter
+    .sort((a, b) => (b.value || 0) - (a.value || 0));
 
-  console.log('Joueurs à update (avec tmid):', targets.length, DRY ? '(DRY RUN)' : '');
+  const targets = withTmid.concat(noTmid).slice(0, LIMIT);
+
+  console.log('Joueurs à update:', targets.length,
+    `(${withTmid.length} avec tmid + ${noTmid.length} sans tmid à découvrir)`,
+    DRY ? '(DRY RUN)' : '');
 
   const updates = [];
   let throttleCount = 0;
 
   for (let i = 0; i < targets.length; i++) {
     const p = targets[i];
-    const slug = toSlug(p.name);
-    const url = 'https://www.transfermarkt.com/' + slug + '/profil/spieler/' + p.tmid;
-    process.stdout.write(`[${i+1}/${targets.length}] ${p.name} (tmid ${p.tmid}) ... `);
+    // Si pas de tmid : search par nom d'abord
+    let tmid = p.tmid;
+    let slug;
+    if (!tmid) {
+      process.stdout.write(`[${i+1}/${targets.length}] ${p.name} (search) ... `);
+      try {
+        const found = await searchTMByName(p.name, p.club);
+        if (!found) { process.stdout.write('NOT FOUND\n'); await sleep(DELAY_MS); continue; }
+        tmid = found.tmid;
+        slug = found.slug;
+        await sleep(DELAY_MS);
+      } catch (e) {
+        process.stdout.write(`search err: ${e.message}\n`);
+        await sleep(DELAY_MS);
+        continue;
+      }
+    } else {
+      slug = toSlug(p.name);
+    }
+    const url = 'https://www.transfermarkt.com/' + slug + '/profil/spieler/' + tmid;
+    process.stdout.write(`[${i+1}/${targets.length}] ${p.name} (tmid ${tmid}) ... `);
     try {
       const html = await fetchHTML(url);
       const parsed = parseTM(html);
@@ -165,6 +226,10 @@ async function main() {
       if (parsed.club && parsed.club !== p.club) {
         changes.club = { old: p.club, new: parsed.club };
       }
+      // Si on a découvert le tmid via search, on l'enregistre
+      if (!p.tmid && tmid) {
+        changes.tmid = { old: '(none)', new: tmid };
+      }
       const nbChanges = Object.keys(changes).length;
       process.stdout.write(nbChanges ? `${nbChanges} change(s)` : 'OK');
       if (nbChanges) {
@@ -177,6 +242,7 @@ async function main() {
           }
           if (changes.photo) p.photo = changes.photo.new;
           if (changes.club) p.club = changes.club.new;
+          if (changes.tmid) p.tmid = changes.tmid.new;
         }
       }
       process.stdout.write('\n');
