@@ -831,13 +831,28 @@
       </div>
       <div class="sim-clock">
         <span id="simMinute">0'</span>
-        <span class="sim-divider">·</span>
-        <span id="simEvent">Coup d'envoi</span>
+        <span class="sim-phase-pill" id="simPhasePill"></span>
       </div>
+
+      <!-- Bannière phase plein écran (apparaît au changement de phase) -->
+      <div class="sim-phase-banner" id="simPhaseBanner" aria-hidden="true">
+        <div class="spb-label">PHASE</div>
+        <div class="spb-title" id="spbTitle">—</div>
+        <div class="spb-sub" id="spbSub">—</div>
+      </div>
+
       <div class="sim-pitch-wrap">
         <svg class="sim-pitch" id="simPitch" viewBox="0 0 600 400" preserveAspectRatio="xMidYMid meet"></svg>
+
+        <!-- Narrative ticker en bas du terrain (1 ligne à la fois, pas un log) -->
+        <div class="sim-ticker" id="simTicker">
+          <div class="st-situation" id="stSituation">—</div>
+          <div class="st-text" id="stText" data-text="">—</div>
+        </div>
       </div>
-      <div class="sim-events" id="simEvents"></div>
+
+      <!-- Le log est conservé caché par défaut, accessible via un toggle -->
+      <div class="sim-events" id="simEvents" aria-hidden="true"></div>
       <div class="modal-actions" style="justify-content:space-between">
         <div class="seg sim-speed" id="simSpeed">
           <button data-spd="1" class="active">1×</button>

@@ -2743,7 +2743,23 @@
     const tacA = stadiumState.tactics[m.a] || window.Sim.STYLES.equilibre.tactics;
     const tacB = stadiumState.tactics[m.b] || window.Sim.STYLES.equilibre.tactics;
 
-    const result = window.Sim.simulateMatch(tpA, tpB, tacA, tacB, { five: state.matchMode === 'five' });
+    // === Nouveau moteur si dispo (engine A+B) ===
+    let result;
+    if (window.Drafter && window.Drafter.MatchEngine && !state.legacyEngine) {
+      try {
+        const teamA = adaptToEngineTeam(partA);
+        const teamB = adaptToEngineTeam(partB);
+        const engineResult = window.Drafter.MatchEngine.runMatch(teamA, teamB);
+        result = convertEngineResultToLegacy(engineResult, partA, partB);
+        m.engineResult = engineResult;  // garde le résultat enrichi pour le rapport
+      } catch (e) {
+        console.warn('MatchEngine failed, fallback legacy:', e);
+        result = window.Sim.simulateMatch(tpA, tpB, tacA, tacB, { five: state.matchMode === 'five' });
+      }
+    } else {
+      result = window.Sim.simulateMatch(tpA, tpB, tacA, tacB, { five: state.matchMode === 'five' });
+    }
+
     m.result = result;
     m.played = true;
 
@@ -2757,6 +2773,77 @@
     }
 
     playMatchAnimation(m, partA, partB);
+  }
+
+  // Adapte un `participant` Drafter (slots {slotId: playerId}) au format engine team
+  function adaptToEngineTeam(participant) {
+    return {
+      name: participant.name,
+      formation: participant.formation,
+      slots: participant.slots,
+      roles: (tacticsState.byParticipant &&
+              tacticsState.byParticipant[state.participants.indexOf(participant)] &&
+              tacticsState.byParticipant[state.participants.indexOf(participant)].players &&
+              Object.fromEntries(Object.entries(tacticsState.byParticipant[state.participants.indexOf(participant)].players)
+                .filter(([_, v]) => v && v.role)
+                .map(([k, v]) => [k, v.role]))) || {},
+      formationDef: FORMATIONS[participant.formation],
+      playerById,
+    };
+  }
+
+  // Convertit le résultat MatchEngine au format Sim.simulateMatch attendu par
+  // l'animation existante (path, moments avec t/type/team/text/scorer/scorerId)
+  function convertEngineResultToLegacy(eng, partA, partB) {
+    const moments = eng.moments.map(mo => {
+      // Reconstitue les path[] compatibles (id + slotId)
+      const legacyPath = mo.path && mo.path.length
+        ? mo.path.map(p => ({ id: p.id, slotId: p.slotId }))
+        : (mo.cast ? Object.values(mo.cast).map(c => ({
+            id: c.player ? c.player.id : c.id,
+            slotId: c.slotId,
+          })) : []).filter(p => p && p.id);
+      // Type compatible : engine 'goal'|'save'|'miss'|'attempt'|'phase'|... → legacy 'goal'|'save'|'miss'|'turnover'|...
+      let legacyType = mo.type;
+      if (mo.type === 'attempt') legacyType = 'turnover';
+      if (mo.type === 'kickoff') legacyType = 'kickoff';
+      if (mo.type === 'halftime') legacyType = 'half';
+      if (mo.type === 'fulltime') legacyType = 'end';
+      if (mo.type === 'phase') legacyType = 'phase';
+      if (mo.type === 'transition') legacyType = 'transition';
+      return {
+        t: mo.t,
+        type: legacyType,
+        team: mo.team,
+        text: mo.text,
+        scorer: mo.scorer && mo.scorer.player ? mo.scorer.player.name : undefined,
+        scorerId: mo.scorer && mo.scorer.player ? mo.scorer.player.id : undefined,
+        assistId: mo.cast && mo.cast.passer && mo.cast.passer.player ? mo.cast.passer.player.id : undefined,
+        path: legacyPath,
+        xg: mo.xg,
+        // enrichissements engine
+        situationKey: mo.situationKey,
+        situationLabel: mo.situationLabel,
+        phaseId: mo.phaseId,
+        phaseLabel: mo.phaseLabel,
+        phaseFocus: mo.phaseFocus,
+        originZone: mo.originZone,
+        targetZone: mo.targetZone,
+      };
+    });
+    return {
+      scoreA: eng.scoreA,
+      scoreB: eng.scoreB,
+      moments,
+      stats: {
+        A: Object.assign({ possession: eng.stats.A.possession, shots: eng.stats.A.shots,
+          onTarget: eng.stats.A.onTarget, xg: eng.stats.A.xg, corners: eng.stats.A.corners, fouls: eng.stats.A.fouls || 0 }),
+        B: Object.assign({ possession: eng.stats.B.possession, shots: eng.stats.B.shots,
+          onTarget: eng.stats.B.onTarget, xg: eng.stats.B.xg, corners: eng.stats.B.corners, fouls: eng.stats.B.fouls || 0 }),
+      },
+      contrib: eng.contributions,
+      engineMeta: { scenario: eng.scenario, analysis: eng.analysis, gradeA: eng.gradeA, gradeB: eng.gradeB },
+    };
   }
 
   function replayMatch(matchIdx) {
@@ -2835,7 +2922,11 @@
     $('#simAvA').style.background = partA.color.grad; $('#simAvA').textContent = initials(partA.name);
     $('#simAvB').style.background = partB.color.grad; $('#simAvB').textContent = initials(partB.name);
     $('#simScoreA').textContent = '0'; $('#simScoreB').textContent = '0';
-    $('#simMinute').textContent = "0'"; $('#simEvent').textContent = "Coup d'envoi";
+    $('#simMinute').textContent = "0'";
+    const ev = $('#simEvent'); if (ev) ev.textContent = "Coup d'envoi";
+    const phasePill = $('#simPhasePill'); if (phasePill) phasePill.textContent = '';
+    const stT = $('#stText'); if (stT) stT.textContent = 'Coup d\'envoi imminent';
+    const stS = $('#stSituation'); if (stS) stS.textContent = 'Présentation';
     $('#simEvents').innerHTML = '';
 
     // Terrain
@@ -3015,45 +3106,137 @@
       lastMinute = target;
     }
 
+    // ===== Ticker animé (UNE seule ligne narrative à la fois) =====
+    function updateTicker(text, situation, options) {
+      options = options || {};
+      const stText = $('#stText');
+      const stSit = $('#stSituation');
+      if (!stText || !stSit) return;
+      // Animate by re-attaching (CSS animation runs again)
+      stText.textContent = text || '';
+      stText.classList.remove('goal');
+      if (options.goal) stText.classList.add('goal');
+      // Trigger reflow to restart animation
+      stText.style.animation = 'none'; void stText.offsetWidth; stText.style.animation = '';
+      stSit.textContent = situation || '';
+    }
+
+    // ===== Phase banner =====
+    function showPhaseBanner(title, sub) {
+      const b = $('#simPhaseBanner');
+      const t = $('#spbTitle');
+      const s = $('#spbSub');
+      const wrap = $('.sim-pitch-wrap');
+      if (!b || !t) return;
+      t.textContent = title || 'Phase';
+      if (s) s.textContent = sub || '';
+      b.classList.remove('active');
+      void b.offsetWidth;
+      b.classList.add('active');
+      wrap && wrap.classList.add('phase-active');
+      setTimeout(() => wrap && wrap.classList.remove('phase-active'), 2200);
+      // Pill update
+      const pill = $('#simPhasePill');
+      if (pill) {
+        pill.textContent = title || '';
+      }
+    }
+
+    // ===== Score avec bump animé =====
+    function bumpScore(side) {
+      const el = $(side === 'A' ? '#simScoreA' : '#simScoreB');
+      if (!el) return;
+      el.textContent = liveScore[side === 'A' ? 'a' : 'b'];
+      el.classList.remove('bump');
+      void el.offsetWidth;
+      el.classList.add('bump');
+      setTimeout(() => el.classList.remove('bump'), 800);
+    }
+
+    // ===== Map du focus de phase vers libellé FR =====
+    const phaseLabels = {
+      'observation': { fr: 'Observation',   sub: 'Les deux équipes prennent leurs marques' },
+      'ascendant':   { fr: 'Ascendant',     sub: 'Une équipe pose son emprise' },
+      'fin-mt':      { fr: 'Fin de période',sub: 'Dernières minutes avant la pause' },
+      'reajustement':{ fr: 'Réajustement',  sub: 'Reprise — ajustements tactiques' },
+      'tournant':    { fr: 'Tournant',      sub: 'Le tournant du match approche' },
+      'finale':      { fr: 'Finale',        sub: 'Dernières minutes, intensité maximale' },
+    };
+
+    // ===== Set initial du ticker =====
+    schedule(() => { updateTicker('Coup d\'envoi', 'Lancement du match'); }, 0);
+
     r.moments.forEach(mo => {
       if (mo.type === 'kickoff') {
-        schedule(() => { $('#simEvent').textContent = "Coup d'envoi"; setMinute(0); lastMinute = 0; resetShape(); moveBallTo(SIMW/2, SIMH/2); }, HOP);
+        schedule(() => {
+          setMinute(0); lastMinute = 0;
+          resetShape();
+          moveBallTo(SIMW/2, SIMH/2);
+          updateTicker('Coup d\'envoi', 'Le match commence');
+        }, HOP);
+        return;
+      }
+      if (mo.type === 'phase') {
+        const labelMeta = phaseLabels[mo.phaseLabel || mo.phaseFocus] || { fr: mo.text || 'Nouvelle phase', sub: '' };
+        schedule(() => {
+          rampMinuteTo(mo.t, HOP * 0.7);
+          showPhaseBanner(labelMeta.fr, labelMeta.sub);
+        }, HOP);
         return;
       }
       if (mo.type === 'half') {
-        schedule(() => { $('#simEvent').textContent = 'Mi-temps'; rampMinuteTo(mo.t, HOP*1.6); pushLog(mo); resetShape(); moveBallTo(SIMW/2, SIMH/2); }, HOP*2.2);
+        schedule(() => {
+          rampMinuteTo(mo.t, HOP*1.4);
+          showPhaseBanner('Mi-temps', 'Pause');
+          resetShape();
+          moveBallTo(SIMW/2, SIMH/2);
+        }, HOP*2.0);
         return;
       }
       if (mo.type === 'end') {
-        schedule(() => { $('#simEvent').textContent = 'Terminé'; rampMinuteTo(mo.t, HOP*0.8); pushLog(mo); renderTournament(); }, HOP);
+        schedule(() => {
+          rampMinuteTo(mo.t, HOP*0.8);
+          showPhaseBanner('Terminé', mo.text || 'Coup de sifflet final');
+          renderTournament();
+        }, HOP);
+        return;
+      }
+      if (mo.type === 'transition') {
+        schedule(() => {
+          rampMinuteTo(mo.t, HOP * 0.5);
+          updateTicker(mo.text || 'Transition au milieu', 'Transition');
+        }, HOP * 0.5);
         return;
       }
       if (mo.type === 'foul' || mo.type === 'card' || mo.type === 'corner' || mo.type === 'freekick') {
         schedule(() => {
           rampMinuteTo(mo.t, HOP*0.9);
-          $('#simEvent').textContent = (mo.type==='card'?(mo.card==='red'?'🟥 ':'🟨 '):mo.type==='corner'?'⛳ ':'⚑ ') + mo.text;
+          const tag = mo.type === 'card' ? (mo.card === 'red' ? 'Carton rouge' : 'Carton') :
+                      mo.type === 'corner' ? 'Corner' :
+                      mo.type === 'freekick' ? 'Coup franc' : 'Faute';
+          updateTicker(mo.text || tag, tag);
           pushLog(mo);
         }, HOP*1.4);
         return;
       }
 
-      const side = mo.team; // 'A'|'B'
+      const side = mo.team;
+      if (!side) return;
       const attackDepth = mo.type === 'goal' ? 0.95 : mo.type === 'save' || mo.type === 'miss' ? 0.82 : 0.62;
-      // pousser le bloc attaquant, reculer le bloc défenseur, update timer
+      // Update visuel : ticker + déplacement bloc
       schedule(() => {
         rampMinuteTo(mo.t, HOP * 0.8);
-        $('#simEvent').textContent = mo.text;
+        const sitTag = mo.situationLabel || (mo.type === 'save' ? 'Parade' : mo.type === 'miss' ? 'Tir manqué' : 'Action');
+        updateTicker(mo.text, sitTag);
         shiftTeam(side, attackDepth);
-        shiftTeam(side === 'A' ? 'B' : 'A', 1 - attackDepth*0.85);
+        shiftTeam(side === 'A' ? 'B' : 'A', 1 - attackDepth * 0.85);
       }, 0);
 
-      // hops sur la trajectoire (passes réelles entre joueurs)
+      // hops sur la trajectoire
       const path = (mo.path || []).filter(p => p && p.id && pawnById[p.id]);
       path.forEach((pt, idx) => {
         schedule(() => {
           ballToPawn(pt.id);
-          // Le porteur s'avance, les adversaires les plus proches le pressent,
-          // les coéquipiers se proposent en soutien, le GK suit latéralement
           pulsePawn(pt.id, side);
           chaseToward(pt.id, side === 'A' ? 'B' : 'A');
           supportFor(pt.id, side);
@@ -3064,12 +3247,11 @@
 
       if (mo.type === 'goal') {
         schedule(() => {
-          // ballon dans le but
           const gx = side === 'A' ? SIMW-10 : 10;
           moveBallTo(gx, SIMH/2 + (Math.random()*70-35));
           liveScore[side==='A'?'a':'b']++;
-          $('#simScoreA').textContent = liveScore.a;
-          $('#simScoreB').textContent = liveScore.b;
+          bumpScore(side);
+          updateTicker('⚽ BUT — ' + (mo.scorer || mo.text || 'But !'), 'But', { goal: true });
           pushLog(mo, true);
           goalCelebration(mo, side === 'A' ? partA : partB, side === 'A' ? kits.a : kits.b);
         }, HOP*1.2);
@@ -3127,6 +3309,10 @@
     const rep = window.Sim.matchReport(partA.name, partB.name, tpA, tpB, tacA, tacB, r);
     const host = $('#simEvent');
     if (host) host.textContent = rep.winner ? ('Victoire ' + rep.winner) : 'Match nul';
+    const stT = $('#stText');
+    if (stT) { stT.textContent = rep.winner ? (rep.winner + ' s\'impose ' + r.scoreA + ' - ' + r.scoreB) : 'Match nul ' + r.scoreA + ' - ' + r.scoreB; }
+    const stS = $('#stSituation');
+    if (stS) { stS.textContent = 'Coup de sifflet final'; }
     // afficher un encart rapport dans la zone events
     const log = $('#simEvents');
     const card = el('div', { class:'sim-report' });
