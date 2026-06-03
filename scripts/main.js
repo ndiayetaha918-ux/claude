@@ -75,25 +75,39 @@
   // ---------- Photo attach helper avec cascade d'URLs ----------
   // Tente photoUrl(p) → photoUrlFallback(p) → fallback gradient + initiales
   function attachPhoto(container, player, imgClass) {
-    const url1 = window.photoUrl && window.photoUrl(player);
-    const url2 = window.photoUrlFallback && window.photoUrlFallback(player);
-    if (!url1 && !url2) return;
+    // Cascade élargie : Sofifa _240 (HD) → Sofifa _120 → Fotmob → TM medium
+    const candidates = [];
+    if (player.photo)  candidates.push(player.photo);
+    if (player.sofifa) candidates.push(player.sofifa.replace(/_120\.png$/, '_240.png'));
+    if (player.sofifa) candidates.push(player.sofifa);  // fallback _120
+    if (player.fot)    candidates.push('https://images.fotmob.com/image_resources/playerimages/' + player.fot + '.png');
+    if (player.tmid)   candidates.push('https://img.a.transfermarkt.technology/portrait/medium/' + player.tmid + '-1.jpg');
+    if (player.sofa)   candidates.push('https://api.sofascore.app/api/v1/player/' + player.sofa + '/image');
+
+    // Dédoublonnage
+    const seen = new Set();
+    const dedup = candidates.filter(u => u && !seen.has(u) && seen.add(u));
+    if (!dedup.length) return;  // aucune source : on garde le fallback initiales du container
+
     const im = new Image();
     im.alt = player.name;
-    im.loading = 'lazy';
     im.referrerPolicy = 'no-referrer';
-    im.className = imgClass;
-    let triedFallback = false;
-    im.onload = () => { if (im.naturalWidth > 1) container.classList.add('has-img'); };
+    im.decoding = 'async';
+    im.className = imgClass || '';
+    let idx = 0;
+    im.onload = () => {
+      if (im.naturalWidth > 1) container.classList.add('has-img');
+    };
     im.onerror = () => {
-      if (!triedFallback && url2 && url2 !== url1) {
-        triedFallback = true;
-        im.src = url2;
+      idx++;
+      if (idx < dedup.length) {
+        im.src = dedup[idx];
       } else {
+        // Échec total : on retire l'image, le fallback initiales reste
         im.remove();
       }
     };
-    im.src = url1 || url2;
+    im.src = dedup[0];
     container.appendChild(im);
   }
 

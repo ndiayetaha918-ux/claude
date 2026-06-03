@@ -412,168 +412,177 @@ h1, h2, h3, h4 { margin: 0; font-weight: 800; letter-spacing: -0.02em; color: va
 }
 
 /* ===== Stage 3D des 3 cards en arc ===== */
+/* ============================================================
+   CARDS MODES — vraie perspective Apple Vision Pro
+   La carte centrale DOMINE. Les latérales sont en RETRAIT marqué
+   en arrière-plan, plus petites, atténuées.
+   Pas de grid alignée : on les SUPERPOSE pour vraie profondeur.
+   ============================================================ */
 .mode-bento {
   position: relative;
   width: 100%;
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: clamp(8px, 1.5vw, 24px);
-  justify-items: center;
-  align-items: center;
-  padding: 120px 0 100px;   /* + d'air pour que les ombres respirent */
+  height: clamp(540px, 62vh, 720px);
+  padding: 60px 0;
+  perspective: 1600px;
+  perspective-origin: 50% 45%;
   transform-style: preserve-3d;
-  perspective: 1800px;       /* perspective plus marquée */
 }
 
-/* Ombre colorée fondue sous chaque card (selon le mode) — gradient map riche */
-.mode-card::after {
-  content: "";
-  position: absolute;
-  left: 8%; right: 8%;
-  bottom: -50px;
-  height: 80px;
-  z-index: -1;
-  pointer-events: none;
-  background: var(--card-glow, radial-gradient(60% 100% at 50% 0%, rgba(214,139,60,0.6), transparent 70%));
-  filter: blur(28px);
-  opacity: 0.85;
-  transition: bottom 0.7s cubic-bezier(0.16,1,0.3,1), opacity 0.5s ease, height 0.7s ease, filter 0.5s ease;
-}
-.mode-card[data-bento="five"]  { --card-glow: radial-gradient(60% 100% at 50% 0%, #6fb1d4 0%, #3a7fb5 25%, rgba(58,127,181,0.5) 55%, transparent 80%); }
-.mode-card[data-bento="draft"] { --card-glow: radial-gradient(60% 100% at 50% 0%, #e8aa78 0%, #c8542f 25%, rgba(138,33,38,0.55) 55%, transparent 80%); }
-.mode-card[data-bento="juste"] { --card-glow: radial-gradient(60% 100% at 50% 0%, #f5e3b8 0%, #e0c177 25%, rgba(184,140,74,0.5) 55%, transparent 80%); }
-.mode-card:hover::after { bottom: -70px; height: 120px; filter: blur(34px); opacity: 1; }
-
+/* CHANGEMENT MAJEUR : les cards sont absolument positionnées,
+   superposées au CENTRE, et placées en arrière par translateZ négatif.
+   Pas de grid 3-colonnes qui aligne. */
 .mode-card {
-  position: relative;
-  width: 100%;
-  max-width: clamp(220px, 28vw, 340px);
-  aspect-ratio: 5 / 7.5;
-  border-radius: 24px;
-  border: 1px solid rgba(255,255,255,0.10);
+  position: absolute;
+  top: 50%; left: 50%;
+  width: clamp(220px, 25vw, 300px);
+  aspect-ratio: 5 / 7;
+  border-radius: 22px;
+  border: 1px solid rgba(255,255,255,0.08);
   overflow: hidden;
   cursor: pointer;
   padding: 0;
   background: var(--surface);
   transform-style: preserve-3d;
-  transition: transform 0.7s cubic-bezier(0.16, 1, 0.3, 1),
-              box-shadow 0.5s ease,
-              filter 0.5s ease;
+  transition: transform 0.7s cubic-bezier(0.22, 1, 0.36, 1),
+              opacity 0.5s ease,
+              filter 0.5s ease,
+              box-shadow 0.5s ease;
   box-shadow:
-    0 1px 0 rgba(255,255,255,0.1) inset,
-    0 30px 60px rgba(0,0,0,0.55),
-    0 12px 22px rgba(0,0,0,0.4);
+    inset 0 1px 0 rgba(255,255,255,0.10),
+    0 24px 50px rgba(0,0,0,0.55),
+    0 10px 20px rgba(0,0,0,0.35);
   isolation: isolate;
-  --tilt: 0deg;
-  --depth: 0px;
-  --scale: 1;
 }
 
-/* Arc 3D : gauche tournée vers le centre, droite en miroir, centre frontal */
-/* ===== ARC 3D + CAROUSEL ===== */
-/* État par défaut (rien de hover) = card centrale (draft) frontale, latérales inclinées vers le centre */
-.mode-card[data-bento="five"]  { --tilt: 32deg;  --depth: -140px; --scale: 0.88; --shift: 0px;  transform-origin: right center;  }
-.mode-card[data-bento="draft"] { --tilt: 0deg;   --depth: 120px;  --scale: 1.06; --shift: 0px;  transform-origin: center center; z-index: 5; }
-.mode-card[data-bento="juste"] { --tilt: -32deg; --depth: -140px; --scale: 0.88; --shift: 0px;  transform-origin: left center;   }
-.mode-card {
-  transform: translateX(var(--shift)) rotateY(var(--tilt)) translateZ(var(--depth)) scale(var(--scale));
-}
+/* Variables par card : position dans l'arc */
+.mode-card { --tx: 0px; --tz: 0px; --ry: 0deg; --sc: 1; --op: 1; --blur: 0px; }
+.mode-card { transform: translate(-50%, -50%) translate3d(var(--tx), 0, var(--tz)) rotateY(var(--ry)) scale(var(--sc)); opacity: var(--op); filter: blur(var(--blur)); }
 
-/* === CAROUSEL : la card focus devient grande/frontale, les autres se décalent === */
-/* FIVE focus (gauche) : Five devient frontale au CENTRE visuel,
-   draft + juste glissent vers la droite et s'inclinent vers la gauche */
-.mode-bento[data-focus="five"] .mode-card[data-bento="five"]  { --tilt: 0deg;   --depth: 240px;  --scale: 1.12; --shift: 36%;  z-index: 12; }
-.mode-bento[data-focus="five"] .mode-card[data-bento="draft"] { --tilt: -38deg; --depth: -160px; --scale: 0.84; --shift: 36%;  z-index: 4; }
-.mode-bento[data-focus="five"] .mode-card[data-bento="juste"] { --tilt: -38deg; --depth: -160px; --scale: 0.78; --shift: 36%;  z-index: 1; }
+/* État par défaut : centre frontale + grande, latérales en RETRAIT MARQUÉ */
+.mode-card[data-bento="five"]  { --tx: -260px; --tz: -260px; --ry: 38deg;  --sc: 0.78; --op: 0.75; --blur: 1px; z-index: 2; }
+.mode-card[data-bento="draft"] { --tx: 0;      --tz: 80px;   --ry: 0deg;   --sc: 1.08; --op: 1;    --blur: 0;   z-index: 5; }
+.mode-card[data-bento="juste"] { --tx: 260px;  --tz: -260px; --ry: -38deg; --sc: 0.78; --op: 0.75; --blur: 1px; z-index: 2; }
 
-/* DRAFT focus (centre) : draft grandit, latérales gardent leur place mais plus inclinées vers elle */
-.mode-bento[data-focus="draft"] .mode-card[data-bento="draft"] { --tilt: 0deg;   --depth: 260px; --scale: 1.14; --shift: 0;  z-index: 12; }
-.mode-bento[data-focus="draft"] .mode-card[data-bento="five"]  { --tilt: 42deg;  --depth: -180px; --scale: 0.82; --shift: 0; z-index: 4; }
-.mode-bento[data-focus="draft"] .mode-card[data-bento="juste"] { --tilt: -42deg; --depth: -180px; --scale: 0.82; --shift: 0; z-index: 4; }
+/* === CAROUSEL : focus = la card hovered prend la place centrale === */
+/* Five focus : five vient au centre, draft glisse à droite, juste à droite plus loin */
+.mode-bento[data-focus="five"] .mode-card[data-bento="five"]  { --tx: 0;      --tz: 100px;  --ry: 0deg;   --sc: 1.10; --op: 1;    --blur: 0;   z-index: 6; }
+.mode-bento[data-focus="five"] .mode-card[data-bento="draft"] { --tx: 280px;  --tz: -260px; --ry: -38deg; --sc: 0.76; --op: 0.65; --blur: 1.5px; z-index: 3; }
+.mode-bento[data-focus="five"] .mode-card[data-bento="juste"] { --tx: 480px;  --tz: -360px; --ry: -38deg; --sc: 0.66; --op: 0.45; --blur: 2px;   z-index: 1; }
 
-/* JUSTE focus (droite) : juste devient frontale au CENTRE visuel,
-   draft + five glissent vers la gauche et s'inclinent vers la droite */
-.mode-bento[data-focus="juste"] .mode-card[data-bento="juste"] { --tilt: 0deg;   --depth: 240px;  --scale: 1.12; --shift: -36%; z-index: 12; }
-.mode-bento[data-focus="juste"] .mode-card[data-bento="draft"] { --tilt: 38deg;  --depth: -160px; --scale: 0.84; --shift: -36%; z-index: 4; }
-.mode-bento[data-focus="juste"] .mode-card[data-bento="five"]  { --tilt: 38deg;  --depth: -160px; --scale: 0.78; --shift: -36%; z-index: 1; }
+/* Draft focus (état par défaut renforcé) */
+.mode-bento[data-focus="draft"] .mode-card[data-bento="draft"] { --tx: 0;      --tz: 130px;  --ry: 0deg;   --sc: 1.14; --op: 1;    --blur: 0;   z-index: 6; }
+.mode-bento[data-focus="draft"] .mode-card[data-bento="five"]  { --tx: -300px; --tz: -300px; --ry: 42deg;  --sc: 0.74; --op: 0.65; --blur: 1.5px; z-index: 3; }
+.mode-bento[data-focus="draft"] .mode-card[data-bento="juste"] { --tx: 300px;  --tz: -300px; --ry: -42deg; --sc: 0.74; --op: 0.65; --blur: 1.5px; z-index: 3; }
 
-/* Image joueur plein cadre, cropée pour montrer tête+buste */
-.mc-inner { width: 100%; height: 100%; position: relative; border-radius: inherit; overflow: hidden; }
-.mc-player {
-  position: absolute; inset: 0;
-  width: 100%; height: 100%;
-  object-fit: cover;
-  object-position: center 15%;
-  transition: transform 0.7s cubic-bezier(0.16, 1, 0.3, 1), object-position 0.7s ease;
-  -webkit-user-drag: none; user-select: none;
-  z-index: 0;
-}
+/* Juste focus */
+.mode-bento[data-focus="juste"] .mode-card[data-bento="juste"] { --tx: 0;      --tz: 100px;  --ry: 0deg;   --sc: 1.10; --op: 1;    --blur: 0;   z-index: 6; }
+.mode-bento[data-focus="juste"] .mode-card[data-bento="draft"] { --tx: -280px; --tz: -260px; --ry: 38deg;  --sc: 0.76; --op: 0.65; --blur: 1.5px; z-index: 3; }
+.mode-bento[data-focus="juste"] .mode-card[data-bento="five"]  { --tx: -480px; --tz: -360px; --ry: 38deg;  --sc: 0.66; --op: 0.45; --blur: 2px;   z-index: 1; }
 
-/* Background fallback derrière l'image (sécurité si pas chargée) */
-.mc-bg {
-  position: absolute; inset: 0;
-  background-size: cover; background-position: center;
-  filter: blur(20px) saturate(1.4);
-  opacity: 0.6;
+/* === Ombre colorée sous la carte centrale (subtile, pas gaming) === */
+.mode-card::after {
+  content: "";
+  position: absolute;
+  left: 10%; right: 10%;
+  bottom: -40px;
+  height: 50px;
   z-index: -1;
+  pointer-events: none;
+  background: var(--card-glow, radial-gradient(60% 100% at 50% 0%, rgba(214,139,60,0.35), transparent 70%));
+  filter: blur(22px);
+  opacity: 0.6;
+  transition: opacity 0.5s ease;
 }
-.mode-draft .mc-bg { background-image: var(--grad-mode-draft); }
-.mode-five  .mc-bg { background-image: var(--grad-mode-five); }
-.mode-juste .mc-bg { background-image: var(--grad-mode-juste); }
+.mode-card[data-bento="five"]  { --card-glow: radial-gradient(50% 100% at 50% 0%, rgba(110, 177, 212, 0.5) 0%, rgba(58, 127, 181, 0.25) 35%, transparent 75%); }
+.mode-card[data-bento="draft"] { --card-glow: radial-gradient(50% 100% at 50% 0%, rgba(220, 140, 80, 0.5) 0%, rgba(166, 60, 46, 0.25) 35%, transparent 75%); }
+.mode-card[data-bento="juste"] { --card-glow: radial-gradient(50% 100% at 50% 0%, rgba(232, 196, 130, 0.5) 0%, rgba(184, 140, 74, 0.25) 35%, transparent 75%); }
+.mode-card[data-bento="draft"]::after { opacity: 0.7; }
+.mode-bento[data-focus] .mode-card::after { opacity: 0.3; }
+.mode-bento[data-focus="five"]  .mode-card[data-bento="five"]::after,
+.mode-bento[data-focus="draft"] .mode-card[data-bento="draft"]::after,
+.mode-bento[data-focus="juste"] .mode-card[data-bento="juste"]::after { opacity: 0.8; }
 
-/* Glow ambiant qui suit la souris */
-.mc-glow {
+/* Inner container — fond noir, aurora en dessous, contenu au-dessus */
+.mc-inner { width: 100%; height: 100%; position: relative; border-radius: inherit; overflow: hidden; }
+
+/* Photo joueur : devient un PETIT AVATAR en haut à gauche (style smiley Noah)
+   au lieu d'occuper toute la card */
+.mc-player {
+  position: absolute;
+  top: 14px; left: 14px;
+  width: 38px; height: 38px;
+  border-radius: 50%;
+  object-fit: cover;
+  object-position: top center;
+  z-index: 4;
+  border: 1.5px solid rgba(255,255,255,0.25);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.5),
+              inset 0 1px 0 rgba(255,255,255,0.2);
+  transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.mode-card:hover .mc-player { transform: scale(1.08); }
+
+.mc-bg { display: none; }   /* plus de background image */
+.mc-glow {                    /* glow mouse-tracking encore subtil */
   position: absolute; inset: 0;
   pointer-events: none; z-index: 2;
   background: radial-gradient(circle at var(--mx-px, 50%) var(--my-px, 35%),
-              rgba(255,255,255,0.22), transparent 55%);
+              rgba(255,255,255,0.10), transparent 55%);
   opacity: 0;
   transition: opacity 0.35s ease;
   mix-blend-mode: screen;
 }
 .mode-card:hover .mc-glow { opacity: 1; }
 
-/* ===== AURORA gradient éclaté multi-couleurs en bas (style références) =====
-   Plusieurs blobs radiaux colorés flous superposés, par-dessus un voile sombre léger
-   pour que le texte blanc reste lisible. La couleur dépend du mode. */
+/* ============================================================
+   AURORA style Noah / réf prem_uiux (layer blur uniforme massif)
+   Une seule forme courbée colorée + blanc dense au sommet,
+   floutée à 50px+ sur fond NOIR profond.
+   Construction : ellipse positionnée bas, gradient vertical
+   transparent → couleur → blanc, blur uniforme.
+   ============================================================ */
+.mc-inner {
+  background: #050608;     /* noir profond comme dans Noah */
+}
 .mc-inner::after {
   content: "";
-  position: absolute; left: 0; right: 0; bottom: 0;
-  height: 70%; z-index: 1;
+  position: absolute;
+  left: -10%; right: -10%;
+  bottom: -10%;
+  height: 75%; z-index: 1;
   pointer-events: none;
-  filter: blur(28px);
-  opacity: 0.9;
+  filter: blur(55px);
+  opacity: 0.92;
   background: var(--mc-aurora);
-  mix-blend-mode: screen;
+  border-radius: 50% 50% 0 0 / 35% 35% 0 0;
 }
-/* Voile sombre fin en bas — sépare le texte de l'image (mais léger, pas opaque) */
-.mc-inner > .mc-veil {
-  position: absolute; left: 0; right: 0; bottom: 0;
-  height: 50%; z-index: 2;
-  pointer-events: none;
-  background: linear-gradient(180deg, transparent 0%, rgba(8,10,14,0.35) 65%, rgba(8,10,14,0.7) 100%);
-}
-/* Auroras par mode : explosion de blobs colorés */
+/* Le .mc-veil n'est plus nécessaire avec le noir profond — le texte est lisible */
+.mc-inner > .mc-veil { display: none; }
+
+/* Auroras style minimaliste : une seule vague colorée + blanc dense au sommet */
 .mode-five .mc-inner {
-  --mc-aurora:
-    radial-gradient(60% 50% at 30% 100%, #6fb1d4 0%, transparent 60%),
-    radial-gradient(45% 40% at 70% 90%, #ffffff 0%, transparent 55%),
-    radial-gradient(55% 60% at 50% 110%, #3a7fb5 0%, transparent 60%),
-    radial-gradient(40% 35% at 20% 90%, #b6dce8 0%, transparent 55%);
+  --mc-aurora: linear-gradient(180deg,
+    transparent 0%,
+    transparent 25%,
+    rgba(58, 127, 181, 0.85) 50%,
+    rgba(146, 200, 232, 0.95) 75%,
+    rgba(255, 255, 255, 0.98) 100%);
 }
 .mode-draft .mc-inner {
-  --mc-aurora:
-    radial-gradient(60% 50% at 30% 100%, #c8542f 0%, transparent 60%),
-    radial-gradient(45% 40% at 70% 90%, #f5d4a8 0%, transparent 55%),
-    radial-gradient(55% 60% at 50% 110%, #8a2126 0%, transparent 60%),
-    radial-gradient(40% 35% at 80% 95%, #ffeac0 0%, transparent 55%);
+  --mc-aurora: linear-gradient(180deg,
+    transparent 0%,
+    transparent 25%,
+    rgba(200, 84, 47, 0.85) 50%,
+    rgba(238, 156, 102, 0.95) 75%,
+    rgba(255, 240, 220, 0.98) 100%);
 }
 .mode-juste .mc-inner {
-  --mc-aurora:
-    radial-gradient(60% 50% at 30% 100%, #e0c177 0%, transparent 60%),
-    radial-gradient(45% 40% at 70% 90%, #fff8e8 0%, transparent 55%),
-    radial-gradient(55% 60% at 50% 110%, #b88c4a 0%, transparent 60%),
-    radial-gradient(40% 35% at 80% 95%, #fff0c8 0%, transparent 55%);
+  --mc-aurora: linear-gradient(180deg,
+    transparent 0%,
+    transparent 25%,
+    rgba(184, 140, 74, 0.85) 50%,
+    rgba(232, 196, 130, 0.95) 75%,
+    rgba(255, 248, 230, 0.98) 100%);
 }
 
 /* Reflet glassy ciselé sur le bord supérieur */
@@ -603,34 +612,45 @@ h1, h2, h3, h4 { margin: 0; font-weight: 800; letter-spacing: -0.02em; color: va
 }
 
 /* Bloc texte : DIRECTEMENT sur l'image en bas, dans la zone gradient */
+/* Style Noah : titre EN HAUT À DROITE (à côté de l'avatar à gauche).
+   La description vit en bas, discrète, par-dessus l'aurora floutée. */
 .mc-body {
   position: absolute;
-  left: 22px; right: 22px; bottom: 22px;
+  top: 20px; right: 22px;
   z-index: 5;
+  text-align: right;
   display: flex; flex-direction: column; gap: 4px;
   color: #fff;
-  text-shadow: 0 2px 8px rgba(0,0,0,0.6);
 }
 .mc-eyebrow {
   display: inline-flex; align-items: center; gap: 6px;
-  font-family: var(--mono); font-size: 10px;
-  letter-spacing: 0.26em; color: rgba(255,255,255,0.78);
+  align-self: flex-end;
+  font-family: var(--mono); font-size: 9.5px;
+  letter-spacing: 0.24em;
+  color: rgba(255,255,255,0.45);
   text-transform: uppercase;
 }
-.mc-eyebrow svg { display: inline-block; }
+.mc-eyebrow svg { display: inline-block; opacity: 0.7; }
 .mc-title {
-  font-family: var(--display);   /* Inter sobre */
-  font-size: clamp(40px, 4.8vw, 58px);
-  line-height: 1; margin: 2px 0 6px;
-  letter-spacing: -0.035em;
+  font-family: var(--display);
+  font-size: clamp(28px, 3vw, 40px);
+  line-height: 1;
+  margin: 4px 0 0;
+  letter-spacing: -0.04em;
   color: #fff;
-  font-weight: 500;
-  text-shadow: 0 2px 12px rgba(0,0,0,0.7), 0 1px 0 rgba(0,0,0,0.4);
+  font-weight: 600;
 }
 .mc-desc {
-  font-size: 12.5px; line-height: 1.45; margin: 0;
-  font-weight: 500; color: rgba(255,255,255,0.86);
-  text-shadow: 0 1px 4px rgba(0,0,0,0.7);
+  position: absolute;
+  left: 22px; right: 22px; bottom: 22px;
+  font-family: var(--font);
+  font-size: 12px; line-height: 1.5;
+  margin: 0;
+  font-weight: 400;
+  color: rgba(255,255,255,0.85);
+  text-align: left;
+  z-index: 5;
+  letter-spacing: -0.005em;
 }
 
 /* HOVER : la card hover se redresse + grandit, les autres reculent */
@@ -2374,9 +2394,18 @@ body[data-mode="juste"] .mode-cloud {
   border-radius: 50%;
   display: grid; place-items: center;
   font-family: var(--display);
-  font-weight: 700; color: white; font-size: 16px;
+  font-weight: 600; color: rgba(255,255,255,0.92);
+  font-size: 17px;
+  letter-spacing: -0.02em;
   position: relative;
   overflow: hidden;
+  /* Fallback premium quand pas d'image : gradient nacré subtle */
+  background:
+    radial-gradient(circle at 32% 28%, rgba(255,255,255,0.32) 0%, transparent 40%),
+    linear-gradient(180deg, rgba(40,46,58,0.85) 0%, rgba(18,22,30,0.92) 100%);
+  box-shadow:
+    inset 0 1.5px 0 rgba(255,255,255,0.22),
+    inset 0 -1px 0 rgba(0,0,0,0.4);
 }
 .slot-photo-img {
   position: absolute; inset: 0;
@@ -2388,6 +2417,9 @@ body[data-mode="juste"] .mode-cloud {
 .slot-photo > span,
 .slot-photo > .slot-photo-fb {
   z-index: 0;
+  /* Initiales premium : ton ivoire + ombre subtle */
+  color: rgba(255,236,200,0.95);
+  text-shadow: 0 1px 2px rgba(0,0,0,0.5);
 }
 .slot-photo.has-img > span,
 .slot-photo.has-img > .slot-photo-fb { display: none; }
