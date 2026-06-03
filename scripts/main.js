@@ -3163,13 +3163,13 @@
         const base = pawnXY(slot, side);
         const adjBase = { x: base.x + adj.x, y: base.y + adj.y };
         const g = svg('g', { class: 'sim-pawn-group' });
-        const ring = svg('circle', { class:'sim-pawn', cx:adjBase.x, cy:adjBase.y, r:13, fill:kit, stroke:'rgba(0,0,0,0.55)', 'stroke-width':1.5 });
-        const num = svg('text', { x:adjBase.x, y:adjBase.y+4.5, 'text-anchor':'middle', 'font-family':'Bebas Neue, sans-serif',
-          'font-size':14, fill: kit === '#eef2f6' ? '#10131a' : '#fff', style:'pointer-events:none' });
+        const ring = svg('circle', { class:'sim-pawn', cx:adjBase.x, cy:adjBase.y, r:17, fill:kit, stroke:'rgba(0,0,0,0.65)', 'stroke-width':1.8 });
+        const num = svg('text', { x:adjBase.x, y:adjBase.y+5, 'text-anchor':'middle', 'font-family':'Inter, sans-serif', 'font-weight':'600',
+          'font-size':16, fill: kit === '#eef2f6' ? '#10131a' : '#fff', style:'pointer-events:none' });
         num.textContent = nums[slot.id];
-        const nm = svg('text', { x:adjBase.x, y:adjBase.y+26, 'text-anchor':'middle', 'font-family':'JetBrains Mono, monospace',
-          'font-size':9, fill:'#fff', style:'pointer-events:none; text-shadow:0 1px 2px rgba(0,0,0,0.9)' });
-        nm.textContent = pl ? pl.name.split(' ').slice(-1)[0].slice(0,11).toUpperCase() : slot.type;
+        const nm = svg('text', { x:adjBase.x, y:adjBase.y+33, 'text-anchor':'middle', 'font-family':'JetBrains Mono, monospace',
+          'font-size':11, fill:'#fff', 'font-weight':'600', style:'pointer-events:none; text-shadow:0 1px 3px rgba(0,0,0,1)' });
+        nm.textContent = pl ? pl.name.split(' ').slice(-1)[0].slice(0,12).toUpperCase() : slot.type;
         g.appendChild(ring); g.appendChild(num); g.appendChild(nm);
         pitch.appendChild(g);
         const obj = { side, base: adjBase, x: adjBase.x, y: adjBase.y, ring, num, nm, g, pid, slotType: slot.type };

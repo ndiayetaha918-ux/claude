@@ -1861,13 +1861,13 @@ body[data-mode="juste"] .mode-cloud {
 }
 .pitch-large {
   width: 100%;
-  max-width: 560px;
+  max-width: 640px;
   aspect-ratio: 3 / 4.4;
 }
-.pitch-large .slot { width: 18%; }
+.pitch-large .slot { width: 22%; }
 .pitch-large .slot-bubble {
   cursor: pointer;
-  font-size: 14px;
+  font-size: 15px;
   letter-spacing: 0.06em;
   touch-action: manipulation;
   -webkit-tap-highlight-color: rgba(214,139,60,0.3);
@@ -1889,8 +1889,9 @@ body[data-mode="juste"] .mode-cloud {
   cursor: default;
 }
 .pitch-large .slot-name {
-  font-size: 12px;
-  font-weight: 800;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
 }
 
 /* Opponents column */
@@ -2325,7 +2326,7 @@ body[data-mode="juste"] .mode-cloud {
 
 .slot {
   position: absolute;
-  width: 17%;
+  width: 21%;
   transform: translate(-50%, -50%);
   display: flex; flex-direction: column; align-items: center;
   text-align: center;
