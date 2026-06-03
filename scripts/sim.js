@@ -97,14 +97,29 @@
         // 70% du naturel, 30% du proxy au slot — sauf si fitMode === 'main' où on garde tout
         if (fitMode !== 'main') prof[k] = Math.round(prof[k] * 0.7 + proxy[k] * 0.3);
       });
-      // Application des sliders individuels (rôles)
+      // Application des sliders individuels (rôles) — IMPACT FORT pour que les choix tactiques comptent
       const role = playerRoles && playerRoles[s.slot.id];
       if (role && role.sliders) {
         const sl = role.sliders;
-        // off > 60 booste l'attaque (légèrement), aggr > 65 booste phy/def, risk > 60 augmente créativité au prix de def
-        if (sl.off  != null) prof.att = Math.round(prof.att * (0.92 + (sl.off-50) / 500));
-        if (sl.aggr != null) { prof.phy = Math.round(prof.phy * (0.95 + (sl.aggr-50)/500)); prof.def = Math.round(prof.def * (0.92 + (sl.aggr-50)/700)); }
-        if (sl.risk != null) { prof.cre = Math.round(prof.cre * (0.92 + (sl.risk-50)/500)); prof.def = Math.round(prof.def * (1 - Math.max(0, sl.risk-65)/400)); }
+        // off (0..100) : implication offensive → att et cre × 0.7..1.25
+        if (sl.off  != null) {
+          const m = 0.70 + sl.off / 200;     // 0.70 à 1.20
+          prof.att = Math.round(prof.att * m);
+          prof.cre = Math.round(prof.cre * (0.85 + sl.off / 333));  // 0.85 à 1.15
+        }
+        // aggr (0..100) : agressivité → phy + def, mais malus exposition si excessive
+        if (sl.aggr != null) {
+          const m = 0.80 + sl.aggr / 250;    // 0.80 à 1.20
+          prof.phy = Math.round(prof.phy * m);
+          prof.def = Math.round(prof.def * (0.85 + sl.aggr / 300));
+        }
+        // risk (0..100) : prise de risque → cre boost MAIS def malus (perd la balle plus souvent)
+        if (sl.risk != null) {
+          const m = 0.80 + sl.risk / 250;    // 0.80 à 1.20
+          prof.cre = Math.round(prof.cre * m);
+          // pénalité défensive nette quand risque élevé (joueur ouvre des espaces)
+          prof.def = Math.round(prof.def * (1 - Math.max(0, sl.risk - 50) / 220));
+        }
       }
       return Object.assign(prof, { player: pl, slotType: s.slot.type, x: s.slot.x, y: s.slot.y, slotId: s.slot.id, fitMode, role: role ? role.role : null, sliders: role ? role.sliders : null });
     }).filter(Boolean);
@@ -239,11 +254,94 @@
     return { depth, width };
   }
 
+  // === MATCHUP TACTIQUE === multiplicateurs sur les chances offensives selon
+  // la confrontation entre les 2 systèmes. C'est ce qui fait qu'une bonne tactique
+  // bat une moins bonne, même à qualité de joueurs égale.
+  function tacticalMatchup(TA, TB, tpA, tpB) {
+    let mA = 1.0, mB = 1.0;       // multiplicateurs de scoring
+    let pressLossA = 0, pressLossB = 0;  // pression subie qui peut se transformer en occasion adverse
+
+    // 1) Pressing haut vs construction courte
+    //    - Si l'adversaire construit court (directness < 40) sous pressing fort (>65),
+    //      la qualité technique de son milieu détermine s'il casse le pressing.
+    //    - Si milieu adverse < milieu pressing → l'attaquant presseur récupère haut et marque.
+    if (TA.press > 60 && TB.directness < 45) {
+      const techGap = (tpA.midControl - tpB.midControl) / 50;
+      mA *= 1.0 + Math.max(0, (TA.press - 60) / 80 + techGap * 0.5);
+      mB *= 1.0 - Math.max(0, (TA.press - 60) / 140 - techGap * 0.3);
+    }
+    if (TB.press > 60 && TA.directness < 45) {
+      const techGap = (tpB.midControl - tpA.midControl) / 50;
+      mB *= 1.0 + Math.max(0, (TB.press - 60) / 80 + techGap * 0.5);
+      mA *= 1.0 - Math.max(0, (TB.press - 60) / 140 - techGap * 0.3);
+    }
+
+    // 2) Bloc bas + contre vs jeu de possession en bloc haut
+    //    - L'équipe en bloc haut concède plus d'espaces dans le dos.
+    //    - L'équipe en bloc bas a moins de possession mais convertit ses contres.
+    if (TA.lineHeight < 40 && TA.directness > 60 && TB.lineHeight > 55) {
+      mA *= 1.0 + (TA.directness - 60) / 140 + (TB.lineHeight - 55) / 130;
+      mB *= 1.0 - (60 - TA.lineHeight) / 200;
+    }
+    if (TB.lineHeight < 40 && TB.directness > 60 && TA.lineHeight > 55) {
+      mB *= 1.0 + (TB.directness - 60) / 140 + (TA.lineHeight - 55) / 130;
+      mA *= 1.0 - (60 - TB.lineHeight) / 200;
+    }
+
+    // 3) Jeu direct vs pressing haut : on saute le pressing par les longs ballons
+    //    si on a un attaquant rapide
+    if (TA.directness > 65 && TB.press > 65) {
+      const speedAdv = (tpA.attackPace - tpB.defLine) / 60;
+      mA *= 1.0 + (TA.directness - 65) / 130 + Math.max(0, speedAdv * 0.5);
+    }
+    if (TB.directness > 65 && TA.press > 65) {
+      const speedAdv = (tpB.attackPace - tpA.defLine) / 60;
+      mB *= 1.0 + (TB.directness - 65) / 130 + Math.max(0, speedAdv * 0.5);
+    }
+
+    // 4) Deux blocs hauts qui pressent : match très ouvert (plus de buts pour les deux)
+    if (TA.press > 65 && TB.press > 65) {
+      mA *= 1.08;
+      mB *= 1.08;
+    }
+    // 5) Deux blocs bas : match fermé (moins de buts)
+    if (TA.lineHeight < 38 && TB.lineHeight < 38) {
+      mA *= 0.78;
+      mB *= 0.78;
+    }
+
+    // 6) Largeur : si une équipe joue très large et l'autre étroit, la première crée plus de chance via les ailes
+    if (Math.abs(TA.width - TB.width) > 30) {
+      if (TA.width > TB.width + 20) {
+        const wingerQ = Math.max(0, (tpA.attackPace - 60) / 70);
+        mA *= 1.0 + 0.06 + wingerQ * 0.1;
+      } else {
+        const wingerQ = Math.max(0, (tpB.attackPace - 60) / 70);
+        mB *= 1.0 + 0.06 + wingerQ * 0.1;
+      }
+    }
+
+    // 7) Tempo très élevé = haute variance (plus d'erreurs, plus de buts)
+    const tempoTot = (TA.tempo + TB.tempo) / 2;
+    if (tempoTot > 70) {
+      mA *= 1.0 + (tempoTot - 70) / 200;
+      mB *= 1.0 + (tempoTot - 70) / 200;
+    }
+
+    // Clamp final pour éviter explosions
+    mA = Math.max(0.5, Math.min(1.8, mA));
+    mB = Math.max(0.5, Math.min(1.8, mB));
+    return { mA, mB };
+  }
+
   function simulateMatch(A, B, tacticsA, tacticsB, opts) {
     opts = opts || {};
     const five = !!opts.five;
     const tpA = A, tpB = B; // déjà des teamProfiles
     const TA = tacticsA, TB = tacticsB;
+
+    // Matchup tactique : la confrontation des systèmes crée des avantages/désavantages
+    const mu = tacticalMatchup(TA, TB, tpA, tpB);
 
     // Probabilité de base de gagner une possession (contrôle du milieu + style)
     // Un style direct/bloc bas cède le ballon ; possession/pressing le garde.
