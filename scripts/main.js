@@ -274,6 +274,14 @@
       state.fiveMode = false;
       state.justeMode = true;
       showModeSetup('juste');
+    } else if (mode === 'under' || mode === 'guess') {
+      // Modes à venir — toast pour l'instant
+      toast(mode === 'under' ? 'Undercover Foot' : 'Guess The Team',
+            'Mode en développement. UX prévue : ' +
+            (mode === 'under'
+              ? 'bluff, déduction, votes et révélations mises en scène.'
+              : 'autocomplétion rapide style Loldle, club ou sélection à deviner.'));
+      return;
     }
 
     // Scroll vers le setup avec délai pour laisser le DOM se mettre à jour
