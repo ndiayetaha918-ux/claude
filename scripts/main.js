@@ -217,20 +217,18 @@
 
   // Mosaïque de mini-cards qui défile en boucle au-dessus du hero
   function buildHeroMosaic() {
-    const row = document.querySelector('.hm-row.r1');
+    const rows = [
+      document.querySelector('.hm-row.r1'),
+      document.querySelector('.hm-row.r2'),
+      document.querySelector('.hm-row.r3'),
+    ].filter(Boolean);
     const mosaic = document.getElementById('heroMosaic');
-    if (!row || !mosaic) return;
+    if (!rows.length || !mosaic) return;
 
-    // Source des images : 53 photos push user dans assets/ (MOSAIC_IMAGES) si dispo,
-    // sinon fallback photos joueurs depuis Sofifa
+    // Source : 53 photos user OU fallback Sofifa
     let images;
     if (window.MOSAIC_IMAGES && window.MOSAIC_IMAGES.length) {
       images = window.MOSAIC_IMAGES.slice();
-      // Mélange déterministe pour varier l'ordre
-      for (let i = images.length - 1; i > 0; i--) {
-        const j = (i * 7919) % (i + 1);
-        [images[i], images[j]] = [images[j], images[i]];
-      }
     } else {
       images = (window.PLAYERS || []).slice()
         .filter(p => (window.photoUrl && window.photoUrl(p)))
@@ -238,42 +236,62 @@
         .slice(0, 30)
         .map(p => window.photoUrl(p));
     }
-    // Cycle ×2 pour boucle continue
-    const cycle = images.concat(images);
-    cycle.forEach(src => {
-      const card = el('div', { class: 'hm-card' });
-      const img = new Image();
-      img.src = src;
-      img.loading = 'lazy';
-      img.decoding = 'async';
-      img.referrerPolicy = 'no-referrer';
-      card.appendChild(img);
-      row.appendChild(card);
+
+    // Mélange déterministe puis distribue sur 3 bandes avec offsets
+    function pseudoShuffle(arr, seed) {
+      const a = arr.slice();
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = ((i + 1) * seed) % (i + 1);
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
+    }
+    const groupSize = Math.ceil(images.length / 3);
+    const groupedImgs = [
+      pseudoShuffle(images, 7919).slice(0, groupSize),
+      pseudoShuffle(images, 3571).slice(0, groupSize),
+      pseudoShuffle(images, 1297).slice(0, groupSize),
+    ];
+
+    rows.forEach((row, idx) => {
+      const imgs = groupedImgs[idx];
+      // ×2 cycle continu
+      imgs.concat(imgs).forEach(src => {
+        const card = el('div', { class: 'hm-card' });
+        const img = new Image();
+        img.src = src;
+        img.loading = 'lazy';
+        img.decoding = 'async';
+        img.referrerPolicy = 'no-referrer';
+        card.appendChild(img);
+        row.appendChild(card);
+      });
     });
 
-    // === Effet visionneuse : pour chaque card on calcule sa position relative
-    // au centre du viewport mosaïque, et on injecte --hm-pos (-1..+1) et
-    // --hm-abs (|hm-pos|). Le CSS utilise ces variables pour appliquer
-    // rotateY + translateZ + scale dynamiquement. ===
-    const cards = Array.from(row.querySelectorAll('.hm-card'));
+    // === Effet grand angle (déformation barillet) ===
+    // Pour chaque card on calcule sa position relative au centre du viewport
+    // de la mosaïque. CSS utilise les CSS vars pour appliquer translateZ +
+    // rotateY + scale → les cards aux extrêmes SE RAPPROCHENT (translateZ
+    // positif) et S'AGRANDISSENT (scale > 1), pas l'inverse.
+    const allCards = Array.from(mosaic.querySelectorAll('.hm-card'));
     let rafToken = null;
     function updateLensEffect() {
       const rect = mosaic.getBoundingClientRect();
       const centerX = rect.left + rect.width / 2;
       const halfW = rect.width / 2;
-      cards.forEach(card => {
+      for (let i = 0; i < allCards.length; i++) {
+        const card = allCards[i];
         const r = card.getBoundingClientRect();
+        if (r.right < rect.left - 100 || r.left > rect.right + 100) continue;
         const cardCenter = r.left + r.width / 2;
-        // Position normalisée : -1 (extrême gauche) à +1 (extrême droite), 0 = centre
         let pos = (cardCenter - centerX) / halfW;
-        pos = Math.max(-1.4, Math.min(1.4, pos));
-        const abs = Math.min(1.4, Math.abs(pos));
+        pos = Math.max(-1.5, Math.min(1.5, pos));
+        const abs = Math.min(1.5, Math.abs(pos));
         card.style.setProperty('--hm-pos', pos.toFixed(3));
         card.style.setProperty('--hm-abs', abs.toFixed(3));
-      });
+      }
       rafToken = requestAnimationFrame(updateLensEffect);
     }
-    // Démarre la boucle quand le hero est visible (et arrête quand caché)
     const io = new IntersectionObserver((entries) => {
       entries.forEach(e => {
         if (e.isIntersecting) {
@@ -309,13 +327,19 @@
       state.justeMode = true;
       showModeSetup('juste');
     } else if (mode === 'guess') {
-      showScreen('guess');
-      initGuessScreen();
-      return;
+      // Pas de redirection : on configure le setup inline pour Guess
+      state.fiveMode = false;
+      state.justeMode = false;
+      state.guessMode = true;
+      state.underMode = false;
+      showModeSetup('guess');
     } else if (mode === 'under') {
-      showScreen('under');
-      initUnderScreen();
-      return;
+      // Pas de redirection : on configure le setup inline pour Under
+      state.fiveMode = false;
+      state.justeMode = false;
+      state.guessMode = false;
+      state.underMode = true;
+      showModeSetup('under');
     }
 
     // Scroll vers le setup avec délai pour laisser le DOM se mettre à jour
@@ -325,26 +349,30 @@
   }
 
   function showModeSetup(mode) {
-    // Affiche le bon panel setup selon le mode et le décore avec le bon "nuage"
+    // Affiche le bon panel setup selon le mode
     const draftPanel = $('#setupDraftPanel');
     const justePanel = $('#setupJustePanel');
-    if (draftPanel) draftPanel.style.display = (mode === 'juste') ? 'none' : '';
+    const guessPanel = $('#setupGuessPanel');
+    const underPanel = $('#setupUnderPanel');
+    if (draftPanel) draftPanel.style.display = (mode === 'draft' || mode === 'five') ? '' : 'none';
     if (justePanel) justePanel.style.display = (mode === 'juste') ? '' : 'none';
+    if (guessPanel) guessPanel.style.display = (mode === 'guess') ? '' : 'none';
+    if (underPanel) underPanel.style.display = (mode === 'under') ? '' : 'none';
 
     // Eyebrow + titre adaptés
     const eyebrow = $('#setupEyebrow');
     const title = $('#setupTitle');
     if (eyebrow && title) {
-      if (mode === 'five') {
-        eyebrow.textContent = '/ MODE FIVE · 5 vs 5';
-        title.textContent = 'Compose ton 5';
-      } else if (mode === 'juste') {
-        eyebrow.textContent = '/ JUSTE PRIX · Estimation';
-        title.textContent = 'Choisis ta variante';
-      } else {
-        eyebrow.textContent = '/ MODE DRAFT · Snake draft';
-        title.textContent = 'Compose, simule, analyse';
-      }
+      const titles = {
+        five:  { eb: '/ MODE FIVE · 5 vs 5',           t: 'Compose ton 5' },
+        juste: { eb: '/ JUSTE PRIX · Estimation',      t: 'Choisis ta variante' },
+        guess: { eb: '/ GUESS THE TEAM · Devine',      t: 'Choisis ton défi' },
+        under: { eb: '/ UNDERCOVER FOOT · Bluff',      t: 'Salon de jeu' },
+        draft: { eb: '/ MODE DRAFT · Snake draft',     t: 'Compose, simule, analyse' },
+      };
+      const t = titles[mode] || titles.draft;
+      eyebrow.textContent = t.eb;
+      title.textContent = t.t;
     }
   }
 
@@ -4750,74 +4778,143 @@
   ];
 
   let guessState = null;
+  // Drapeaux emoji par pays
+  const NATION_FLAGS = {
+    'France':'🇫🇷','Spain':'🇪🇸','England':'🏴󠁧󠁢󠁥󠁮󠁧󠁿','Brazil':'🇧🇷','Argentina':'🇦🇷',
+    'Germany':'🇩🇪','Italy':'🇮🇹','Portugal':'🇵🇹','Netherlands':'🇳🇱','Belgium':'🇧🇪',
+    'Croatia':'🇭🇷','Uruguay':'🇺🇾','Norway':'🇳🇴','Sweden':'🇸🇪','Denmark':'🇩🇰',
+    'Poland':'🇵🇱','Morocco':'🇲🇦','Senegal':'🇸🇳','Côte d\'Ivoire':'🇨🇮','Ivory Coast':'🇨🇮',
+    'Nigeria':'🇳🇬','Cameroon':'🇨🇲','Egypt':'🇪🇬','Algeria':'🇩🇿','Tunisia':'🇹🇳',
+    'Ghana':'🇬🇭','Switzerland':'🇨🇭','Austria':'🇦🇹','Czech Republic':'🇨🇿','Czechia':'🇨🇿',
+    'Slovakia':'🇸🇰','Serbia':'🇷🇸','Hungary':'🇭🇺','Türkiye':'🇹🇷','Turkey':'🇹🇷',
+    'Ukraine':'🇺🇦','Russia':'🇷🇺','Wales':'🏴󠁧󠁢󠁷󠁬󠁳󠁿','Scotland':'🏴󠁧󠁢󠁳󠁣󠁴󠁿','Republic of Ireland':'🇮🇪',
+    'Northern Ireland':'🇮🇪','Greece':'🇬🇷','Mexico':'🇲🇽','USA':'🇺🇸','United States':'🇺🇸',
+    'Canada':'🇨🇦','Colombia':'🇨🇴','Chile':'🇨🇱','Peru':'🇵🇪','Ecuador':'🇪🇨',
+    'Paraguay':'🇵🇾','Venezuela':'🇻🇪','Bolivia':'🇧🇴','Japan':'🇯🇵','South Korea':'🇰🇷',
+    'Korea Republic':'🇰🇷','Australia':'🇦🇺','New Zealand':'🇳🇿','Iran':'🇮🇷','Saudi Arabia':'🇸🇦',
+    'Qatar':'🇶🇦','UAE':'🇦🇪','Israel':'🇮🇱','Norway':'🇳🇴','Iceland':'🇮🇸',
+    'Albania':'🇦🇱','Bosnia':'🇧🇦','Romania':'🇷🇴','Bulgaria':'🇧🇬','Slovenia':'🇸🇮',
+    'Georgia':'🇬🇪','Armenia':'🇦🇲','Finland':'🇫🇮','Estonia':'🇪🇪','Latvia':'🇱🇻',
+    'Lithuania':'🇱🇹','North Macedonia':'🇲🇰','Montenegro':'🇲🇪',
+  };
+  function flagFor(nationality) {
+    if (!nationality) return '🌍';
+    return NATION_FLAGS[nationality] || nationality.slice(0,3).toUpperCase();
+  }
+  // Badge club court : initiales (max 4 chars) avec accent couleur
+  function clubBadge(club) {
+    if (!club) return '?';
+    return club.replace(/\bFC\b|\bAC\b|\bAS\b|\bAFC\b|\bUS\b/g, '').trim().split(' ').filter(Boolean)
+      .map(w => w[0]).join('').slice(0, 4).toUpperCase();
+  }
+
   function initGuessScreen() {
     document.body.setAttribute('data-mode', 'guess');
-    $('#guessVariants').style.display = '';
-    $('#guessGame').style.display = 'none';
-    $('#guessFeedback').textContent = '';
-    $('#guessBack').onclick = () => showScreen('home');
+    if ($('#guessVariants')) $('#guessVariants').style.display = '';
+    if ($('#guessGame')) $('#guessGame').style.display = 'none';
+    if ($('#guessFeedback')) $('#guessFeedback').textContent = '';
+    if ($('#guessBack')) $('#guessBack').onclick = () => showScreen('home');
     $$('#guessVariants .guess-variant').forEach(b => {
       b.onclick = () => startGuess(b.dataset.variant);
     });
   }
-  function startGuess(variant) {
+  function bindInlineGuessSetup() {
+    if (!$('#setupGuessPanel')) return;
+    // Mode pick (solo/multi)
+    $$('#setupGuessPanel .guess-mode-btn').forEach(b => {
+      b.onclick = () => {
+        $$('#setupGuessPanel .guess-mode-btn').forEach(x => x.classList.remove('active'));
+        b.classList.add('active');
+      };
+    });
+    // Variant pick
+    $$('#setupGuessPanel .guess-variant-card').forEach(b => {
+      b.onclick = () => {
+        $$('#setupGuessPanel .guess-variant-card').forEach(x => x.classList.remove('active'));
+        b.classList.add('active');
+      };
+    });
+    // Démarrer
+    const startBtn = $('#guessStartInline');
+    if (startBtn) startBtn.onclick = () => {
+      const variant = ($('#setupGuessPanel .guess-variant-card.active') || {}).dataset?.variant || 'club';
+      const mode = ($('#setupGuessPanel .guess-mode-btn.active') || {}).dataset?.guessMode || 'solo';
+      showScreen('guess');
+      startGuess(variant, mode);
+    };
+  }
+  function startGuess(variant, mode) {
     const pool = variant === 'club' ? GUESS_CLUB_LINEUPS : GUESS_NATION_LINEUPS;
     guessState = {
       variant,
+      mode: mode || 'solo',
       pool: pool.slice().sort(() => Math.random() - 0.5),
       idx: 0,
       score: 0,
       streak: 0,
     };
-    $('#guessVariants').style.display = 'none';
-    $('#guessGame').style.display = '';
-    $('#guessSkip').onclick = () => skipGuess();
-    $('#guessInput').oninput = () => updateSuggestions();
-    $('#guessInput').onkeydown = (ev) => {
-      if (ev.key === 'Enter') submitGuessAnswer();
-    };
+    if ($('#guessVariants')) $('#guessVariants').style.display = 'none';
+    if ($('#guessGame')) $('#guessGame').style.display = '';
+    if ($('#guessSkip')) $('#guessSkip').onclick = () => skipGuess();
+    if ($('#guessInput')) {
+      $('#guessInput').oninput = () => updateSuggestions();
+      $('#guessInput').onkeydown = (ev) => { if (ev.key === 'Enter') submitGuessAnswer(); };
+    }
     renderGuessRound();
   }
   function renderGuessRound() {
     const s = guessState;
     if (s.idx >= s.pool.length) {
-      // Refill
       s.pool = (s.variant === 'club' ? GUESS_CLUB_LINEUPS : GUESS_NATION_LINEUPS).slice().sort(() => Math.random() - 0.5);
       s.idx = 0;
     }
     const target = s.pool[s.idx];
     s._target = target;
-    $('#guessVariantLabel').textContent = s.variant === 'club' ? 'CLUB' : 'SÉLECTION';
+    $('#guessVariantLabel').textContent = s.variant === 'club' ? 'CLUB INCONNU' : 'SÉLECTION INCONNUE';
     $('#guessHint').textContent = s.variant === 'club'
-      ? '11 joueurs masqués par leur nationalité'
-      : '11 joueurs masqués par leur club';
-    $('#guessInput').value = '';
-    $('#guessInput').placeholder = s.variant === 'club' ? 'Tape un club…' : 'Tape une sélection…';
+      ? '11 joueurs masqués par leur drapeau de nationalité'
+      : '11 joueurs masqués par leur badge de club';
+    if ($('#guessInput')) {
+      $('#guessInput').value = '';
+      $('#guessInput').placeholder = s.variant === 'club' ? 'Tape un club…' : 'Tape une sélection…';
+    }
     $('#guessFeedback').textContent = '';
     $('#guessFeedback').className = 'guess-feedback';
     $('#guessScore').textContent = s.score;
     $('#guessStreak').textContent = 'Série · ' + s.streak;
-    // Render lineup masqué
+
+    // === TERRAIN VISUEL : affiche les 11 joueurs sur la formation
+    // avec leur drapeau (club mode) ou badge club (nation mode) — PAS le nom ===
     const lineup = $('#guessLineup');
     lineup.innerHTML = '';
-    target.slots.forEach(slot => {
-      const playerData = PLAYERS.find(p => p.name === slot.name || p.name.endsWith(slot.name));
-      const tag = el('div', { class: 'guess-slot' });
-      const badge = el('div', { class: 'gs-badge' });
-      // Variante club : badge = nationalité ; variante nation : badge = club
+    lineup.className = 'guess-pitch';
+    const formation = window.FORMATIONS[target.formation] || window.FORMATIONS['4-3-3'];
+    if (!formation) return;
+
+    // Positionnement absolu sur le pitch comme le mode draft
+    target.slots.forEach((slotData, i) => {
+      const formSlot = formation.slots[i];
+      if (!formSlot) return;
+      const playerData = window.PLAYERS.find(p => p.name === slotData.name || p.name.endsWith(slotData.name));
+      const slot = el('div', { class: 'gp-slot', style: `left:${formSlot.x}%; top:${formSlot.y}%` });
+      const bubble = el('div', { class: 'gp-bubble' });
       if (s.variant === 'club') {
-        badge.textContent = playerData ? (playerData.nat || '?').slice(0, 3).toUpperCase() : '?';
-        badge.title = playerData ? playerData.nat : '';
+        // Variante club → afficher le drapeau de la nationalité du joueur
+        const flag = el('div', { class: 'gp-flag' }, flagFor(playerData ? playerData.nat : null));
+        flag.title = playerData ? playerData.nat : '';
+        bubble.appendChild(flag);
       } else {
-        badge.textContent = playerData ? (playerData.club || '?').split(' ')[0].slice(0, 3).toUpperCase() : '?';
+        // Variante sélection → afficher le badge club
+        const clubBg = playerData && playerData.club ? glowColorFor(playerData) : [180, 180, 180];
+        const badge = el('div', { class: 'gp-club-badge', style: `background:rgb(${clubBg[0]},${clubBg[1]},${clubBg[2]})` }, clubBadge(playerData ? playerData.club : ''));
         badge.title = playerData ? playerData.club : '';
+        bubble.appendChild(badge);
       }
-      tag.appendChild(badge);
-      tag.appendChild(el('div', { class: 'gs-pos' }, slot.type));
-      tag.appendChild(el('div', { class: 'gs-name' }, slot.name));
-      lineup.appendChild(tag);
+      slot.appendChild(bubble);
+      slot.appendChild(el('div', { class: 'gp-pos' }, slotData.type));
+      lineup.appendChild(slot);
     });
-    setTimeout(() => $('#guessInput').focus(), 100);
+    setTimeout(() => $('#guessInput') && $('#guessInput').focus(), 100);
   }
   function updateSuggestions() {
     const s = guessState;
@@ -4875,17 +4972,23 @@
   let underState = null;
   function initUnderScreen() {
     document.body.setAttribute('data-mode', 'under');
-    $('#underSetup').style.display = '';
-    $('#underGame').style.display = 'none';
-    $('#underVotePhase').style.display = 'none';
-    $('#underBack').onclick = () => showScreen('home');
-    if (!underState) {
-      underState = { players: [], scores: {} };
-    }
+    if ($('#underSetup')) $('#underSetup').style.display = '';
+    if ($('#underGame')) $('#underGame').style.display = 'none';
+    if ($('#underVotePhase')) $('#underVotePhase').style.display = 'none';
+    if ($('#underBack')) $('#underBack').onclick = () => showScreen('home');
+    if (!underState) underState = { players: [], scores: {} };
     renderUnderPlayers();
-    $('#underAddBtn').onclick = () => addUnderPlayer();
-    $('#underNewName').onkeydown = (ev) => { if (ev.key === 'Enter') addUnderPlayer(); };
-    $('#underStart').onclick = () => startUnderRound();
+    if ($('#underAddBtn')) $('#underAddBtn').onclick = () => addUnderPlayer();
+    if ($('#underNewName')) $('#underNewName').onkeydown = (ev) => { if (ev.key === 'Enter') addUnderPlayer(); };
+    if ($('#underStart')) $('#underStart').onclick = () => startUnderRound();
+  }
+  function bindInlineUnderSetup() {
+    if (!$('#setupUnderPanel')) return;
+    if (!underState) underState = { players: [], scores: {} };
+    renderUnderPlayers();
+    if ($('#underAddBtn')) $('#underAddBtn').onclick = () => addUnderPlayer();
+    if ($('#underNewName')) $('#underNewName').onkeydown = (ev) => { if (ev.key === 'Enter') addUnderPlayer(); };
+    if ($('#underStart')) $('#underStart').onclick = () => { showScreen('under'); startUnderRound(); };
   }
   function addUnderPlayer() {
     const inp = $('#underNewName');
@@ -5009,6 +5112,8 @@
     buildHero();
     bindSetup();
     bindInlineJusteSetup();
+    bindInlineGuessSetup();
+    bindInlineUnderSetup();
     bindModeTabs();
     bindLobby();
     populateOnlineFormations();

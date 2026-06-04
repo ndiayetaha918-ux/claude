@@ -229,66 +229,88 @@ h1, h2, h3, h4 { margin: 0; font-weight: 800; letter-spacing: -0.02em; color: va
 
 /* === Mosaïque qui défile (style visionneuse / grand angle) === */
 /* ============================================================
-   MOSAÏQUE — Vraie visionneuse style Oli Studio
-   1 row de cards qui défile, cards déformées en 3D selon
-   leur position relative au centre du viewport (JS-driven).
+   MOSAÏQUE — Vraie visionneuse FISHEYE/GRAND ANGLE (réf user)
+   3 bandes de mini cards. Les cards aux extrêmes sont
+   AGRANDIES + déformées (effet barillet d'un objectif grand angle).
+   Gradient bas : violet → orange en arrière-plan.
    ============================================================ */
 .hero-mosaic {
   position: relative;
   width: 100%;
-  height: clamp(280px, 30vw, 380px);
+  height: clamp(320px, 36vw, 440px);
   overflow: hidden;
   margin-bottom: 36px;
-  perspective: 1300px;
+  perspective: 600px;          /* perspective FORTE pour déformation marquée */
   perspective-origin: 50% 50%;
-  /* Pas de mask : on laisse les cards extrêmes dépasser pour l'effet "qui sort du cadre" */
+}
+/* Gradient de fond style ref : noir → violet → orange depuis bas */
+.hm-bg-gradient {
+  position: absolute; inset: 0; z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 100%,
+      rgba(255,140,60,0.55) 0%,
+      rgba(255,90,80,0.35) 25%,
+      rgba(180,90,200,0.30) 50%,
+      rgba(80,60,180,0.18) 70%,
+      transparent 95%);
 }
 .hm-stage {
   position: absolute; inset: 0;
   transform-style: preserve-3d;
-}
-/* Row centrée verticalement, défile horizontalement */
-.hm-row {
-  position: absolute;
-  top: 50%;
-  left: 0;
-  transform: translateY(-50%);
-  display: flex;
-  gap: 18px;
-  width: max-content;
-  will-change: transform;
-  animation: hmScroll 80s linear infinite;
-  transform-style: preserve-3d;
-  padding: 0 50vw;   /* espace pour cycle continu */
-}
-.hero-mosaic:hover .hm-row { animation-play-state: paused; }
-@keyframes hmScroll {
-  from { transform: translateY(-50%) translate3d(0, 0, 0); }
-  to   { transform: translateY(-50%) translate3d(-50%, 0, 0); }
+  z-index: 1;
 }
 
-/* Card mosaïque : aspect 4/5 portrait, grande taille pour effet immersif */
+/* 3 bandes mini cards, non superposées (chacune sa zone verticale) */
+.hm-row {
+  position: absolute;
+  left: 0;
+  display: flex;
+  gap: 12px;
+  width: max-content;
+  will-change: transform;
+  animation: hmScroll linear infinite;
+  transform-style: preserve-3d;
+}
+.hm-row.r1 { top: 8%;  height: 24%; animation-duration: 90s;  animation-direction: normal;  }
+.hm-row.r2 { top: 38%; height: 24%; animation-duration: 75s;  animation-direction: reverse; }
+.hm-row.r3 { top: 68%; height: 24%; animation-duration: 100s; animation-direction: normal;  }
+.hero-mosaic:hover .hm-row { animation-play-state: paused; }
+@keyframes hmScroll {
+  from { transform: translate3d(0, 0, 0); }
+  to   { transform: translate3d(-50%, 0, 0); }
+}
+
+/* MINI card avec déformation grand angle.
+   --hm-abs : 0 (centre) à 1.4 (extrême)
+   --hm-pos : -1.4 (gauche) à +1.4 (droite)
+   Effet BARILLET : cards aux bords sont AGRANDIES (scale > 1) et tournées
+   vers nous, pas réduites — c'est l'inverse d'un téléobjectif. */
 .hm-card {
+  --glow-r: 214; --glow-g: 139; --glow-b: 60;
   flex: 0 0 auto;
-  width: clamp(150px, 16vw, 220px);
-  aspect-ratio: 4/5;
+  width: clamp(76px, 8.4vw, 110px);
+  aspect-ratio: 1;        /* carré avec coins arrondis comme dans la ref */
   border-radius: 18px;
   position: relative;
   overflow: hidden;
-  background: linear-gradient(180deg, rgba(28,30,40,0.85) 0%, rgba(14,16,22,0.95) 100%);
-  border: 1px solid rgba(255,255,255,0.08);
+  background: linear-gradient(180deg, rgba(40,40,55,0.75) 0%, rgba(20,20,30,0.95) 100%);
+  border: 1px solid rgba(255,255,255,0.12);
   box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.10),
-    0 12px 28px rgba(0,0,0,0.55);
+    inset 0 1px 0 rgba(255,255,255,0.15),
+    0 6px 18px rgba(0,0,0,0.5),
+    0 0 22px rgba(var(--glow-r), var(--glow-g), var(--glow-b), 0.28);
   transform-style: preserve-3d;
   will-change: transform;
-  /* Transform piloté par JS via CSS variable --hm-pos (-1 = far left, 0 = center, 1 = far right) */
-  --hm-pos: 0;
+  --hm-pos: 0; --hm-abs: 0;
+  /* Déformation grand angle : translateZ POSITIF aux extrêmes (avance vers nous)
+     + rotateY inverse (tourné vers le centre)
+     + scale > 1 aux bords (barillet) */
   transform:
-    translateZ(calc((1 - var(--hm-abs)) * 100px - 40px))
-    rotateY(calc(var(--hm-pos) * -40deg))
-    scale(calc(0.65 + (1 - var(--hm-abs)) * 0.45));
-  transition: transform 0.18s linear;
+    translateZ(calc(var(--hm-abs) * 80px))
+    rotateY(calc(var(--hm-pos) * 28deg))
+    scale(calc(1 + var(--hm-abs) * 0.22));
+  transition: transform 0.16s linear;
 }
 .hm-card img {
   position: absolute; inset: 0;
@@ -299,8 +321,16 @@ h1, h2, h3, h4 { margin: 0; font-weight: 800; letter-spacing: -0.02em; color: va
 .hm-card::after {
   content: "";
   position: absolute; inset: 0;
-  background: linear-gradient(180deg, transparent 55%, rgba(0,0,0,0.7) 100%);
+  background: linear-gradient(180deg, transparent 60%, rgba(0,0,0,0.55) 100%);
   pointer-events: none;
+}
+/* Reflet glassy léger */
+.hm-card::before {
+  content: "";
+  position: absolute; inset: 0; z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(160deg, rgba(255,255,255,0.16) 0%, transparent 35%);
+  border-radius: inherit;
 }
 
 /* ===== Hero shell ===== */
@@ -367,7 +397,7 @@ h1, h2, h3, h4 { margin: 0; font-weight: 800; letter-spacing: -0.02em; color: va
 .mode-bento {
   position: relative;
   width: 100%;
-  height: clamp(540px, 62vh, 720px);
+  height: clamp(640px, 72vh, 820px);
   padding: 60px 0;
   perspective: 1600px;
   perspective-origin: 50% 45%;
@@ -380,9 +410,9 @@ h1, h2, h3, h4 { margin: 0; font-weight: 800; letter-spacing: -0.02em; color: va
 .mode-card {
   position: absolute;
   top: 50%; left: 50%;
-  width: clamp(220px, 25vw, 300px);
+  width: clamp(280px, 32vw, 380px);
   aspect-ratio: 5 / 7;
-  border-radius: 22px;
+  border-radius: 24px;
   border: 1px solid rgba(255,255,255,0.08);
   overflow: hidden;
   cursor: pointer;
@@ -393,7 +423,7 @@ h1, h2, h3, h4 { margin: 0; font-weight: 800; letter-spacing: -0.02em; color: va
               opacity 0.4s ease;
   box-shadow:
     inset 0 1px 0 rgba(255,255,255,0.08),
-    0 18px 36px rgba(0,0,0,0.50);
+    0 22px 44px rgba(0,0,0,0.55);
   isolation: isolate;
   contain: layout style paint;
 }
@@ -993,6 +1023,20 @@ body[data-mode="juste"] .mode-cloud {
     radial-gradient(60% 70% at 30% 50%, #b88c4a 0%, transparent 60%),
     radial-gradient(50% 60% at 70% 60%, #ffffff 0%, transparent 55%),
     radial-gradient(50% 60% at 50% 40%, #e0c177 0%, transparent 65%);
+}
+body[data-mode="guess"] .mode-cloud {
+  opacity: 0.8;
+  background:
+    radial-gradient(60% 70% at 30% 50%, #ff5a9c 0%, transparent 60%),
+    radial-gradient(50% 60% at 70% 60%, #ffb4aa 0%, transparent 55%),
+    radial-gradient(50% 60% at 50% 40%, #ffffff 0%, transparent 65%);
+}
+body[data-mode="under"] .mode-cloud {
+  opacity: 0.75;
+  background:
+    radial-gradient(60% 70% at 30% 50%, #508cff 0%, transparent 60%),
+    radial-gradient(50% 60% at 70% 60%, #ffffff 0%, transparent 55%),
+    radial-gradient(50% 60% at 50% 40%, #1a2a6e 0%, transparent 65%);
 }
 
 .setup-header {
@@ -4681,3 +4725,168 @@ body[data-mode="juste"] .mode-cloud {
   line-height: 1.55;
 }
 .uvr-detail strong { color: white; font-weight: 600; }
+
+/* ============================================================
+   GUESS THE TEAM — setup inline (in-page, descend dans setup)
+   ============================================================ */
+/* Mode pick : Solo / Tour à tour */
+.guess-mode-pick {
+  display: flex; gap: 12px; justify-content: center;
+  margin-bottom: 22px;
+}
+.guess-mode-btn {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 14px;
+  padding: 14px 22px;
+  cursor: pointer;
+  color: rgba(255,255,255,0.65);
+  font-family: var(--font);
+  font-size: 13px; font-weight: 500;
+  letter-spacing: -0.005em;
+  min-width: 120px;
+  transition: all 0.2s;
+}
+.guess-mode-btn:hover { background: rgba(255,255,255,0.07); border-color: rgba(255,255,255,0.18); color: white; }
+.guess-mode-btn.active {
+  background: rgba(255,90,160,0.10);
+  border-color: rgba(255,90,160,0.45);
+  color: white;
+}
+.guess-mode-btn .gmb-icon { color: rgba(255,255,255,0.78); }
+.guess-mode-btn.active .gmb-icon { color: #ff7ab3; }
+
+/* Variantes club / sélection */
+.guess-variants-inline {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+  max-width: 800px; margin: 0 auto;
+}
+@media (max-width: 720px) { .guess-variants-inline { grid-template-columns: 1fr; } }
+.guess-variant-card {
+  position: relative;
+  background: linear-gradient(180deg, rgba(26,30,40,0.7) 0%, rgba(14,18,26,0.85) 100%);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 18px;
+  padding: 20px;
+  text-align: left;
+  cursor: pointer;
+  color: white;
+  transition: all 0.25s;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.guess-variant-card:hover { border-color: rgba(255,255,255,0.20); transform: translateY(-2px); }
+.guess-variant-card.active {
+  border-color: rgba(255,90,160,0.55);
+  box-shadow: 0 0 0 1px rgba(255,90,160,0.30) inset, 0 0 28px rgba(255,90,160,0.18);
+}
+.guess-variant-card .gv-eyebrow {
+  font-family: var(--mono); font-size: 9.5px;
+  letter-spacing: 0.22em; color: rgba(255,255,255,0.45);
+  text-transform: uppercase;
+}
+.guess-variant-card .gv-title {
+  font-family: var(--display); font-weight: 600;
+  font-size: 24px; letter-spacing: -0.025em;
+  color: white;
+}
+.guess-variant-card .gv-tease {
+  font-size: 12.5px; color: rgba(255,255,255,0.65);
+  line-height: 1.45;
+  margin: 4px 0 8px;
+}
+/* Logos clubs / drapeaux — séparés par • */
+.gv-logos {
+  display: flex; flex-wrap: wrap; gap: 6px;
+  align-items: center;
+  font-family: var(--mono); font-size: 11.5px;
+  color: rgba(255,255,255,0.55);
+  letter-spacing: -0.005em;
+}
+.gv-logos span { white-space: nowrap; }
+.gv-flags { font-size: 18px; gap: 10px; }
+.gv-flags .flag-emoji {
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.45));
+}
+
+/* === TERRAIN visuel Guess (à la place du listing brut) === */
+.guess-pitch {
+  position: relative;
+  width: 100%;
+  max-width: 520px;
+  margin: 0 auto;
+  aspect-ratio: 3 / 4.4;
+  background:
+    repeating-linear-gradient(0deg,
+      rgba(255,255,255,0.025) 0,
+      rgba(255,255,255,0.025) 26px,
+      transparent 26px, transparent 52px),
+    linear-gradient(180deg, #1f5740 0%, #14392a 50%, #0e2418 100%);
+  border-radius: 22px;
+  overflow: hidden;
+  box-shadow:
+    inset 0 0 0 1.5px rgba(255,255,255,0.16),
+    inset 0 0 80px rgba(0,0,0,0.55),
+    0 20px 50px rgba(0,0,0,0.55);
+}
+.guess-pitch::before {
+  content: ""; position: absolute;
+  left: 5%; right: 5%; top: 4%; bottom: 4%;
+  border: 1.5px solid rgba(255,255,255,0.25); border-radius: 8px;
+}
+.guess-pitch::after {
+  content: ""; position: absolute;
+  left: 5%; right: 5%; top: 50%; height: 0;
+  border-top: 1.5px solid rgba(255,255,255,0.25);
+}
+.gp-slot {
+  position: absolute;
+  width: 16%;
+  transform: translate(-50%, -50%);
+  display: flex; flex-direction: column; align-items: center;
+  text-align: center;
+  z-index: 2;
+}
+.gp-bubble {
+  width: 100%; aspect-ratio: 1;
+  border-radius: 50%;
+  background: rgba(8,12,18,0.55);
+  border: 1.5px solid rgba(255,255,255,0.42);
+  display: grid; place-items: center;
+  overflow: hidden;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.18),
+    0 8px 18px rgba(0,0,0,0.5);
+}
+.gp-flag {
+  font-size: clamp(18px, 4vw, 30px);
+  line-height: 1;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.6));
+}
+.gp-club-badge {
+  width: 80%; height: 80%; border-radius: 50%;
+  display: grid; place-items: center;
+  font-family: var(--mono); font-weight: 800;
+  font-size: clamp(10px, 2.4vw, 14px);
+  color: white;
+  letter-spacing: 0.05em;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.6);
+  border: 1.5px solid rgba(255,255,255,0.30);
+}
+.gp-pos {
+  margin-top: 4px;
+  font-family: var(--mono); font-size: 10px;
+  color: white; font-weight: 700;
+  letter-spacing: 0.06em;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.9);
+}
+
+/* ============================================================
+   UNDERCOVER inline setup — pas de redirection
+   ============================================================ */
+#setupUnderPanel .under-config {
+  background: linear-gradient(180deg, rgba(26,30,40,0.6) 0%, rgba(14,18,26,0.85) 100%);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 18px;
+  padding: 22px;
+}

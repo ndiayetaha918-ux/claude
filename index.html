@@ -50,8 +50,11 @@
       <!-- HERO — mosaïque qui défile + 3 cards modes en arc spatial -->
       <div class="hero-v3">
         <div class="hero-mosaic" id="heroMosaic" aria-hidden="true">
+          <div class="hm-bg-gradient"></div>
           <div class="hm-stage">
             <div class="hm-row r1"></div>
+            <div class="hm-row r2"></div>
+            <div class="hm-row r3"></div>
           </div>
         </div>
         <div class="hero-intro">
@@ -71,7 +74,7 @@
             <div class="mc-inner">
               <div class="mc-glow"></div>
               <div class="mc-shine"></div>
-              <img class="mc-player" src="assets/undercover-dembele.webp" alt="Undercover" loading="lazy" decoding="async" onerror="this.style.display='none'" />
+              <img class="mc-player" src="assets/IMG_2619.png" alt="Undercover" loading="lazy" decoding="async" onerror="this.style.display='none'" />
               <div class="mc-emblem">
                 <!-- Masque mystère (silence/bluff) -->
                 <svg viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -132,7 +135,7 @@
             <div class="mc-inner">
               <div class="mc-glow"></div>
               <div class="mc-shine"></div>
-              <img class="mc-player" src="assets/guess-yildiz.webp" alt="Guess The Team" loading="lazy" decoding="async" onerror="this.style.display='none'" />
+              <img class="mc-player" src="assets/IMG_2620.png" alt="Guess The Team" loading="lazy" decoding="async" onerror="this.style.display='none'" />
               <div class="mc-emblem">
                 <!-- Cible / point d'interrogation -->
                 <svg viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -394,7 +397,97 @@
           </div>
         </div><!-- /#setupJustePanel -->
 
-      </div><!-- /#setupSection (now contains both panels) -->
+        <!-- =================================== -->
+        <!-- PANEL : Setup Guess The Team       -->
+        <!-- =================================== -->
+        <div id="setupGuessPanel" style="display:none">
+          <div class="guess-mode-pick">
+            <button class="guess-mode-btn" data-guess-mode="solo">
+              <div class="gmb-icon">
+                <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="8" r="4"/><path d="M4 22c0-4.4 3.6-8 8-8s8 3.6 8 8"/>
+                </svg>
+              </div>
+              <div class="gmb-label">Solo</div>
+            </button>
+            <button class="guess-mode-btn active" data-guess-mode="multi">
+              <div class="gmb-icon">
+                <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="9" cy="8" r="3.5"/><circle cx="17" cy="9" r="3"/><path d="M2 22c0-3.5 3-6 7-6s7 2.5 7 6"/><path d="M14 22c0-2.5 2-5 5-5s5 2.5 5 5" opacity="0.5"/>
+                </svg>
+              </div>
+              <div class="gmb-label">Tour à tour</div>
+            </button>
+          </div>
+
+          <div class="guess-variants-inline">
+            <button class="guess-variant-card active" data-variant="club">
+              <div class="gv-eyebrow">VARIANTE</div>
+              <div class="gv-title">Club</div>
+              <div class="gv-tease">11 joueurs masqués par leur drapeau. Devine le club.</div>
+              <div class="gv-logos" id="guessClubLogos">
+                <span>Real Madrid</span><span>•</span><span>City</span><span>•</span><span>Barça</span><span>•</span><span>Arsenal</span><span>•</span><span>PSG</span><span>•</span><span>Bayern</span><span>•</span><span>Inter</span>
+              </div>
+            </button>
+            <button class="guess-variant-card" data-variant="nation">
+              <div class="gv-eyebrow">VARIANTE</div>
+              <div class="gv-title">Sélection</div>
+              <div class="gv-tease">11 joueurs masqués par leur club. Devine la sélection.</div>
+              <div class="gv-logos gv-flags">
+                <span class="flag-emoji">🇫🇷</span>
+                <span class="flag-emoji">🇪🇸</span>
+                <span class="flag-emoji">🏴󠁧󠁢󠁥󠁮󠁧󠁿</span>
+                <span class="flag-emoji">🇧🇷</span>
+                <span class="flag-emoji">🇦🇷</span>
+                <span class="flag-emoji">🇩🇪</span>
+                <span class="flag-emoji">🇮🇹</span>
+                <span class="flag-emoji">🇵🇹</span>
+              </div>
+            </button>
+          </div>
+
+          <div class="setup-actions" style="margin-top:24px">
+            <button class="btn btn-primary btn-lg" id="guessStartInline">
+              <span>Lancer Guess The Team</span>
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>
+            </button>
+          </div>
+        </div><!-- /#setupGuessPanel -->
+
+        <!-- =================================== -->
+        <!-- PANEL : Setup Undercover Foot      -->
+        <!-- =================================== -->
+        <div id="setupUnderPanel" style="display:none">
+          <div class="under-config">
+            <div class="under-rules">
+              <div class="ur-step">
+                <div class="ur-num">1</div>
+                <div class="ur-text"><strong>Distribution.</strong> Chaque joueur reçoit un mot secret (joueur de foot). L'imposteur en reçoit un proche mais différent.</div>
+              </div>
+              <div class="ur-step">
+                <div class="ur-num">2</div>
+                <div class="ur-text"><strong>Indices.</strong> À tour de rôle, chacun donne un indice sans dire son mot.</div>
+              </div>
+              <div class="ur-step">
+                <div class="ur-num">3</div>
+                <div class="ur-text"><strong>Vote.</strong> Tout le monde vote pour démasquer l'imposteur.</div>
+              </div>
+              <div class="ur-step">
+                <div class="ur-num">4</div>
+                <div class="ur-text"><strong>Révélation.</strong> L'imposteur est dévoilé. Civils gagnent ou imposteur s'en sort.</div>
+              </div>
+            </div>
+            <label class="under-label">Joueurs (3 à 8)</label>
+            <div class="under-players" id="underPlayers"></div>
+            <div class="under-add-row">
+              <input type="text" id="underNewName" class="line-input" placeholder="Pseudo…" />
+              <button class="btn btn-ghost" id="underAddBtn">+ Ajouter</button>
+            </div>
+            <button class="btn btn-primary btn-lg" id="underStart" disabled>Distribuer les rôles</button>
+          </div>
+        </div><!-- /#setupUnderPanel -->
+
+      </div><!-- /#setupSection -->
 
       <div class="features">
         <div class="feature">
