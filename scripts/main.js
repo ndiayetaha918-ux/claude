@@ -449,24 +449,7 @@
       });
     }
 
-    // Clé API IA (optionnel)
-    const aiKeyInput = $('#aiApiKey');
-    const btnSaveAi = $('#btnSaveAiKey');
-    if (aiKeyInput && btnSaveAi) {
-      try {
-        const saved = localStorage.getItem('drafter_ai_key');
-        if (saved) aiKeyInput.value = saved;
-      } catch (e) {}
-      btnSaveAi.addEventListener('click', () => {
-        const v = aiKeyInput.value.trim();
-        try {
-          if (v) localStorage.setItem('drafter_ai_key', v);
-          else localStorage.removeItem('drafter_ai_key');
-          btnSaveAi.textContent = '✓ Enregistré';
-          setTimeout(() => btnSaveAi.textContent = 'Enregistrer', 1500);
-        } catch (e) { toast('Erreur', 'localStorage indisponible.'); }
-      });
-    }
+    // (Analyse IA / clé Cloudflare supprimée — moteur déterministe intégré)
 
     // Mode Club : segment + select
     const segClubMode = $('#segClubMode');
@@ -2474,120 +2457,13 @@
   }
 
   // ============================================================
-  // ANALYSE IA (optionnelle, via clé Claude API du user)
+  // ANALYSE TACTIQUE — 100% déterministe (moteur intégré, pas de clé)
   // ============================================================
-  async function renderAiAnalysis() {
+  function renderAiAnalysis() {
     const area = $('#aiAnalysisArea');
     const status = $('#aiAnalysisStatus');
     if (!area) return;
-    // 1) Toujours rendre le raisonnement déterministe en premier (instantané)
     renderDeterministicAnalysis(area, status);
-    // 2) Si une clé est posée, on enrichit avec l'analyse LLM par-dessus
-    let aiConfig = null;
-    try { aiConfig = localStorage.getItem('drafter_ai_key'); } catch (e) {}
-    if (!aiConfig) return;
-    const isWorker = aiConfig.startsWith('http');
-    status.textContent = isWorker ? 'enrichissement via worker...' : 'enrichissement Claude...';
-    const enrichBox = el('div', { class: 'ai-loading' });
-    enrichBox.textContent = '⏳ ' + (isWorker ? 'Worker' : 'Claude') + ' approfondit l\'analyse...';
-    area.appendChild(enrichBox);
-
-    const teams = state.participants.map((p, i) => {
-      const score = stadiumState.scores[i];
-      const ts = tacticsState.byParticipant && tacticsState.byParticipant[i];
-      const lineup = FORMATIONS[p.formation].slots.map(slot => {
-        const pid = p.slots[slot.id];
-        const player = pid ? playerById(pid) : null;
-        const tp = ts && ts.players && ts.players[slot.id];
-        const role = tp && tp.role ? window.Tactics.ROLES[tp.role] : null;
-        return {
-          slot: slot.type,
-          player: player ? player.name + ' (' + player.value + 'M, ' + (player.posMain||[]).join('/') + ')' : '—',
-          role: role ? role.label : '—',
-        };
-      });
-      return {
-        drafter: p.name,
-        formation: FORMATIONS[p.formation].label,
-        phases: ts ? ts.phases : {},
-        overall: score.overall,
-        breakdown: { qualite: score.quality, chimie: score.chemistry, adequation: score.fit, equilibre: score.balance, tactique: score.tactic },
-        lineup,
-      };
-    });
-
-    try {
-      let res, data, text;
-      if (isWorker) {
-        // Mode worker : on POST direct sur l'URL
-        const url = aiConfig.replace(/\/+$/, '') + '/ai/analyze';
-        res = await fetch(url, {
-          method: 'POST',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ teams, context: {} }),
-        });
-        if (res.ok) {
-          data = await res.json();
-          text = data.text || '';
-        }
-      } else {
-        // Mode clé directe (insecure, mais le user a accepté)
-        const prompt = buildPromptFromTeams(teams);
-        res = await fetch('https://api.anthropic.com/v1/messages', {
-          method: 'POST',
-          headers: {
-            'x-api-key': aiConfig,
-            'anthropic-version': '2023-06-01',
-            'anthropic-dangerous-direct-browser-access': 'true',
-            'content-type': 'application/json',
-          },
-          body: JSON.stringify({
-            model: 'claude-sonnet-4-6',
-            max_tokens: 2400,
-            messages: [{ role: 'user', content: prompt }],
-          }),
-        });
-        if (res.ok) {
-          data = await res.json();
-          text = (data.content || []).map(c => c.text || '').join('\n');
-        }
-      }
-      enrichBox.remove();
-      if (!res.ok) {
-        const errEl = el('p', { class: 'muted ai-error' });
-        errEl.textContent = 'Enrichissement IA indisponible (HTTP ' + res.status + ').';
-        area.appendChild(errEl);
-        status.textContent = 'heuristique seul';
-        return;
-      }
-      const div = el('div', { class: 'ai-output ai-llm' });
-      div.innerHTML = '<h3 class="ai-h">🤖 Analyse approfondie</h3>' + renderMarkdown(text);
-      area.appendChild(div);
-      status.textContent = isWorker ? '✓ enrichi via worker' : '✓ enrichi par Claude';
-      return;
-    } catch (e) {
-      enrichBox.remove();
-      const errEl = el('p', { class: 'muted ai-error' });
-      errEl.textContent = 'Réseau IA inaccessible : ' + e.message;
-      area.appendChild(errEl);
-      status.textContent = 'heuristique seul';
-      return;
-    }
-
-  }
-
-  function buildPromptFromTeams(teams) {
-    let p = 'Tu es un analyste tactique de football professionnel. Voici ' + teams.length + ' équipes draftées qui vont s\'affronter.\n\n';
-    teams.forEach((t, i) => {
-      p += '## Équipe ' + (i+1) + ' — ' + t.drafter + '\n';
-      p += 'Formation : ' + t.formation + '\n';
-      p += 'Tactique : possession=' + (t.phases.possession||'?') + ', transition=' + (t.phases.transition||'?') + ', défense=' + (t.phases.defense||'?') + '\n';
-      p += 'Compo :\n';
-      t.lineup.forEach(l => { p += '- ' + l.slot + ' : ' + l.player + ' — rôle ' + l.role + '\n'; });
-      p += '\n';
-    });
-    p += '\nPour chaque équipe :\n1) Identité tactique en 1 phrase\n2) 2-3 forces réelles (joueurs clés et rôles qui se complètent)\n3) 2-3 failles concrètes que l\'adversaire peut exploiter\n4) Un joueur dont le rôle assigné ne lui convient PAS, et pourquoi.\n\nPuis : pour chaque MATCHUP, 3 phrases sur le déroulé probable du match. Format markdown ## Équipe X.';
-    return p;
   }
 
   function renderDeterministicAnalysis(area, status) {

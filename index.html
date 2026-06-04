@@ -320,15 +320,6 @@
             </div>
 
             <div class="setup-field setup-field-wide">
-              <label>Analyse IA en fin de draft <span class="age-label">facultatif</span></label>
-              <div class="ai-key-row">
-                <input type="password" id="aiApiKey" class="line-input" placeholder="URL de ton worker Cloudflare (recommandé) ou clé sk-ant-..."/>
-                <button class="btn btn-ghost" id="btnSaveAiKey">Enregistrer</button>
-              </div>
-              <p class="muted" style="margin-top:6px;font-size:11px">Sans rien → moteur déterministe (instantané). URL de worker → Claude derrière. Clé directe → marche aussi mais clé exposée. Setup worker : <code>worker/README.md</code>.</p>
-            </div>
-
-            <div class="setup-field setup-field-wide">
               <label>Mode club <span class="age-label" id="clubModeLabel">Désactivé</span></label>
               <div class="club-mode-row">
                 <select id="clubModeSelect" class="select">
@@ -424,24 +415,17 @@
             <button class="guess-variant-card active" data-variant="club">
               <div class="gv-eyebrow">VARIANTE</div>
               <div class="gv-title">Club</div>
-              <div class="gv-tease">11 joueurs masqués par leur drapeau. Devine le club.</div>
-              <div class="gv-logos" id="guessClubLogos">
-                <span>Real Madrid</span><span>•</span><span>City</span><span>•</span><span>Barça</span><span>•</span><span>Arsenal</span><span>•</span><span>PSG</span><span>•</span><span>Bayern</span><span>•</span><span>Inter</span>
+              <div class="gv-tease">Compo type avec les drapeaux des titulaires. Devine le club.</div>
+              <div class="gv-logos">
+                <span>Real Madrid</span><span>•</span><span>Barça</span><span>•</span><span>City</span><span>•</span><span>PSG</span>
               </div>
             </button>
             <button class="guess-variant-card" data-variant="nation">
               <div class="gv-eyebrow">VARIANTE</div>
               <div class="gv-title">Sélection</div>
-              <div class="gv-tease">11 joueurs masqués par leur club. Devine la sélection.</div>
-              <div class="gv-logos gv-flags">
-                <span class="flag-emoji">🇫🇷</span>
-                <span class="flag-emoji">🇪🇸</span>
-                <span class="flag-emoji">🏴󠁧󠁢󠁥󠁮󠁧󠁿</span>
-                <span class="flag-emoji">🇧🇷</span>
-                <span class="flag-emoji">🇦🇷</span>
-                <span class="flag-emoji">🇩🇪</span>
-                <span class="flag-emoji">🇮🇹</span>
-                <span class="flag-emoji">🇵🇹</span>
+              <div class="gv-tease">Compo type avec les logos des clubs des titulaires. Devine la sélection.</div>
+              <div class="gv-logos">
+                <span>France</span><span>•</span><span>Brésil</span><span>•</span><span>Argentine</span><span>•</span><span>Espagne</span>
               </div>
             </button>
           </div>
@@ -675,12 +659,10 @@
         <div class="tournament-area" id="tournamentArea"></div>
       </div>
 
-      <!-- Analyse IA (facultatif) -->
+      <!-- Analyse tactique déterministe (moteur intégré, sans clé) -->
       <div class="stadium-section" id="aiAnalysisSection">
-        <h2 class="section-title"><span class="num">03</span>Analyse IA <span class="age-label" id="aiAnalysisStatus">activée si clé Claude API</span></h2>
-        <div class="ai-analysis-area" id="aiAnalysisArea">
-          <p class="muted">Tu n'as pas configuré de clé Claude API au setup. Ajoute-la depuis l'écran de configuration pour obtenir une critique tactique sur chaque équipe.</p>
-        </div>
+        <h2 class="section-title"><span class="num">03</span>Analyse tactique</h2>
+        <div class="ai-analysis-area" id="aiAnalysisArea"></div>
       </div>
 
       <div class="setup-actions" style="justify-content:center; gap:14px;">
