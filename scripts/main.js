@@ -233,64 +233,38 @@
     });
   }
 
-  // Mosaïque de mini-cards qui défile en boucle au-dessus du hero
+  // Mosaïque visionneuse 1-row : photos de JOUEURS, jamais répétées
   function buildHeroMosaic() {
-    const rows = [
-      document.querySelector('.hm-row.r1'),
-      document.querySelector('.hm-row.r2'),
-      document.querySelector('.hm-row.r3'),
-    ].filter(Boolean);
+    const row = document.querySelector('.hm-row.r1');
     const mosaic = document.getElementById('heroMosaic');
-    if (!rows.length || !mosaic) return;
+    if (!row || !mosaic) return;
 
-    // Source : 53 photos user OU fallback Sofifa
-    let images;
-    if (window.MOSAIC_IMAGES && window.MOSAIC_IMAGES.length) {
-      images = window.MOSAIC_IMAGES.slice();
-    } else {
-      images = (window.PLAYERS || []).slice()
-        .filter(p => (window.photoUrl && window.photoUrl(p)))
-        .sort((a, b) => (b.value || 0) - (a.value || 0))
-        .slice(0, 30)
-        .map(p => window.photoUrl(p));
+    // Source : photos de joueurs (Sofascore/Fotmob/TM) — pool large pour
+    // garantir l'absence de répétition. On prend les 40 stars avec photo.
+    const players = (window.PLAYERS || []).slice()
+      .filter(p => (window.photoUrl && window.photoUrl(p)))
+      .sort((a, b) => (b.value || 0) - (a.value || 0))
+      .slice(0, 40);
+
+    // Mélange déterministe puis ×2 pour la boucle continue
+    const shuffled = players.slice();
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = ((i + 1) * 7919) % (i + 1);
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
     }
-
-    // Mélange déterministe puis distribue sur 3 bandes avec offsets
-    function pseudoShuffle(arr, seed) {
-      const a = arr.slice();
-      for (let i = a.length - 1; i > 0; i--) {
-        const j = ((i + 1) * seed) % (i + 1);
-        [a[i], a[j]] = [a[j], a[i]];
-      }
-      return a;
-    }
-    const groupSize = Math.ceil(images.length / 3);
-    const groupedImgs = [
-      pseudoShuffle(images, 7919).slice(0, groupSize),
-      pseudoShuffle(images, 3571).slice(0, groupSize),
-      pseudoShuffle(images, 1297).slice(0, groupSize),
-    ];
-
-    rows.forEach((row, idx) => {
-      const imgs = groupedImgs[idx];
-      // ×2 cycle continu
-      imgs.concat(imgs).forEach(src => {
-        const card = el('div', { class: 'hm-card' });
-        const img = new Image();
-        img.src = src;
-        img.loading = 'lazy';
-        img.decoding = 'async';
-        img.referrerPolicy = 'no-referrer';
-        card.appendChild(img);
-        row.appendChild(card);
-      });
+    shuffled.concat(shuffled).forEach(p => {
+      const card = el('div', { class: 'hm-card' });
+      const img = new Image();
+      img.src = window.photoUrl(p);
+      img.loading = 'lazy';
+      img.decoding = 'async';
+      img.referrerPolicy = 'no-referrer';
+      img.alt = p.name;
+      card.appendChild(img);
+      row.appendChild(card);
     });
 
-    // === Effet grand angle (déformation barillet) ===
-    // Pour chaque card on calcule sa position relative au centre du viewport
-    // de la mosaïque. CSS utilise les CSS vars pour appliquer translateZ +
-    // rotateY + scale → les cards aux extrêmes SE RAPPROCHENT (translateZ
-    // positif) et S'AGRANDISSENT (scale > 1), pas l'inverse.
+    // === Coverflow : déformation selon position au centre ===
     const allCards = Array.from(mosaic.querySelectorAll('.hm-card'));
     let rafToken = null;
     function updateLensEffect() {

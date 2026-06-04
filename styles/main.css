@@ -229,107 +229,90 @@ h1, h2, h3, h4 { margin: 0; font-weight: 800; letter-spacing: -0.02em; color: va
 
 /* === Mosaïque qui défile (style visionneuse / grand angle) === */
 /* ============================================================
-   MOSAÏQUE — Vraie visionneuse FISHEYE/GRAND ANGLE (réf user)
-   3 bandes de mini cards. Les cards aux extrêmes sont
-   AGRANDIES + déformées (effet barillet d'un objectif grand angle).
-   Gradient bas : violet → orange en arrière-plan.
+   MOSAÏQUE — Visionneuse 1-row coverflow (photos joueurs en face)
+   1 rangée qui défile, cards déformées en 3D selon position au
+   centre (JS-driven), fade flou doux aux bords.
    ============================================================ */
 .hero-mosaic {
   position: relative;
   width: 100%;
-  height: clamp(320px, 36vw, 440px);
+  height: clamp(260px, 28vw, 340px);
   overflow: hidden;
-  margin-bottom: 36px;
-  perspective: 600px;          /* perspective FORTE pour déformation marquée */
+  margin-bottom: 0;            /* le texte hero remonte par-dessus */
+  perspective: 1300px;
   perspective-origin: 50% 50%;
+  /* Fade flou doux aux bords (mask gradient horizontal large) */
+  -webkit-mask-image: linear-gradient(90deg,
+                       transparent 0%, black 14%, black 86%, transparent 100%);
+          mask-image: linear-gradient(90deg,
+                       transparent 0%, black 14%, black 86%, transparent 100%);
 }
-/* Gradient de fond style ref : noir → violet → orange depuis bas */
-.hm-bg-gradient {
-  position: absolute; inset: 0; z-index: 0;
-  pointer-events: none;
-  background:
-    radial-gradient(ellipse 80% 60% at 50% 100%,
-      rgba(255,140,60,0.55) 0%,
-      rgba(255,90,80,0.35) 25%,
-      rgba(180,90,200,0.30) 50%,
-      rgba(80,60,180,0.18) 70%,
-      transparent 95%);
-}
+.hm-bg-gradient { display: none; }
 .hm-stage {
   position: absolute; inset: 0;
   transform-style: preserve-3d;
   z-index: 1;
 }
-
-/* 3 bandes mini cards, non superposées (chacune sa zone verticale) */
+/* 1 row centrée verticalement */
 .hm-row {
   position: absolute;
-  left: 0;
+  top: 50%; left: 0;
+  transform: translateY(-50%);
   display: flex;
-  gap: 12px;
+  gap: 16px;
   width: max-content;
   will-change: transform;
-  animation: hmScroll linear infinite;
+  animation: hmScroll 90s linear infinite;
   transform-style: preserve-3d;
+  padding: 0 50vw;
 }
-.hm-row.r1 { top: 8%;  height: 24%; animation-duration: 90s;  animation-direction: normal;  }
-.hm-row.r2 { top: 38%; height: 24%; animation-duration: 75s;  animation-direction: reverse; }
-.hm-row.r3 { top: 68%; height: 24%; animation-duration: 100s; animation-direction: normal;  }
+.hm-row.r2, .hm-row.r3 { display: none; }   /* on n'utilise qu'une rangée */
 .hero-mosaic:hover .hm-row { animation-play-state: paused; }
 @keyframes hmScroll {
-  from { transform: translate3d(0, 0, 0); }
-  to   { transform: translate3d(-50%, 0, 0); }
+  from { transform: translateY(-50%) translate3d(0, 0, 0); }
+  to   { transform: translateY(-50%) translate3d(-50%, 0, 0); }
 }
 
-/* MINI card avec déformation grand angle.
-   --hm-abs : 0 (centre) à 1.4 (extrême)
-   --hm-pos : -1.4 (gauche) à +1.4 (droite)
-   Effet BARILLET : cards aux bords sont AGRANDIES (scale > 1) et tournées
-   vers nous, pas réduites — c'est l'inverse d'un téléobjectif. */
+/* Card visionneuse : portrait, déformée selon --hm-pos / --hm-abs (JS) */
 .hm-card {
-  --glow-r: 214; --glow-g: 139; --glow-b: 60;
   flex: 0 0 auto;
-  width: clamp(76px, 8.4vw, 110px);
-  aspect-ratio: 1;        /* carré avec coins arrondis comme dans la ref */
-  border-radius: 18px;
+  width: clamp(140px, 15vw, 200px);
+  aspect-ratio: 4/5;
+  border-radius: 20px;
   position: relative;
   overflow: hidden;
-  background: linear-gradient(180deg, rgba(40,40,55,0.75) 0%, rgba(20,20,30,0.95) 100%);
-  border: 1px solid rgba(255,255,255,0.12);
+  background: linear-gradient(180deg, rgba(30,32,42,0.85) 0%, rgba(16,18,26,0.95) 100%);
+  border: 1px solid rgba(255,255,255,0.10);
   box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.15),
-    0 6px 18px rgba(0,0,0,0.5),
-    0 0 22px rgba(var(--glow-r), var(--glow-g), var(--glow-b), 0.28);
+    inset 0 1px 0 rgba(255,255,255,0.12),
+    0 14px 32px rgba(0,0,0,0.55);
   transform-style: preserve-3d;
   will-change: transform;
   --hm-pos: 0; --hm-abs: 0;
-  /* Déformation grand angle : translateZ POSITIF aux extrêmes (avance vers nous)
-     + rotateY inverse (tourné vers le centre)
-     + scale > 1 aux bords (barillet) */
+  /* Coverflow : les cards aux bords tournent vers le centre et reculent */
   transform:
-    translateZ(calc(var(--hm-abs) * 80px))
-    rotateY(calc(var(--hm-pos) * 28deg))
-    scale(calc(1 + var(--hm-abs) * 0.22));
+    translateZ(calc(var(--hm-abs) * -90px))
+    rotateY(calc(var(--hm-pos) * -38deg))
+    scale(calc(1 - var(--hm-abs) * 0.12));
   transition: transform 0.16s linear;
 }
 .hm-card img {
   position: absolute; inset: 0;
   width: 100%; height: 100%;
   object-fit: cover;
-  object-position: center 18%;
+  object-position: center 14%;
 }
 .hm-card::after {
   content: "";
   position: absolute; inset: 0;
-  background: linear-gradient(180deg, transparent 60%, rgba(0,0,0,0.55) 100%);
+  background: linear-gradient(180deg, transparent 58%, rgba(0,0,0,0.6) 100%);
   pointer-events: none;
 }
-/* Reflet glassy léger */
 .hm-card::before {
   content: "";
   position: absolute; inset: 0; z-index: 1;
   pointer-events: none;
-  background: linear-gradient(160deg, rgba(255,255,255,0.16) 0%, transparent 35%);
+  background: linear-gradient(160deg, rgba(255,255,255,0.14) 0%, transparent 35%);
   border-radius: inherit;
 }
 
@@ -346,7 +329,12 @@ h1, h2, h3, h4 { margin: 0; font-weight: 800; letter-spacing: -0.02em; color: va
   text-align: center;
   margin-bottom: 52px;
   position: relative;
-  z-index: 1;
+  z-index: 3;
+  /* Remonte par-dessus le bas de la mosaïque + halo derrière le texte pour contraste */
+  margin-top: -70px;
+  padding-top: 30px;
+  background: radial-gradient(ellipse 80% 120% at 50% 60%,
+              var(--bg) 35%, rgba(10,12,16,0.6) 60%, transparent 85%);
 }
 .hero-eyebrow {
   display: inline-flex; align-items: center; gap: 8px;
