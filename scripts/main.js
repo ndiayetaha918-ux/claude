@@ -181,37 +181,55 @@
     const bento = $('#modeBento');
     if (!bento) return;
 
-    // Mouse-tracking glow par card (halo qui suit le pointeur)
+    const cards = Array.from(bento.querySelectorAll('.mode-card'));
+    const order = cards.map(c => c.dataset.bento);   // ordre DOM
+    let activeIdx = order.indexOf('draft');           // draft au centre au départ
+    if (activeIdx < 0) activeIdx = Math.floor(cards.length / 2);
+
+    const MODE_AMBIANCE = { five:'five', draft:'draft', juste:'juste', under:'under', guess:'guess' };
+
+    function applyCoverflow() {
+      cards.forEach((card, i) => {
+        const slot = i - activeIdx;                 // distance signée au centre
+        card.style.setProperty('--slot', slot);
+        card.style.setProperty('--abs', Math.abs(slot));
+        card.classList.toggle('is-center', slot === 0);
+      });
+      // Ambiance fond selon la card centrale
+      const centerMode = order[activeIdx];
+      document.body.classList.remove('mode-hover-five','mode-hover-draft','mode-hover-juste','mode-hover-under','mode-hover-guess');
+      if (MODE_AMBIANCE[centerMode]) document.body.classList.add('mode-hover-' + centerMode);
+    }
+    applyCoverflow();
+
+    // Glow mouse-tracking sur la card centrale
     bento.addEventListener('pointermove', (ev) => {
-      const card = ev.target.closest && ev.target.closest('.mode-card');
+      const card = ev.target.closest && ev.target.closest('.mode-card.is-center');
       if (!card) return;
       const cr = card.getBoundingClientRect();
-      const px = ((ev.clientX - cr.left) / cr.width) * 100;
-      const py = ((ev.clientY - cr.top) / cr.height) * 100;
-      card.style.setProperty('--mx-px', px + '%');
-      card.style.setProperty('--my-px', py + '%');
+      card.style.setProperty('--mx-px', ((ev.clientX - cr.left) / cr.width * 100) + '%');
+      card.style.setProperty('--my-px', ((ev.clientY - cr.top) / cr.height * 100) + '%');
     });
 
-    // Ambiance globale + CAROUSEL : la card hovered devient frontale (en grand),
-    // les deux autres se décalent vers le côté opposé et s'inclinent vers elle.
-    bento.querySelectorAll('.mode-card').forEach(card => {
-      const mode = card.dataset.bento;
-      card.addEventListener('mouseenter', () => {
-        document.body.classList.remove('mode-hover-five', 'mode-hover-draft', 'mode-hover-juste');
-        document.body.classList.add('mode-hover-' + mode);
-        // Marque le carousel : la card focus est annoncée au container
-        bento.setAttribute('data-focus', mode);
-      });
-      card.addEventListener('mouseleave', () => {
-        document.body.classList.remove('mode-hover-' + mode);
-        bento.removeAttribute('data-focus');
-      });
-    });
-
+    // Clic : si card centrale → lance le mode ; sinon → la card vient au centre
     bento.addEventListener('click', (ev) => {
       const card = ev.target.closest('.mode-card');
       if (!card) return;
-      routeMode(card.dataset.bento);
+      const i = cards.indexOf(card);
+      if (i === activeIdx) {
+        routeMode(card.dataset.bento);
+      } else {
+        activeIdx = i;
+        applyCoverflow();
+      }
+    });
+
+    // Flèches clavier pour naviguer
+    bento.setAttribute('tabindex', '0');
+    bento.addEventListener('keydown', (ev) => {
+      if (ev.key === 'ArrowLeft' && activeIdx > 0) { activeIdx--; applyCoverflow(); }
+      if (ev.key === 'ArrowRight' && activeIdx < cards.length - 1) { activeIdx++; applyCoverflow(); }
+      if (ev.key === 'Enter') routeMode(order[activeIdx]);
     });
   }
 

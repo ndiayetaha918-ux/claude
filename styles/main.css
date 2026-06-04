@@ -428,56 +428,24 @@ h1, h2, h3, h4 { margin: 0; font-weight: 800; letter-spacing: -0.02em; color: va
   contain: layout style paint;
 }
 
-/* Variables par card : position dans l'arc */
-.mode-card { --tx: 0px; --tz: 0px; --ry: 0deg; --sc: 1; --op: 1; --blur: 0px; }
+/* Variables par card : position dans l'arc (coverflow --slot ci-dessous) */
+.mode-card { --slot: 0; --abs: 0; will-change: transform, opacity; }
+
+/* === COVERFLOW équilibré (réf Spotify Vision Pro) ===
+   Toutes les cards ont QUASI la même taille. La position est définie par
+   --slot (distance signée au centre : -2,-1,0,+1,+2). Les latérales sont
+   orientées en perspective X (rotateY), pas réduites drastiquement.
+   JS gère --slot sur chaque card et le centre actif. */
 .mode-card {
-  /* Perf : on retire filter:blur (coûteux GPU), opacité + transform suffisent */
-  transform: translate(-50%, -50%) translate3d(var(--tx), 0, var(--tz)) rotateY(var(--ry)) scale(var(--sc));
-  opacity: var(--op);
-  will-change: transform, opacity;
+  transform:
+    translate(-50%, -50%)
+    translateX(calc(var(--slot) * 78%))
+    translateZ(calc(var(--abs) * -150px))
+    rotateY(calc(var(--slot) * -34deg))
+    scale(calc(1 - var(--abs) * 0.05));
+  opacity: calc(1 - var(--abs) * 0.26);
+  z-index: calc(10 - var(--abs));
 }
-
-/* Arc 5 cards — Undercover (gauche extrême) - Five - Draft (centre) - Juste - Guess (droite extrême) */
-.mode-card[data-bento="under"] { --tx: -420px; --tz: -640px; --ry: 56deg;  --sc: 0.56; --op: 0.32; z-index: 1; }
-.mode-card[data-bento="five"]  { --tx: -240px; --tz: -440px; --ry: 48deg;  --sc: 0.72; --op: 0.55; z-index: 2; }
-.mode-card[data-bento="draft"] { --tx: 0;      --tz: 140px;  --ry: 0deg;   --sc: 1.12; --op: 1;    z-index: 5; }
-.mode-card[data-bento="juste"] { --tx: 240px;  --tz: -440px; --ry: -48deg; --sc: 0.72; --op: 0.55; z-index: 2; }
-.mode-card[data-bento="guess"] { --tx: 420px;  --tz: -640px; --ry: -56deg; --sc: 0.56; --op: 0.32; z-index: 1; }
-
-/* === CAROUSEL : focus = la card hovered prend la place centrale === */
-/* Five focus : five vient au centre, draft glisse à droite, juste à droite plus loin */
-/* === CAROUSEL 5 cards : la card focus passe au centre, le reste se redéploie === */
-/* UNDER focus : Under au centre, four others à droite en cascade derrière */
-.mode-bento[data-focus="under"] .mode-card[data-bento="under"] { --tx: 0;     --tz: 160px;  --ry: 0deg;   --sc: 1.14; --op: 1;    z-index: 6; }
-.mode-bento[data-focus="under"] .mode-card[data-bento="five"]  { --tx: 230px; --tz: -440px; --ry: -48deg; --sc: 0.70; --op: 0.50; z-index: 4; }
-.mode-bento[data-focus="under"] .mode-card[data-bento="draft"] { --tx: 400px; --tz: -560px; --ry: -52deg; --sc: 0.60; --op: 0.35; z-index: 3; }
-.mode-bento[data-focus="under"] .mode-card[data-bento="juste"] { --tx: 540px; --tz: -640px; --ry: -54deg; --sc: 0.52; --op: 0.24; z-index: 2; }
-.mode-bento[data-focus="under"] .mode-card[data-bento="guess"] { --tx: 640px; --tz: -700px; --ry: -56deg; --sc: 0.46; --op: 0.18; z-index: 1; }
-
-.mode-bento[data-focus="five"] .mode-card[data-bento="five"]  { --tx: 0;      --tz: 160px;  --ry: 0deg;   --sc: 1.14; --op: 1;    z-index: 6; }
-.mode-bento[data-focus="five"] .mode-card[data-bento="under"] { --tx: -260px; --tz: -460px; --ry: 50deg;  --sc: 0.68; --op: 0.45; z-index: 4; }
-.mode-bento[data-focus="five"] .mode-card[data-bento="draft"] { --tx: 260px;  --tz: -460px; --ry: -50deg; --sc: 0.68; --op: 0.45; z-index: 4; }
-.mode-bento[data-focus="five"] .mode-card[data-bento="juste"] { --tx: 460px;  --tz: -580px; --ry: -54deg; --sc: 0.56; --op: 0.30; z-index: 2; }
-.mode-bento[data-focus="five"] .mode-card[data-bento="guess"] { --tx: 620px;  --tz: -680px; --ry: -56deg; --sc: 0.48; --op: 0.22; z-index: 1; }
-
-/* DRAFT focus : centre frontale, 2 latérales chaque côté en cascade */
-.mode-bento[data-focus="draft"] .mode-card[data-bento="draft"] { --tx: 0;      --tz: 180px;  --ry: 0deg;   --sc: 1.16; --op: 1;    z-index: 6; }
-.mode-bento[data-focus="draft"] .mode-card[data-bento="five"]  { --tx: -260px; --tz: -460px; --ry: 50deg;  --sc: 0.68; --op: 0.45; z-index: 4; }
-.mode-bento[data-focus="draft"] .mode-card[data-bento="under"] { --tx: -440px; --tz: -600px; --ry: 54deg;  --sc: 0.58; --op: 0.30; z-index: 3; }
-.mode-bento[data-focus="draft"] .mode-card[data-bento="juste"] { --tx: 260px;  --tz: -460px; --ry: -50deg; --sc: 0.68; --op: 0.45; z-index: 4; }
-.mode-bento[data-focus="draft"] .mode-card[data-bento="guess"] { --tx: 440px;  --tz: -600px; --ry: -54deg; --sc: 0.58; --op: 0.30; z-index: 3; }
-
-.mode-bento[data-focus="juste"] .mode-card[data-bento="juste"] { --tx: 0;      --tz: 160px;  --ry: 0deg;   --sc: 1.14; --op: 1;    z-index: 6; }
-.mode-bento[data-focus="juste"] .mode-card[data-bento="draft"] { --tx: -260px; --tz: -460px; --ry: 50deg;  --sc: 0.68; --op: 0.45; z-index: 4; }
-.mode-bento[data-focus="juste"] .mode-card[data-bento="guess"] { --tx: 260px;  --tz: -460px; --ry: -50deg; --sc: 0.68; --op: 0.45; z-index: 4; }
-.mode-bento[data-focus="juste"] .mode-card[data-bento="five"]  { --tx: -460px; --tz: -580px; --ry: 54deg;  --sc: 0.56; --op: 0.30; z-index: 2; }
-.mode-bento[data-focus="juste"] .mode-card[data-bento="under"] { --tx: -620px; --tz: -680px; --ry: 56deg;  --sc: 0.48; --op: 0.22; z-index: 1; }
-
-.mode-bento[data-focus="guess"] .mode-card[data-bento="guess"] { --tx: 0;      --tz: 160px;  --ry: 0deg;   --sc: 1.14; --op: 1;    z-index: 6; }
-.mode-bento[data-focus="guess"] .mode-card[data-bento="juste"] { --tx: -230px; --tz: -440px; --ry: 48deg;  --sc: 0.70; --op: 0.50; z-index: 4; }
-.mode-bento[data-focus="guess"] .mode-card[data-bento="draft"] { --tx: -400px; --tz: -560px; --ry: 52deg;  --sc: 0.60; --op: 0.35; z-index: 3; }
-.mode-bento[data-focus="guess"] .mode-card[data-bento="five"]  { --tx: -540px; --tz: -640px; --ry: 54deg;  --sc: 0.52; --op: 0.24; z-index: 2; }
-.mode-bento[data-focus="guess"] .mode-card[data-bento="under"] { --tx: -640px; --tz: -700px; --ry: 56deg;  --sc: 0.46; --op: 0.18; z-index: 1; }
 
 /* === Ombre colorée sous la carte centrale (subtile, pas gaming) === */
 .mode-card::after {
@@ -498,11 +466,9 @@ h1, h2, h3, h4 { margin: 0; font-weight: 800; letter-spacing: -0.02em; color: va
 .mode-card[data-bento="draft"] { --card-glow: radial-gradient(50% 100% at 50% 0%, rgba(220, 140, 80, 0.5) 0%, rgba(166, 60, 46, 0.25) 35%, transparent 75%); }
 .mode-card[data-bento="juste"] { --card-glow: radial-gradient(50% 100% at 50% 0%, rgba(232, 196, 130, 0.5) 0%, rgba(184, 140, 74, 0.25) 35%, transparent 75%); }
 .mode-card[data-bento="guess"] { --card-glow: radial-gradient(50% 100% at 50% 0%, rgba(240, 170, 170, 0.55) 0%, rgba(218, 120, 150, 0.30) 35%, transparent 75%); }
-.mode-card[data-bento="draft"]::after { opacity: 0.7; }
-.mode-bento[data-focus] .mode-card::after { opacity: 0.3; }
-.mode-bento[data-focus="five"]  .mode-card[data-bento="five"]::after,
-.mode-bento[data-focus="draft"] .mode-card[data-bento="draft"]::after,
-.mode-bento[data-focus="juste"] .mode-card[data-bento="juste"]::after { opacity: 0.8; }
+/* Ombre colorée seulement sous la card centrale */
+.mode-card::after { opacity: 0; }
+.mode-card.is-center::after { opacity: 0.85; }
 
 /* Inner container — fond noir, aurora en dessous, contenu au-dessus */
 .mc-inner { width: 100%; height: 100%; position: relative; border-radius: inherit; overflow: hidden; }
@@ -539,33 +505,27 @@ h1, h2, h3, h4 { margin: 0; font-weight: 800; letter-spacing: -0.02em; color: va
    transparent → couleur → blanc, blur uniforme.
    ============================================================ */
 .mc-inner {
-  background: #1a1d24;     /* moins sombre que noir profond */
+  background: #1a1d24;
 }
-/* Aurora très subtle au bas, juste pour signaler le mode + lisibilité du texte */
-/* Aurora DENSE qui occupe la moitié basse — pas une lueur subtle */
+/* GRADIENT FORT en bas — assumé, dense, occupe ~58% de la card.
+   La couleur monte de saturée (bas) à transparente (milieu). Le texte
+   se pose PAR-DESSUS ce gradient, en bas. */
 .mc-inner::after {
   content: "";
   position: absolute;
-  left: -20%; right: -20%;
-  bottom: -15%;
-  height: 78%; z-index: 2;
+  left: 0; right: 0;
+  bottom: 0;
+  height: 60%; z-index: 2;
   pointer-events: none;
-  filter: blur(32px);
-  opacity: 1;             /* opacity max — la saturation des gradients suffit */
   background: var(--mc-aurora);
 }
-/* Voile noir bas pour lisibilité du texte par-dessus la photo */
+/* Léger voile haut pour fondre la photo */
 .mc-inner::before {
   content: "";
   position: absolute;
   inset: 0; z-index: 1;
   pointer-events: none;
-  background:
-    linear-gradient(180deg,
-      rgba(10,12,16,0.20) 0%,
-      transparent 35%,
-      rgba(10,12,16,0.45) 75%,
-      rgba(10,12,16,0.80) 100%);
+  background: linear-gradient(180deg, rgba(10,12,16,0.30) 0%, transparent 30%);
 }
 /* Le .mc-veil n'est plus nécessaire avec le noir profond — le texte est lisible */
 .mc-inner > .mc-veil { display: none; }
@@ -638,91 +598,85 @@ h1, h2, h3, h4 { margin: 0; font-weight: 800; letter-spacing: -0.02em; color: va
     inset 0 -1px 0 rgba(0,0,0,0.4);
 }
 
-/* Texte du mode CENTRÉ sur la card */
+/* Texte du mode EN BAS, par-dessus le gradient fort */
 .mc-body {
   position: absolute;
-  inset: 0;
+  left: 0; right: 0; bottom: 64px;
   z-index: 5;
   display: flex; flex-direction: column;
-  align-items: center; justify-content: center;
+  align-items: center;
   text-align: center;
-  padding: 0 28px;
+  padding: 0 24px;
   color: #fff;
   pointer-events: none;
 }
 .mc-eyebrow {
   font-family: var(--mono); font-size: 10px;
   letter-spacing: 0.30em;
-  color: rgba(255,255,255,0.72);
+  color: rgba(255,255,255,0.88);
   text-transform: uppercase;
-  margin-bottom: 14px;
-  text-shadow: 0 2px 8px rgba(0,0,0,0.4);
+  margin-bottom: 6px;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.5);
 }
-.mc-eyebrow svg { display: none; }   /* on enlève le picto, on garde le texte */
+.mc-eyebrow svg { display: none; }
 .mc-title {
   font-family: var(--display);
-  font-size: clamp(40px, 4.6vw, 60px);
+  font-size: clamp(38px, 4.4vw, 54px);
   line-height: 0.95;
   margin: 0;
   letter-spacing: -0.045em;
   color: #fff;
-  font-weight: 600;
+  font-weight: 700;
   text-shadow:
-    0 4px 18px rgba(0,0,0,0.55),
-    0 1px 0 rgba(0,0,0,0.3);
+    0 3px 16px rgba(0,0,0,0.6),
+    0 1px 0 rgba(0,0,0,0.4);
 }
 .mc-desc {
   position: absolute;
-  left: 24px; right: 24px; bottom: 22px;
+  left: 22px; right: 22px; bottom: 22px;
   font-family: var(--font);
-  font-size: 12.5px; line-height: 1.5;
+  font-size: 12px; line-height: 1.45;
   margin: 0;
-  font-weight: 400;
-  color: rgba(255,255,255,0.82);
+  font-weight: 500;
+  color: rgba(255,255,255,0.92);
   text-align: center;
   z-index: 5;
   letter-spacing: -0.005em;
-  text-shadow: 0 1px 4px rgba(0,0,0,0.6);
+  text-shadow: 0 1px 6px rgba(0,0,0,0.7);
 }
 
-/* HOVER : la card hover se redresse + grandit, les autres reculent */
-/* Box-shadow renforcée sur la card focus (gérée par data-focus) */
-.mode-bento[data-focus] .mode-card[data-bento]:where([data-bento]) { /* placeholder */ }
-.mode-bento[data-focus="five"]  .mode-card[data-bento="five"],
-.mode-bento[data-focus="draft"] .mode-card[data-bento="draft"],
-.mode-bento[data-focus="juste"] .mode-card[data-bento="juste"] {
+/* Box-shadow forte + texte/gradient pleins uniquement sur la card centrale */
+.mode-card.is-center {
   box-shadow:
     0 1px 0 rgba(255,255,255,0.22) inset,
-    0 90px 160px rgba(0,0,0,0.8),
-    0 35px 70px rgba(0,0,0,0.6);
+    0 60px 120px rgba(0,0,0,0.75),
+    0 24px 50px rgba(0,0,0,0.55);
+  cursor: pointer;
 }
-/* Léger zoom de l'image quand la card est focus */
-.mode-bento[data-focus="five"]  .mode-card[data-bento="five"]  .mc-player,
-.mode-bento[data-focus="draft"] .mode-card[data-bento="draft"] .mc-player,
-.mode-bento[data-focus="juste"] .mode-card[data-bento="juste"] .mc-player {
-  transform: scale(1.04);
-  object-position: center 12%;
-}
+.mode-card:not(.is-center) { cursor: pointer; }
+.mode-card:not(.is-center) .mc-body,
+.mode-card:not(.is-center) .mc-desc { opacity: 0.6; }
 
-/* Mobile : on aplatit l'arc et on empile */
+/* Mobile : coverflow resserré (la centrale grande, les voisines en aperçu) */
 @media (max-width: 760px) {
   .mode-bento {
-    grid-template-columns: 1fr;
-    gap: 22px;
-    padding: 30px 0;
-    perspective: 1000px;
+    height: clamp(440px, 64vh, 560px);
+    padding: 20px 0;
+    perspective: 900px;
   }
   .mode-card {
-    max-width: min(420px, 92vw);
-    aspect-ratio: 5 / 6.2;
+    width: clamp(220px, 64vw, 280px);
   }
-  .mode-card[data-bento="five"]  { --tilt: 12deg;  --depth: -30px; --scale: 0.96; --shift: 0; }
-  .mode-card[data-bento="draft"] { --tilt: 0deg;   --depth: 20px;  --scale: 1;    --shift: 0; }
-  .mode-card[data-bento="juste"] { --tilt: -12deg; --depth: -30px; --scale: 0.96; --shift: 0; }
-  /* Mobile : on neutralise le carousel (les cards sont empilées) */
-  .mode-bento[data-focus] .mode-card { --shift: 0 !important; }
-  .mc-title { font-size: 44px; }
-  .mc-body  { left: 18px; right: 18px; bottom: 18px; }
+  /* Coverflow override mobile : spread réduit pour rester dans l'écran */
+  .mode-card {
+    transform:
+      translate(-50%, -50%)
+      translateX(calc(var(--slot) * 62%))
+      translateZ(calc(var(--abs) * -120px))
+      rotateY(calc(var(--slot) * -30deg))
+      scale(calc(1 - var(--abs) * 0.08));
+  }
+  .mc-title { font-size: 40px; }
 }
 
 /* ==========================================================================
