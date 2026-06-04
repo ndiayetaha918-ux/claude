@@ -4832,3 +4832,120 @@ body[data-mode="under"] .mode-cloud {
   border-radius: 18px;
   padding: 22px;
 }
+
+/* ============================================================
+   FEUILLE DE MATCH (FlashScore-style) — rapport fin de match
+   ============================================================ */
+.sim-events.match-report-visible {
+  display: block !important;
+  max-height: none;
+  margin-top: 16px;
+}
+.sim-report {
+  background: linear-gradient(180deg, rgba(24,28,38,0.6) 0%, rgba(12,16,24,0.85) 100%);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 18px;
+  padding: 22px 20px;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+/* Scoreline */
+.sr-scoreline {
+  display: grid; grid-template-columns: 1fr auto 1fr;
+  align-items: center; gap: 16px;
+  padding-bottom: 18px; margin-bottom: 18px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+.sr-team { text-align: center; }
+.sr-team.win .sr-tname { color: #fff; }
+.sr-tname {
+  font-family: var(--display); font-weight: 700;
+  font-size: clamp(15px, 2.2vw, 20px);
+  color: rgba(255,255,255,0.6);
+  letter-spacing: -0.02em;
+}
+.sr-score {
+  font-family: var(--display); font-weight: 800;
+  font-size: clamp(32px, 5vw, 46px);
+  color: #fff; letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+.sr-score span { color: rgba(255,255,255,0.3); margin: 0 4px; }
+
+/* Buteurs */
+.sr-scorers {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+  margin-bottom: 18px;
+}
+.sr-scorers-col { display: flex; flex-direction: column; gap: 6px; }
+.sr-scorers-col.left { align-items: flex-start; text-align: left; }
+.sr-scorers-col.right { align-items: flex-end; text-align: right; }
+.sr-goal {
+  font-size: 13px; color: rgba(255,255,255,0.85);
+  display: flex; align-items: center; gap: 6px;
+}
+.sr-gname { font-weight: 600; color: #fff; }
+.sr-gmin { font-family: var(--mono); font-size: 11px; color: var(--gold); }
+.sr-gicon { font-size: 12px; }
+
+/* MVP */
+.sr-mvp {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  background: rgba(214,139,60,0.10);
+  border: 1px solid rgba(214,139,60,0.25);
+  border-radius: 12px; padding: 12px;
+  margin-bottom: 18px;
+}
+.sr-mvp-badge { font-family: var(--mono); font-size: 11px; letter-spacing: 0.14em; color: var(--gold); }
+.sr-mvp-name { font-family: var(--display); font-weight: 700; font-size: 17px; color: #fff; }
+.sr-mvp-note {
+  font-family: var(--display); font-weight: 800; font-size: 17px;
+  background: var(--gold); color: #1a0e00;
+  padding: 2px 10px; border-radius: 8px;
+}
+
+/* Résumé */
+.sr-summary { margin-bottom: 18px; }
+.sr-summary .sr-line {
+  font-size: 13px; line-height: 1.55;
+  color: rgba(255,255,255,0.78); margin-bottom: 6px;
+}
+.sr-summary .sr-line strong { color: #fff; font-weight: 600; }
+
+/* Barres de stats comparatives */
+.sr-statbars { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+.sr-sb-wrap { }
+.sr-sb-label {
+  text-align: center; font-family: var(--mono); font-size: 10px;
+  letter-spacing: 0.10em; color: rgba(255,255,255,0.5);
+  text-transform: uppercase; margin-bottom: 4px;
+}
+.sr-statbar { display: grid; grid-template-columns: 44px 1fr 44px; gap: 10px; align-items: center; }
+.sr-sb-a { text-align: right; font-family: var(--mono); font-size: 12px; color: #fff; font-weight: 600; }
+.sr-sb-b { text-align: left; font-family: var(--mono); font-size: 12px; color: #fff; font-weight: 600; }
+.sr-sb-track { display: flex; height: 6px; border-radius: 3px; overflow: hidden; background: rgba(255,255,255,0.06); }
+.sr-sb-fill-a { background: linear-gradient(90deg, var(--neon), var(--gold)); }
+.sr-sb-fill-b { background: rgba(255,255,255,0.20); }
+
+/* Notes joueurs */
+.sr-rating-title {
+  font-family: var(--mono); font-size: 11px; letter-spacing: 0.16em;
+  text-transform: uppercase; color: rgba(255,255,255,0.5);
+  margin-bottom: 12px; text-align: center;
+}
+.sr-ratings { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 600px) { .sr-ratings { grid-template-columns: 1fr; } }
+.sr-rating-col { background: rgba(0,0,0,0.2); border-radius: 10px; padding: 10px; }
+.sr-rating-team {
+  font-family: var(--display); font-weight: 700; font-size: 13px;
+  color: #fff; margin-bottom: 8px; padding-bottom: 6px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+.sr-rating-row { display: grid; grid-template-columns: 34px 1fr 38px; gap: 8px; align-items: center; padding: 3px 0; font-size: 12px; }
+.sr-rp-pos { font-family: var(--mono); font-size: 9px; color: rgba(255,255,255,0.4); letter-spacing: 0.06em; }
+.sr-rp-name { color: rgba(255,255,255,0.9); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sr-rp-note { font-family: var(--display); font-weight: 700; text-align: center; padding: 2px 5px; border-radius: 5px; font-variant-numeric: tabular-nums; font-size: 13px; }
+.sr-rp-note.great { background: rgba(80,200,120,0.18); color: #80d695; }
+.sr-rp-note.good  { background: rgba(214,139,60,0.15); color: var(--gold); }
+.sr-rp-note.mid   { background: rgba(255,255,255,0.04); color: rgba(255,255,255,0.7); }
+.sr-rp-note.bad   { background: rgba(240,138,138,0.15); color: #f08a8a; }

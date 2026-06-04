@@ -3063,7 +3063,10 @@
     const phasePill = $('#simPhasePill'); if (phasePill) phasePill.textContent = '';
     const stT = $('#stText'); if (stT) stT.textContent = 'Coup d\'envoi imminent';
     const stS = $('#stSituation'); if (stS) stS.textContent = 'Présentation';
-    $('#simEvents').innerHTML = '';
+    const _simLog = $('#simEvents');
+    _simLog.innerHTML = '';
+    _simLog.setAttribute('aria-hidden', 'true');
+    _simLog.classList.remove('match-report-visible');
 
     // Terrain
     const pitch = $('#simPitch');
@@ -3496,53 +3499,116 @@
     const tacA = stadiumState.tactics[m.a] || window.Sim.STYLES.equilibre.tactics;
     const tacB = stadiumState.tactics[m.b] || window.Sim.STYLES.equilibre.tactics;
     const rep = window.Sim.matchReport(partA.name, partB.name, tpA, tpB, tacA, tacB, r);
-    const host = $('#simEvent');
-    if (host) host.textContent = rep.winner ? ('Victoire ' + rep.winner) : 'Match nul';
-    const stT = $('#stText');
-    if (stT) { stT.textContent = rep.winner ? (rep.winner + ' s\'impose ' + r.scoreA + ' - ' + r.scoreB) : 'Match nul ' + r.scoreA + ' - ' + r.scoreB; }
-    const stS = $('#stSituation');
-    if (stS) { stS.textContent = 'Coup de sifflet final'; }
-    // afficher un encart rapport dans la zone events
-    const log = $('#simEvents');
-    const card = el('div', { class:'sim-report' });
-    card.appendChild(el('div', { class:'sr-title' }, '📋 Analyse du match'));
-    rep.lines.forEach(l => {
-      const p = el('div', { class:'sr-line' });
-      p.innerHTML = l.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-      card.appendChild(p);
-    });
-    // Stats classiques
-    const st = el('div', { class:'sr-stats' });
-    st.innerHTML =
-      `<div><span>${r.stats.A.possession}%</span><label>Possession</label><span>${r.stats.B.possession}%</span></div>` +
-      `<div><span>${r.stats.A.shots}</span><label>Tirs</label><span>${r.stats.B.shots}</span></div>` +
-      `<div><span>${r.stats.A.onTarget}</span><label>Cadrés</label><span>${r.stats.B.onTarget}</span></div>` +
-      `<div><span>${r.stats.A.xg}</span><label>xG</label><span>${r.stats.B.xg}</span></div>` +
-      `<div><span>${r.stats.A.corners}</span><label>Corners</label><span>${r.stats.B.corners}</span></div>`;
-    card.appendChild(st);
 
-    // Deep stats supplémentaires (calculés à partir de l'engagement déjà disponible)
+    const stT = $('#stText');
+    if (stT) stT.textContent = rep.winner ? (rep.winner + ' s\'impose ' + r.scoreA + ' - ' + r.scoreB) : 'Match nul ' + r.scoreA + ' - ' + r.scoreB;
+    const stS = $('#stSituation');
+    if (stS) stS.textContent = 'Coup de sifflet final';
+
+    // === Extraction des buteurs depuis les moments ===
+    const goalsA = [], goalsB = [];
+    (r.moments || []).forEach(mo => {
+      if (mo.type === 'goal') {
+        const scorerName = mo.scorer || (mo.text || '').replace(/^⚽?\s*(BUT\s*!?\s*)?/i, '').split(/[—,]/)[0].trim();
+        const entry = { name: scorerName || 'But', minute: mo.t };
+        if (mo.team === 'A') goalsA.push(entry); else goalsB.push(entry);
+      }
+    });
+
+    // === Notes + MVP ===
+    const ratingsA = computePlayerRatings(partA, tpA, r, 'A');
+    const ratingsB = computePlayerRatings(partB, tpB, r, 'B');
+    const allRated = ratingsA.concat(ratingsB);
+    const mvp = allRated.slice().sort((a, b) => b.rating - a.rating)[0];
+
+    // === Construit la feuille de match dans #simEvents (révélé) ===
+    const log = $('#simEvents');
+    log.setAttribute('aria-hidden', 'false');
+    log.classList.add('match-report-visible');
+    log.innerHTML = '';
+
+    const card = el('div', { class: 'sim-report' });
+
+    // 1. En-tête score
+    const head = el('div', { class: 'sr-scoreline' });
+    head.innerHTML =
+      `<div class="sr-team ${r.scoreA>=r.scoreB?'win':''}"><span class="sr-tname">${partA.name}</span></div>` +
+      `<div class="sr-score">${r.scoreA} <span>–</span> ${r.scoreB}</div>` +
+      `<div class="sr-team ${r.scoreB>=r.scoreA?'win':''}"><span class="sr-tname">${partB.name}</span></div>`;
+    card.appendChild(head);
+
+    // 2. Buteurs (style FlashScore avec icône ballon)
+    if (goalsA.length || goalsB.length) {
+      const scorers = el('div', { class: 'sr-scorers' });
+      const colA = el('div', { class: 'sr-scorers-col left' });
+      goalsA.forEach(g => {
+        const it = el('div', { class: 'sr-goal' });
+        it.innerHTML = `<span class="sr-gname">${g.name}</span> <span class="sr-gmin">${g.minute}'</span> <span class="sr-gicon">⚽</span>`;
+        colA.appendChild(it);
+      });
+      const colB = el('div', { class: 'sr-scorers-col right' });
+      goalsB.forEach(g => {
+        const it = el('div', { class: 'sr-goal' });
+        it.innerHTML = `<span class="sr-gicon">⚽</span> <span class="sr-gmin">${g.minute}'</span> <span class="sr-gname">${g.name}</span>`;
+        colB.appendChild(it);
+      });
+      scorers.appendChild(colA);
+      scorers.appendChild(colB);
+      card.appendChild(scorers);
+    }
+
+    // 3. MVP
+    if (mvp) {
+      const mvpEl = el('div', { class: 'sr-mvp' });
+      mvpEl.innerHTML = `<span class="sr-mvp-badge">★ MVP</span> <span class="sr-mvp-name">${mvp.name}</span> <span class="sr-mvp-note">${mvp.rating.toFixed(1)}</span>`;
+      card.appendChild(mvpEl);
+    }
+
+    // 4. Résumé narratif court
+    if (rep.lines && rep.lines.length) {
+      const summary = el('div', { class: 'sr-summary' });
+      rep.lines.slice(0, 3).forEach(l => {
+        const p = el('div', { class: 'sr-line' });
+        p.innerHTML = l.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+        summary.appendChild(p);
+      });
+      card.appendChild(summary);
+    }
+
+    // 5. Stats principales (barres comparatives)
     const deepA = computeDeepStats(r, tpA, 'A');
     const deepB = computeDeepStats(r, tpB, 'B');
-    const deep = el('div', { class:'sr-stats sr-deep' });
-    deep.innerHTML =
-      `<div><span>${deepA.passes}</span><label>Passes réussies</label><span>${deepB.passes}</span></div>` +
-      `<div><span>${deepA.passAcc}%</span><label>% de passes</label><span>${deepB.passAcc}%</span></div>` +
-      `<div><span>${deepA.duels}</span><label>Duels gagnés</label><span>${deepB.duels}</span></div>` +
-      `<div><span>${deepA.thirdFinal}%</span><label>Possession 30m adverse</label><span>${deepB.thirdFinal}%</span></div>` +
-      `<div><span>${deepA.fouls}</span><label>Fautes</label><span>${deepB.fouls}</span></div>`;
-    card.appendChild(deep);
+    const statRows = [
+      ['Possession', r.stats.A.possession, r.stats.B.possession, '%'],
+      ['Tirs', r.stats.A.shots, r.stats.B.shots, ''],
+      ['Cadrés', r.stats.A.onTarget, r.stats.B.onTarget, ''],
+      ['xG', r.stats.A.xg, r.stats.B.xg, ''],
+      ['Passes %', deepA.passAcc, deepB.passAcc, '%'],
+      ['Duels gagnés', deepA.duels, deepB.duels, ''],
+    ];
+    const stats = el('div', { class: 'sr-statbars' });
+    statRows.forEach(([label, a, b, unit]) => {
+      const total = (parseFloat(a) + parseFloat(b)) || 1;
+      const pctA = Math.round(parseFloat(a) / total * 100);
+      const row = el('div', { class: 'sr-statbar' });
+      row.innerHTML =
+        `<span class="sr-sb-a">${a}${unit}</span>` +
+        `<div class="sr-sb-track"><div class="sr-sb-fill-a" style="width:${pctA}%"></div><div class="sr-sb-fill-b" style="width:${100-pctA}%"></div></div>` +
+        `<span class="sr-sb-b">${b}${unit}</span>`;
+      const lbl = el('div', { class: 'sr-sb-label' }, label);
+      const wrap = el('div', { class: 'sr-sb-wrap' });
+      wrap.appendChild(lbl); wrap.appendChild(row);
+      stats.appendChild(wrap);
+    });
+    card.appendChild(stats);
 
-    // === Notes individuelles par joueur (1.0 à 10.0 style FootMercato) ===
-    const ratingsTitle = el('div', { class: 'sr-rating-title' }, 'Notes individuelles');
-    card.appendChild(ratingsTitle);
+    // 6. Notes individuelles (2 colonnes)
+    card.appendChild(el('div', { class: 'sr-rating-title' }, 'Notes des joueurs'));
     const ratingsBox = el('div', { class: 'sr-ratings' });
-    [partA, partB].forEach((part, idx) => {
-      const tp = idx === 0 ? tpA : tpB;
+    [[partA, ratingsA], [partB, ratingsB]].forEach(([part, ratings]) => {
       const col = el('div', { class: 'sr-rating-col' });
-      col.appendChild(el('div', { class: 'sr-rating-team', style: 'color:' + part.color }, part.name));
-      const players = computePlayerRatings(part, tp, r, idx === 0 ? 'A' : 'B');
-      players.forEach(p => {
+      col.appendChild(el('div', { class: 'sr-rating-team' }, part.name));
+      ratings.forEach(p => {
         const row = el('div', { class: 'sr-rating-row' });
         row.appendChild(el('span', { class: 'sr-rp-pos' }, p.slotType));
         row.appendChild(el('span', { class: 'sr-rp-name' }, p.name));
@@ -3555,7 +3621,6 @@
     card.appendChild(ratingsBox);
 
     log.appendChild(card);
-    log.scrollTop = log.scrollHeight;
   }
 
   // Calcule des stats avancées à partir du résultat de la sim
