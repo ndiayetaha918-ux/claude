@@ -275,13 +275,13 @@
       state.fiveMode = false;
       state.justeMode = true;
       showModeSetup('juste');
-    } else if (mode === 'under' || mode === 'guess') {
-      // Modes à venir — toast pour l'instant
-      toast(mode === 'under' ? 'Undercover Foot' : 'Guess The Team',
-            'Mode en développement. UX prévue : ' +
-            (mode === 'under'
-              ? 'bluff, déduction, votes et révélations mises en scène.'
-              : 'autocomplétion rapide style Loldle, club ou sélection à deviner.'));
+    } else if (mode === 'guess') {
+      showScreen('guess');
+      initGuessScreen();
+      return;
+    } else if (mode === 'under') {
+      showScreen('under');
+      initUnderScreen();
       return;
     }
 
@@ -4613,6 +4613,360 @@
   // Synchroniser au chargement du tactics board
   function syncAllTacticsToStadium() {
     state.participants.forEach((_, i) => syncTacticsToStadium(i));
+  }
+
+  // ============================================================
+  // GUESS THE TEAM
+  // Variantes : club (joueurs masqués par nationalité), nation (par club)
+  // Compos types pour les grands clubs / sélections
+  // ============================================================
+  const GUESS_CLUB_LINEUPS = [
+    // Top 12 clubs avec leur 11 typique 2025/26
+    { team: 'Real Madrid', formation: '4-3-3', slots: [
+      { type:'GK',   name:'Courtois' }, { type:'LB', name:'Mendy' }, { type:'CB', name:'Militão' }, { type:'CB', name:'Rüdiger' }, { type:'RB', name:'Alexander-Arnold' },
+      { type:'CM', name:'Tchouaméni' }, { type:'CM', name:'Bellingham' }, { type:'CM', name:'Valverde' },
+      { type:'LW', name:'Vinicius Jr.' }, { type:'ST', name:'Mbappé' }, { type:'RW', name:'Rodrygo' },
+    ]},
+    { team: 'Manchester City', formation: '4-3-3', slots: [
+      { type:'GK', name:'Ederson' }, { type:'LB', name:'Gvardiol' }, { type:'CB', name:'Dias' }, { type:'CB', name:'Akanji' }, { type:'RB', name:'Walker' },
+      { type:'DM', name:'Rodri' }, { type:'CM', name:'De Bruyne' }, { type:'CM', name:'Bernardo Silva' },
+      { type:'LW', name:'Foden' }, { type:'ST', name:'Haaland' }, { type:'RW', name:'Doku' },
+    ]},
+    { team: 'FC Barcelona', formation: '4-3-3', slots: [
+      { type:'GK', name:'ter Stegen' }, { type:'LB', name:'Balde' }, { type:'CB', name:'Cubarsí' }, { type:'CB', name:'Araujo' }, { type:'RB', name:'Koundé' },
+      { type:'CM', name:'Pedri' }, { type:'DM', name:'de Jong' }, { type:'CM', name:'Gavi' },
+      { type:'LW', name:'Raphinha' }, { type:'ST', name:'Lewandowski' }, { type:'RW', name:'Yamal' },
+    ]},
+    { team: 'Arsenal', formation: '4-3-3', slots: [
+      { type:'GK', name:'Raya' }, { type:'LB', name:'Calafiori' }, { type:'CB', name:'Saliba' }, { type:'CB', name:'Gabriel' }, { type:'RB', name:'White' },
+      { type:'DM', name:'Rice' }, { type:'CM', name:'Ødegaard' }, { type:'CM', name:'Havertz' },
+      { type:'LW', name:'Martinelli' }, { type:'ST', name:'Gyökeres' }, { type:'RW', name:'Saka' },
+    ]},
+    { team: 'Liverpool', formation: '4-3-3', slots: [
+      { type:'GK', name:'Alisson' }, { type:'LB', name:'Robertson' }, { type:'CB', name:'van Dijk' }, { type:'CB', name:'Konaté' }, { type:'RB', name:'Bradley' },
+      { type:'CM', name:'Mac Allister' }, { type:'DM', name:'Gravenberch' }, { type:'CM', name:'Szoboszlai' },
+      { type:'LW', name:'Díaz' }, { type:'ST', name:'Isak' }, { type:'RW', name:'Salah' },
+    ]},
+    { team: 'Paris SG', formation: '4-3-3', slots: [
+      { type:'GK', name:'Donnarumma' }, { type:'LB', name:'Mendes' }, { type:'CB', name:'Marquinhos' }, { type:'CB', name:'Beraldo' }, { type:'RB', name:'Hakimi' },
+      { type:'CM', name:'Vitinha' }, { type:'DM', name:'Neves' }, { type:'CM', name:'Zaïre-Emery' },
+      { type:'LW', name:'Doué' }, { type:'ST', name:'Dembélé' }, { type:'RW', name:'Barcola' },
+    ]},
+    { team: 'Bayern Munich', formation: '4-2-3-1', slots: [
+      { type:'GK', name:'Neuer' }, { type:'LB', name:'Davies' }, { type:'CB', name:'Upamecano' }, { type:'CB', name:'Kim' }, { type:'RB', name:'Kimmich' },
+      { type:'DM', name:'Pavlovic' }, { type:'CM', name:'Goretzka' }, { type:'AM', name:'Musiala' },
+      { type:'LW', name:'Sané' }, { type:'ST', name:'Kane' }, { type:'RW', name:'Olise' },
+    ]},
+    { team: 'Inter', formation: '3-5-2', slots: [
+      { type:'GK', name:'Sommer' }, { type:'CB', name:'Bastoni' }, { type:'CB', name:'Acerbi' }, { type:'CB', name:'Pavard' },
+      { type:'LWB', name:'Dimarco' }, { type:'CM', name:'Mkhitaryan' }, { type:'CM', name:'Çalhanoğlu' }, { type:'CM', name:'Barella' }, { type:'RWB', name:'Dumfries' },
+      { type:'ST', name:'Thuram' }, { type:'ST', name:'Lautaro Martínez' },
+    ]},
+    { team: 'Juventus', formation: '3-5-2', slots: [
+      { type:'GK', name:'Di Gregorio' }, { type:'CB', name:'Bremer' }, { type:'CB', name:'Gatti' }, { type:'CB', name:'Kalulu' },
+      { type:'LWB', name:'Cambiaso' }, { type:'CM', name:'Locatelli' }, { type:'CM', name:'McKennie' }, { type:'CM', name:'Koopmeiners' }, { type:'RWB', name:'Weah' },
+      { type:'ST', name:'Vlahović' }, { type:'ST', name:'Yıldız' },
+    ]},
+    { team: 'Atlético Madrid', formation: '4-4-2', slots: [
+      { type:'GK', name:'Oblak' }, { type:'LB', name:'Lino' }, { type:'CB', name:'Witsel' }, { type:'CB', name:'Le Normand' }, { type:'RB', name:'Llorente' },
+      { type:'LM', name:'Koke' }, { type:'CM', name:'De Paul' }, { type:'CM', name:'Barrios' }, { type:'RM', name:'Griezmann' },
+      { type:'ST', name:'Alvarez' }, { type:'ST', name:'Sørloth' },
+    ]},
+  ];
+  const GUESS_NATION_LINEUPS = [
+    { team: 'France', formation: '4-3-3', slots: [
+      { type:'GK', name:'Maignan' }, { type:'LB', name:'Theo Hernández' }, { type:'CB', name:'Saliba' }, { type:'CB', name:'Upamecano' }, { type:'RB', name:'Koundé' },
+      { type:'DM', name:'Tchouaméni' }, { type:'CM', name:'Camavinga' }, { type:'CM', name:'Rabiot' },
+      { type:'LW', name:'Mbappé' }, { type:'ST', name:'Kolo Muani' }, { type:'RW', name:'Dembélé' },
+    ]},
+    { team: 'Espagne', formation: '4-3-3', slots: [
+      { type:'GK', name:'Simón' }, { type:'LB', name:'Cucurella' }, { type:'CB', name:'Le Normand' }, { type:'CB', name:'Laporte' }, { type:'RB', name:'Carvajal' },
+      { type:'DM', name:'Rodri' }, { type:'CM', name:'Pedri' }, { type:'CM', name:'Fabián Ruiz' },
+      { type:'LW', name:'Nico Williams' }, { type:'ST', name:'Morata' }, { type:'RW', name:'Yamal' },
+    ]},
+    { team: 'Angleterre', formation: '4-3-3', slots: [
+      { type:'GK', name:'Pickford' }, { type:'LB', name:'Lewis' }, { type:'CB', name:'Stones' }, { type:'CB', name:'Guéhi' }, { type:'RB', name:'Walker' },
+      { type:'DM', name:'Rice' }, { type:'CM', name:'Bellingham' }, { type:'CM', name:'Mainoo' },
+      { type:'LW', name:'Foden' }, { type:'ST', name:'Kane' }, { type:'RW', name:'Saka' },
+    ]},
+    { team: 'Brésil', formation: '4-3-3', slots: [
+      { type:'GK', name:'Ederson' }, { type:'LB', name:'Wendell' }, { type:'CB', name:'Militão' }, { type:'CB', name:'Marquinhos' }, { type:'RB', name:'Danilo' },
+      { type:'DM', name:'Casemiro' }, { type:'CM', name:'Bruno Guimarães' }, { type:'CM', name:'Lucas Paquetá' },
+      { type:'LW', name:'Vinicius Jr.' }, { type:'ST', name:'Endrick' }, { type:'RW', name:'Rodrygo' },
+    ]},
+    { team: 'Allemagne', formation: '4-2-3-1', slots: [
+      { type:'GK', name:'Neuer' }, { type:'LB', name:'Raum' }, { type:'CB', name:'Rüdiger' }, { type:'CB', name:'Tah' }, { type:'RB', name:'Kimmich' },
+      { type:'DM', name:'Andrich' }, { type:'CM', name:'Goretzka' }, { type:'AM', name:'Wirtz' },
+      { type:'LW', name:'Sané' }, { type:'ST', name:'Havertz' }, { type:'RW', name:'Musiala' },
+    ]},
+    { team: 'Portugal', formation: '4-3-3', slots: [
+      { type:'GK', name:'Diogo Costa' }, { type:'LB', name:'Mendes' }, { type:'CB', name:'Dias' }, { type:'CB', name:'Pepe' }, { type:'RB', name:'Cancelo' },
+      { type:'DM', name:'João Palhinha' }, { type:'CM', name:'Bruno Fernandes' }, { type:'CM', name:'Vitinha' },
+      { type:'LW', name:'Bernardo Silva' }, { type:'ST', name:'Cristiano Ronaldo' }, { type:'RW', name:'Leão' },
+    ]},
+    { team: 'Argentine', formation: '4-3-3', slots: [
+      { type:'GK', name:'Emiliano Martínez' }, { type:'LB', name:'Tagliafico' }, { type:'CB', name:'Romero' }, { type:'CB', name:'Otamendi' }, { type:'RB', name:'Molina' },
+      { type:'DM', name:'Paredes' }, { type:'CM', name:'Enzo Fernández' }, { type:'CM', name:'Mac Allister' },
+      { type:'LW', name:'Di María' }, { type:'ST', name:'Alvarez' }, { type:'RW', name:'Messi' },
+    ]},
+    { team: 'Italie', formation: '4-3-3', slots: [
+      { type:'GK', name:'Donnarumma' }, { type:'LB', name:'Dimarco' }, { type:'CB', name:'Bastoni' }, { type:'CB', name:'Calafiori' }, { type:'RB', name:'Di Lorenzo' },
+      { type:'DM', name:'Locatelli' }, { type:'CM', name:'Barella' }, { type:'CM', name:'Pellegrini' },
+      { type:'LW', name:'Chiesa' }, { type:'ST', name:'Retegui' }, { type:'RW', name:'Politano' },
+    ]},
+  ];
+
+  let guessState = null;
+  function initGuessScreen() {
+    document.body.setAttribute('data-mode', 'guess');
+    $('#guessVariants').style.display = '';
+    $('#guessGame').style.display = 'none';
+    $('#guessFeedback').textContent = '';
+    $('#guessBack').onclick = () => showScreen('home');
+    $$('#guessVariants .guess-variant').forEach(b => {
+      b.onclick = () => startGuess(b.dataset.variant);
+    });
+  }
+  function startGuess(variant) {
+    const pool = variant === 'club' ? GUESS_CLUB_LINEUPS : GUESS_NATION_LINEUPS;
+    guessState = {
+      variant,
+      pool: pool.slice().sort(() => Math.random() - 0.5),
+      idx: 0,
+      score: 0,
+      streak: 0,
+    };
+    $('#guessVariants').style.display = 'none';
+    $('#guessGame').style.display = '';
+    $('#guessSkip').onclick = () => skipGuess();
+    $('#guessInput').oninput = () => updateSuggestions();
+    $('#guessInput').onkeydown = (ev) => {
+      if (ev.key === 'Enter') submitGuessAnswer();
+    };
+    renderGuessRound();
+  }
+  function renderGuessRound() {
+    const s = guessState;
+    if (s.idx >= s.pool.length) {
+      // Refill
+      s.pool = (s.variant === 'club' ? GUESS_CLUB_LINEUPS : GUESS_NATION_LINEUPS).slice().sort(() => Math.random() - 0.5);
+      s.idx = 0;
+    }
+    const target = s.pool[s.idx];
+    s._target = target;
+    $('#guessVariantLabel').textContent = s.variant === 'club' ? 'CLUB' : 'SÉLECTION';
+    $('#guessHint').textContent = s.variant === 'club'
+      ? '11 joueurs masqués par leur nationalité'
+      : '11 joueurs masqués par leur club';
+    $('#guessInput').value = '';
+    $('#guessInput').placeholder = s.variant === 'club' ? 'Tape un club…' : 'Tape une sélection…';
+    $('#guessFeedback').textContent = '';
+    $('#guessFeedback').className = 'guess-feedback';
+    $('#guessScore').textContent = s.score;
+    $('#guessStreak').textContent = 'Série · ' + s.streak;
+    // Render lineup masqué
+    const lineup = $('#guessLineup');
+    lineup.innerHTML = '';
+    target.slots.forEach(slot => {
+      const playerData = PLAYERS.find(p => p.name === slot.name || p.name.endsWith(slot.name));
+      const tag = el('div', { class: 'guess-slot' });
+      const badge = el('div', { class: 'gs-badge' });
+      // Variante club : badge = nationalité ; variante nation : badge = club
+      if (s.variant === 'club') {
+        badge.textContent = playerData ? (playerData.nat || '?').slice(0, 3).toUpperCase() : '?';
+        badge.title = playerData ? playerData.nat : '';
+      } else {
+        badge.textContent = playerData ? (playerData.club || '?').split(' ')[0].slice(0, 3).toUpperCase() : '?';
+        badge.title = playerData ? playerData.club : '';
+      }
+      tag.appendChild(badge);
+      tag.appendChild(el('div', { class: 'gs-pos' }, slot.type));
+      tag.appendChild(el('div', { class: 'gs-name' }, slot.name));
+      lineup.appendChild(tag);
+    });
+    setTimeout(() => $('#guessInput').focus(), 100);
+  }
+  function updateSuggestions() {
+    const s = guessState;
+    const q = $('#guessInput').value.trim().toLowerCase();
+    const sugg = $('#guessSuggestions');
+    sugg.innerHTML = '';
+    if (q.length < 1) return;
+    // Pool des réponses possibles
+    const pool = s.variant === 'club'
+      ? Array.from(new Set(PLAYERS.map(p => p.club).filter(Boolean)))
+      : Array.from(new Set(PLAYERS.map(p => p.nat).filter(Boolean)));
+    const matches = pool.filter(name => name.toLowerCase().includes(q)).slice(0, 6);
+    matches.forEach(name => {
+      const it = el('div', { class: 'guess-suggestion' }, name);
+      it.onclick = () => { $('#guessInput').value = name; sugg.innerHTML = ''; submitGuessAnswer(); };
+      sugg.appendChild(it);
+    });
+  }
+  function submitGuessAnswer() {
+    const s = guessState;
+    if (!s || !s._target) return;
+    const ans = $('#guessInput').value.trim().toLowerCase();
+    const target = s._target.team.toLowerCase();
+    const fb = $('#guessFeedback');
+    if (ans === target || target.includes(ans) && ans.length >= 4) {
+      s.score++;
+      s.streak++;
+      fb.textContent = '✓ Bonne réponse : ' + s._target.team;
+      fb.className = 'guess-feedback correct';
+      $('#guessScore').textContent = s.score;
+      $('#guessStreak').textContent = 'Série · ' + s.streak;
+      $('#guessSuggestions').innerHTML = '';
+      setTimeout(() => { s.idx++; renderGuessRound(); }, 1500);
+    } else {
+      s.streak = 0;
+      fb.textContent = '✗ Réponse : ' + s._target.team;
+      fb.className = 'guess-feedback wrong';
+      $('#guessStreak').textContent = 'Série · 0';
+      setTimeout(() => { s.idx++; renderGuessRound(); }, 2000);
+    }
+  }
+  function skipGuess() {
+    const s = guessState;
+    s.streak = 0;
+    const fb = $('#guessFeedback');
+    fb.textContent = '⏭ ' + s._target.team;
+    fb.className = 'guess-feedback wrong';
+    setTimeout(() => { s.idx++; renderGuessRound(); }, 1300);
+  }
+
+  // ============================================================
+  // UNDERCOVER FOOT
+  // Salon multi (3-8), distribution de rôles, vote, révélation
+  // ============================================================
+  let underState = null;
+  function initUnderScreen() {
+    document.body.setAttribute('data-mode', 'under');
+    $('#underSetup').style.display = '';
+    $('#underGame').style.display = 'none';
+    $('#underVotePhase').style.display = 'none';
+    $('#underBack').onclick = () => showScreen('home');
+    if (!underState) {
+      underState = { players: [], scores: {} };
+    }
+    renderUnderPlayers();
+    $('#underAddBtn').onclick = () => addUnderPlayer();
+    $('#underNewName').onkeydown = (ev) => { if (ev.key === 'Enter') addUnderPlayer(); };
+    $('#underStart').onclick = () => startUnderRound();
+  }
+  function addUnderPlayer() {
+    const inp = $('#underNewName');
+    const name = inp.value.trim();
+    if (!name) return;
+    if (underState.players.length >= 8) { toast('Maximum 8 joueurs'); return; }
+    underState.players.push({ id: 'u' + Date.now(), name, alive: true });
+    inp.value = '';
+    renderUnderPlayers();
+  }
+  function renderUnderPlayers() {
+    const wrap = $('#underPlayers');
+    wrap.innerHTML = '';
+    underState.players.forEach((p, i) => {
+      const pill = el('div', { class: 'under-pill' });
+      pill.appendChild(el('span', {}, p.name));
+      const rm = el('button', { class: 'under-pill-rm' }, '×');
+      rm.onclick = () => { underState.players.splice(i, 1); renderUnderPlayers(); };
+      pill.appendChild(rm);
+      wrap.appendChild(pill);
+    });
+    $('#underStart').disabled = underState.players.length < 3;
+  }
+  // Paires de mots pour le bluff — civils / imposteur
+  const UNDER_WORDS = [
+    ['Messi', 'Cristiano Ronaldo'],
+    ['Mbappé', 'Haaland'],
+    ['Vinicius Jr.', 'Saka'],
+    ['Bellingham', 'Yamal'],
+    ['Modric', 'Kroos'],
+    ['Pedri', 'Gavi'],
+    ['Salah', 'Sterling'],
+    ['Benzema', 'Lewandowski'],
+    ['Kanté', 'Casemiro'],
+    ['Maignan', 'Donnarumma'],
+    ['Mertens', 'Insigne'],
+    ['Mané', 'Salah'],
+    ['Foden', 'De Bruyne'],
+    ['Rodri', 'Casemiro'],
+    ['Rashford', 'Sancho'],
+  ];
+  function startUnderRound() {
+    const pair = UNDER_WORDS[Math.floor(Math.random() * UNDER_WORDS.length)];
+    const civilWord = pair[0];
+    const impostorWord = pair[1];
+    const playersShuffled = underState.players.slice().sort(() => Math.random() - 0.5);
+    const impostorIdx = Math.floor(Math.random() * playersShuffled.length);
+    playersShuffled.forEach((p, i) => {
+      p.role = i === impostorIdx ? 'impostor' : 'civil';
+      p.word = i === impostorIdx ? impostorWord : civilWord;
+      p.revealed = false;
+      p.alive = true;
+    });
+    underState.round = { civilWord, impostorWord, turnIdx: 0 };
+    $('#underSetup').style.display = 'none';
+    $('#underGame').style.display = '';
+    $('#underVotePhase').style.display = 'none';
+    showUnderTurn();
+  }
+  function showUnderTurn() {
+    const round = underState.round;
+    const p = underState.players[round.turnIdx];
+    if (!p) return;
+    $('#underTurn').textContent = p.name;
+    $('#underPrompt').firstChild && ($('#underPrompt').firstChild.textContent = 'Téléphone à ');
+    const card = $('#underRevealCard');
+    card.classList.remove('revealed');
+    $('#underRoleLabel').textContent = p.role === 'impostor' ? 'IMPOSTEUR' : 'CIVIL';
+    $('#underMot').textContent = p.word;
+    card.onclick = () => card.classList.add('revealed');
+    $('#underNextTurn').onclick = () => {
+      round.turnIdx++;
+      if (round.turnIdx >= underState.players.length) {
+        // Phase indices terminée → vote
+        startUnderVotePhase();
+      } else {
+        showUnderTurn();
+      }
+    };
+  }
+  function startUnderVotePhase() {
+    $('#underVotePhase').style.display = '';
+    const grid = $('#underVoteGrid');
+    grid.innerHTML = '';
+    const alive = underState.players.filter(p => p.alive);
+    alive.forEach(p => {
+      const btn = el('button', { class: 'under-vote-item' });
+      btn.appendChild(el('span', { class: 'uvi-name' }, p.name));
+      btn.onclick = () => underVoteFor(p.id);
+      grid.appendChild(btn);
+    });
+    $('#underVoteResult').textContent = '';
+  }
+  function underVoteFor(playerId) {
+    const accused = underState.players.find(p => p.id === playerId);
+    if (!accused) return;
+    const wasImpostor = accused.role === 'impostor';
+    const result = $('#underVoteResult');
+    if (wasImpostor) {
+      result.innerHTML = '<div class="uvr-win">✓ Les civils ont démasqué l\'imposteur !</div>' +
+        '<div class="uvr-detail">Mot civil : <strong>' + underState.round.civilWord + '</strong> · Mot imposteur : <strong>' + underState.round.impostorWord + '</strong></div>';
+      underState.players.filter(p => p.role === 'civil').forEach(p => {
+        underState.scores[p.id] = (underState.scores[p.id] || 0) + 1;
+      });
+    } else {
+      result.innerHTML = '<div class="uvr-lose">✗ Mauvaise cible. ' + accused.name + ' était un CIVIL.</div>' +
+        '<div class="uvr-detail">L\'imposteur s\'en sort. Mot civil : <strong>' + underState.round.civilWord + '</strong></div>';
+      const impostor = underState.players.find(p => p.role === 'impostor');
+      if (impostor) underState.scores[impostor.id] = (underState.scores[impostor.id] || 0) + 2;
+    }
+    // Bouton nouvelle manche
+    const again = el('button', { class: 'btn btn-primary', style: 'margin-top:16px' }, 'Nouvelle manche');
+    again.onclick = () => { $('#underSetup').style.display = ''; $('#underGame').style.display = 'none'; renderUnderPlayers(); };
+    result.appendChild(again);
   }
 
   function init() {

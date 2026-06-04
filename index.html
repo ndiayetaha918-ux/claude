@@ -735,6 +735,132 @@
       </div>
     </section>
 
+    <!-- ============= SCREEN — GUESS THE TEAM ============= -->
+    <section class="screen screen-guess" id="screen-guess">
+      <div class="screen-pad">
+        <button class="btn btn-ghost guess-back" id="guessBack">← Retour</button>
+        <div class="guess-shell">
+          <!-- Sélection variante -->
+          <div class="guess-variants" id="guessVariants">
+            <div class="hero-intro" style="margin-bottom:32px;">
+              <div class="hero-eyebrow">DEVINE LA COMPO</div>
+              <h1 class="hero-title-v3">Guess the team</h1>
+              <p class="hero-sub-v3">Identifie le club ou la sélection à partir de sa composition type.</p>
+            </div>
+            <div class="guess-variant-grid">
+              <button class="guess-variant" data-variant="club">
+                <div class="gv-aurora gv-aurora-club"></div>
+                <div class="gv-body">
+                  <div class="gv-head">Variante club</div>
+                  <h3 class="gv-title">Club</h3>
+                  <div class="gv-desc">Joueurs masqués par leur drapeau de nationalité. Devine le club.</div>
+                </div>
+              </button>
+              <button class="guess-variant" data-variant="nation">
+                <div class="gv-aurora gv-aurora-nation"></div>
+                <div class="gv-body">
+                  <div class="gv-head">Variante sélection</div>
+                  <h3 class="gv-title">Sélection</h3>
+                  <div class="gv-desc">Joueurs masqués par leur club. Devine la sélection nationale.</div>
+                </div>
+              </button>
+            </div>
+          </div>
+
+          <!-- Partie de jeu -->
+          <div class="guess-game" id="guessGame" style="display:none">
+            <div class="guess-hud">
+              <div class="gh-score">Score · <span id="guessScore">0</span></div>
+              <div class="gh-streak" id="guessStreak">Série · 0</div>
+              <button class="btn btn-ghost gh-skip" id="guessSkip">Passer</button>
+            </div>
+            <div class="guess-target" id="guessTarget">
+              <div class="gt-info">
+                <div class="gt-eyebrow" id="guessVariantLabel">CLUB</div>
+                <div class="gt-mystery">???</div>
+                <div class="gt-sub" id="guessHint">11 joueurs masqués par leur nationalité</div>
+              </div>
+              <div class="gt-lineup" id="guessLineup"></div>
+            </div>
+            <div class="guess-input-wrap">
+              <input type="text" id="guessInput" class="guess-input" placeholder="Tape un club…" autocomplete="off" />
+              <div class="guess-suggestions" id="guessSuggestions"></div>
+            </div>
+            <div class="guess-feedback" id="guessFeedback"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============= SCREEN — UNDERCOVER FOOT ============= -->
+    <section class="screen screen-under" id="screen-under">
+      <div class="screen-pad">
+        <button class="btn btn-ghost guess-back" id="underBack">← Retour</button>
+        <div class="under-shell">
+          <!-- Setup salon -->
+          <div class="under-setup" id="underSetup">
+            <div class="hero-intro" style="margin-bottom:24px;">
+              <div class="hero-eyebrow">BLUFF · DÉDUCTION · RÉVÉLATION</div>
+              <h1 class="hero-title-v3">Undercover Foot</h1>
+              <p class="hero-sub-v3">Un imposteur se cache parmi les civils. Décris un mot SANS le dire. Vote pour démasquer.</p>
+            </div>
+            <div class="under-rules">
+              <div class="ur-step">
+                <div class="ur-num">1</div>
+                <div class="ur-text"><strong>Distribution</strong>. Chaque joueur reçoit un mot secret (un joueur de foot). L'imposteur en reçoit un différent mais proche.</div>
+              </div>
+              <div class="ur-step">
+                <div class="ur-num">2</div>
+                <div class="ur-text"><strong>Indices</strong>. À tour de rôle, chacun donne un indice SANS dire son mot.</div>
+              </div>
+              <div class="ur-step">
+                <div class="ur-num">3</div>
+                <div class="ur-text"><strong>Vote</strong>. Tout le monde vote pour démasquer l'imposteur. Le plus voté est éliminé.</div>
+              </div>
+              <div class="ur-step">
+                <div class="ur-num">4</div>
+                <div class="ur-text"><strong>Révélation</strong>. L'imposteur révèle son mot. Si les civils gagnent, ils marquent. Sinon, l'imposteur tente de deviner et peut tout retourner.</div>
+              </div>
+            </div>
+            <div class="under-config">
+              <label class="under-label">Joueurs (3 à 8)</label>
+              <div class="under-players" id="underPlayers"></div>
+              <div class="under-add-row">
+                <input type="text" id="underNewName" class="line-input" placeholder="Pseudo…" />
+                <button class="btn btn-ghost" id="underAddBtn">+ Ajouter</button>
+              </div>
+              <button class="btn btn-primary btn-lg" id="underStart" disabled>Distribuer les rôles</button>
+            </div>
+          </div>
+
+          <!-- Distribution / phase de jeu -->
+          <div class="under-game" id="underGame" style="display:none">
+            <div class="under-card-stage">
+              <div class="uc-prompt" id="underPrompt">Téléphone à <strong id="underTurn">—</strong></div>
+              <button class="under-reveal-card" id="underRevealCard">
+                <div class="urc-front">
+                  <div class="urc-eyebrow">Touche pour révéler</div>
+                  <div class="urc-icon">🔒</div>
+                </div>
+                <div class="urc-back">
+                  <div class="urc-eyebrow" id="underRoleLabel">CIVIL</div>
+                  <div class="urc-mot" id="underMot">—</div>
+                  <div class="urc-hint">Garde-le secret. Repasse l'appareil quand tu as compris.</div>
+                </div>
+              </button>
+              <button class="btn btn-ghost" id="underNextTurn">Joueur suivant →</button>
+            </div>
+            <!-- Phase votes -->
+            <div class="under-vote" id="underVotePhase" style="display:none">
+              <h3 class="under-vote-title">Qui est l'imposteur ?</h3>
+              <div class="under-vote-grid" id="underVoteGrid"></div>
+              <div class="under-vote-result" id="underVoteResult"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <!-- ============= SCREEN 7 — SEASON ============= -->
     <section class="screen screen-season" id="screen-season">
       <div class="screen-pad">

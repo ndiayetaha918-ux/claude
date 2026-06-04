@@ -559,17 +559,17 @@ h1, h2, h3, h4 { margin: 0; font-weight: 800; letter-spacing: -0.02em; color: va
   background: #1a1d24;     /* moins sombre que noir profond */
 }
 /* Aurora très subtle au bas, juste pour signaler le mode + lisibilité du texte */
+/* Aurora DENSE qui occupe la moitié basse — pas une lueur subtle */
 .mc-inner::after {
   content: "";
   position: absolute;
-  left: -15%; right: -15%;
-  bottom: -8%;
-  height: 60%; z-index: 2;
+  left: -20%; right: -20%;
+  bottom: -15%;
+  height: 78%; z-index: 2;
   pointer-events: none;
-  filter: blur(40px);
-  opacity: 0.62;
+  filter: blur(32px);
+  opacity: 1;             /* opacity max — la saturation des gradients suffit */
   background: var(--mc-aurora);
-  border-radius: 50% 50% 0 0 / 38% 38% 0 0;
 }
 /* Voile noir bas pour lisibilité du texte par-dessus la photo */
 .mc-inner::before {
@@ -587,48 +587,47 @@ h1, h2, h3, h4 { margin: 0; font-weight: 800; letter-spacing: -0.02em; color: va
 /* Le .mc-veil n'est plus nécessaire avec le noir profond — le texte est lisible */
 .mc-inner > .mc-veil { display: none; }
 
-/* Auroras style minimaliste : une seule vague colorée + blanc dense au sommet */
+/* Auroras VRAIES (réf prem_uiux) : forme courbée DENSE + blanc dense au sommet
+   3 radial-gradients superposés :
+   1) Blanc dense en bas centré (la "crête" de la vague blanche)
+   2) Couleur secondaire chaude/intense
+   3) Couleur dominante saturée (le plus large)
+   → l'opacity reste à 1, la saturation porte le rendu */
+
+/* FIVE : bleu City (cyan + bleu profond + blanc dense) */
 .mode-five .mc-inner {
-  --mc-aurora: linear-gradient(180deg,
-    transparent 0%,
-    transparent 25%,
-    rgba(58, 127, 181, 0.85) 50%,
-    rgba(146, 200, 232, 0.95) 75%,
-    rgba(255, 255, 255, 0.98) 100%);
+  --mc-aurora:
+    radial-gradient(ellipse 100% 30% at 50% 100%, rgba(255,255,255,1) 0%, rgba(255,255,255,0) 60%),
+    radial-gradient(ellipse 80% 60% at 40% 105%, rgba(0,200,255,0.95) 0%, transparent 60%),
+    radial-gradient(ellipse 110% 75% at 60% 115%, rgba(24,100,173,0.95) 0%, transparent 65%);
 }
+/* DRAFT : orange chaud (rouge + or + blanc dense) */
 .mode-draft .mc-inner {
-  --mc-aurora: linear-gradient(180deg,
-    transparent 0%,
-    transparent 25%,
-    rgba(200, 84, 47, 0.85) 50%,
-    rgba(238, 156, 102, 0.95) 75%,
-    rgba(255, 240, 220, 0.98) 100%);
+  --mc-aurora:
+    radial-gradient(ellipse 100% 30% at 50% 100%, rgba(255,255,255,1) 0%, rgba(255,255,255,0) 60%),
+    radial-gradient(ellipse 80% 60% at 40% 105%, rgba(255,200,80,0.95) 0%, transparent 60%),
+    radial-gradient(ellipse 110% 75% at 60% 115%, rgba(255,80,40,0.95) 0%, transparent 65%);
 }
+/* JUSTE PRIX : or champagne (or pur + cuivre + blanc dense) */
 .mode-juste .mc-inner {
-  --mc-aurora: linear-gradient(180deg,
-    transparent 0%,
-    transparent 25%,
-    rgba(184, 140, 74, 0.85) 50%,
-    rgba(232, 196, 130, 0.95) 75%,
-    rgba(255, 248, 230, 0.98) 100%);
+  --mc-aurora:
+    radial-gradient(ellipse 100% 30% at 50% 100%, rgba(255,255,255,1) 0%, rgba(255,255,255,0) 60%),
+    radial-gradient(ellipse 80% 60% at 40% 105%, rgba(255,217,107,0.95) 0%, transparent 60%),
+    radial-gradient(ellipse 110% 75% at 60% 115%, rgba(180,120,30,0.95) 0%, transparent 65%);
 }
-/* Undercover Foot : navy + bleu profond + blanc nacré (mystère, bluff) */
+/* UNDERCOVER : navy + violet électrique + blanc nacré (mystère, bluff) */
 .mode-under .mc-inner {
-  --mc-aurora: linear-gradient(180deg,
-    transparent 0%,
-    transparent 25%,
-    rgba(28, 42, 90, 0.85) 50%,
-    rgba(80, 110, 180, 0.95) 75%,
-    rgba(220, 230, 255, 0.95) 100%);
+  --mc-aurora:
+    radial-gradient(ellipse 100% 30% at 50% 100%, rgba(225,232,255,1) 0%, rgba(225,232,255,0) 60%),
+    radial-gradient(ellipse 80% 60% at 40% 105%, rgba(80,140,255,0.95) 0%, transparent 60%),
+    radial-gradient(ellipse 110% 75% at 60% 115%, rgba(26,42,110,0.95) 0%, transparent 65%);
 }
-/* Guess The Team : saumon + rose + blanc (chaleureux, fun) */
+/* GUESS : rose vif + saumon + blanc (chaleureux, fun) */
 .mode-guess .mc-inner {
-  --mc-aurora: linear-gradient(180deg,
-    transparent 0%,
-    transparent 25%,
-    rgba(218, 120, 150, 0.85) 50%,
-    rgba(240, 170, 170, 0.95) 75%,
-    rgba(255, 240, 235, 0.98) 100%);
+  --mc-aurora:
+    radial-gradient(ellipse 100% 30% at 50% 100%, rgba(255,255,255,1) 0%, rgba(255,255,255,0) 60%),
+    radial-gradient(ellipse 80% 60% at 40% 105%, rgba(255,180,170,0.95) 0%, transparent 60%),
+    radial-gradient(ellipse 110% 75% at 60% 115%, rgba(255,90,160,0.95) 0%, transparent 65%);
 }
 
 /* (Reflet glassy déplacé dans la classe .mc-shine pour éviter conflit ::before) */
@@ -4354,3 +4353,367 @@ body[data-mode="juste"] .mode-cloud {
   transition: opacity 0.5s ease, r 0.7s cubic-bezier(0.22, 1, 0.36, 1);
   pointer-events: none;
 }
+
+/* ============================================================
+   GUESS THE TEAM — mode quiz autocomplétion
+   ============================================================ */
+.screen-guess .screen-pad { max-width: 1080px; margin: 0 auto; padding: 32px 24px 80px; }
+.guess-back { margin-bottom: 18px; }
+.guess-shell { position: relative; }
+
+/* Sélection variante : cards style aurora */
+.guess-variant-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 20px;
+  max-width: 880px; margin: 24px auto 0;
+}
+@media (max-width: 720px) { .guess-variant-grid { grid-template-columns: 1fr; } }
+.guess-variant {
+  position: relative;
+  background: #0c0f15;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 22px;
+  padding: 28px 24px;
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+  min-height: 240px;
+  transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.3s;
+  box-shadow: 0 18px 36px rgba(0,0,0,0.5);
+  display: flex; flex-direction: column; justify-content: space-between;
+}
+.guess-variant:hover { transform: translateY(-4px); border-color: rgba(255,255,255,0.18); }
+.gv-aurora {
+  position: absolute;
+  left: -15%; right: -15%; bottom: -10%;
+  height: 70%; z-index: 0; pointer-events: none;
+  filter: blur(32px); opacity: 1;
+}
+.gv-aurora-club {
+  background:
+    radial-gradient(ellipse 100% 30% at 50% 100%, #fff 0%, transparent 60%),
+    radial-gradient(ellipse 90% 65% at 50% 110%, rgba(80,140,255,0.9) 0%, transparent 60%),
+    radial-gradient(ellipse 110% 80% at 60% 120%, rgba(140,80,220,0.9) 0%, transparent 65%);
+}
+.gv-aurora-nation {
+  background:
+    radial-gradient(ellipse 100% 30% at 50% 100%, #fff 0%, transparent 60%),
+    radial-gradient(ellipse 90% 65% at 50% 110%, rgba(80,200,255,0.9) 0%, transparent 60%),
+    radial-gradient(ellipse 110% 80% at 60% 120%, rgba(60,230,180,0.9) 0%, transparent 65%);
+}
+.gv-body { position: relative; z-index: 2; }
+.gv-head {
+  font-family: var(--mono); font-size: 10px; letter-spacing: 0.26em;
+  color: rgba(255,255,255,0.55); margin-bottom: 10px; text-transform: uppercase;
+}
+.gv-title {
+  font-family: var(--display); font-weight: 600;
+  font-size: 30px; letter-spacing: -0.035em;
+  color: white; margin: 0 0 8px;
+}
+.gv-desc { color: rgba(255,255,255,0.72); font-size: 13.5px; line-height: 1.5; margin-top: auto; position: relative; z-index: 2; }
+
+/* === Partie de jeu === */
+.guess-hud {
+  display: flex; gap: 16px; align-items: center;
+  margin-bottom: 22px;
+  font-family: var(--mono); font-size: 13px;
+  color: rgba(255,255,255,0.75);
+}
+.gh-score, .gh-streak {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 8px;
+  padding: 8px 14px;
+}
+.gh-score span { color: var(--gold); font-weight: 700; }
+.gh-skip { margin-left: auto; }
+
+.guess-target {
+  background: linear-gradient(180deg, rgba(28,30,40,0.6) 0%, rgba(14,16,22,0.85) 100%);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 22px;
+  padding: 28px 24px;
+  margin-bottom: 22px;
+}
+.gt-info { text-align: center; margin-bottom: 22px; }
+.gt-eyebrow {
+  font-family: var(--mono); font-size: 10px;
+  letter-spacing: 0.32em; color: var(--gold);
+  text-transform: uppercase; opacity: 0.85;
+}
+.gt-mystery {
+  font-family: var(--display); font-weight: 600;
+  font-size: 64px; letter-spacing: -0.04em;
+  color: rgba(255,255,255,0.15);
+  margin: 4px 0;
+}
+.gt-sub { color: rgba(255,255,255,0.55); font-size: 13px; }
+
+.gt-lineup {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 10px;
+}
+.guess-slot {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 10px;
+  padding: 12px 8px;
+  text-align: center;
+  display: flex; flex-direction: column; gap: 4px;
+  align-items: center;
+}
+.gs-badge {
+  width: 44px; height: 44px; border-radius: 50%;
+  display: grid; place-items: center;
+  font-family: var(--mono); font-size: 10px; font-weight: 700;
+  background: linear-gradient(180deg, rgba(60,80,120,0.55), rgba(30,40,60,0.85));
+  border: 1px solid rgba(255,255,255,0.10);
+  color: rgba(255,255,255,0.85);
+  letter-spacing: 0.08em;
+}
+.gs-pos {
+  font-family: var(--mono); font-size: 9px;
+  color: rgba(255,255,255,0.40);
+  letter-spacing: 0.14em;
+}
+.gs-name {
+  font-size: 11.5px; color: white; font-weight: 500;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.guess-input-wrap { position: relative; }
+.guess-input {
+  width: 100%; padding: 14px 20px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 12px;
+  font-family: var(--font); font-size: 16px;
+  color: white; letter-spacing: -0.005em;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.guess-input:focus { border-color: var(--gold); background: rgba(255,255,255,0.06); }
+.guess-input::placeholder { color: rgba(255,255,255,0.30); }
+
+.guess-suggestions {
+  position: absolute;
+  left: 0; right: 0; top: 100%;
+  margin-top: 6px;
+  background: rgba(20,22,30,0.95);
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 12px;
+  overflow: hidden; z-index: 10;
+}
+.guess-suggestion {
+  padding: 10px 16px;
+  cursor: pointer;
+  color: white; font-size: 14px;
+  border-top: 1px solid rgba(255,255,255,0.05);
+}
+.guess-suggestion:first-child { border-top: 0; }
+.guess-suggestion:hover { background: rgba(214,139,60,0.15); color: var(--gold); }
+
+.guess-feedback {
+  margin-top: 18px;
+  font-family: var(--display); font-weight: 600;
+  font-size: 18px;
+  text-align: center;
+  min-height: 24px;
+}
+.guess-feedback.correct { color: #8fd6a4; }
+.guess-feedback.wrong { color: #f08a8a; }
+
+/* ============================================================
+   UNDERCOVER FOOT — mode social
+   ============================================================ */
+.screen-under .screen-pad { max-width: 760px; margin: 0 auto; padding: 32px 24px 80px; }
+.under-shell { }
+
+.under-rules {
+  display: grid; gap: 12px;
+  margin-bottom: 28px;
+}
+.ur-step {
+  display: grid; grid-template-columns: 32px 1fr; gap: 16px;
+  align-items: center;
+  background: rgba(255,255,255,0.025);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+.ur-num {
+  width: 32px; height: 32px; border-radius: 50%;
+  background: rgba(214,139,60,0.18);
+  color: var(--gold);
+  font-family: var(--display); font-weight: 700;
+  font-size: 16px;
+  display: grid; place-items: center;
+}
+.ur-text { font-size: 13.5px; line-height: 1.5; color: rgba(255,255,255,0.78); }
+.ur-text strong { color: white; font-weight: 600; }
+
+.under-config {
+  background: linear-gradient(180deg, rgba(28,30,40,0.55) 0%, rgba(14,16,22,0.78) 100%);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 16px;
+  padding: 20px;
+}
+.under-label {
+  font-family: var(--mono); font-size: 10.5px;
+  letter-spacing: 0.18em;
+  color: rgba(255,255,255,0.55);
+  text-transform: uppercase;
+  margin-bottom: 12px; display: block;
+}
+.under-players {
+  display: flex; flex-wrap: wrap; gap: 8px;
+  margin-bottom: 14px;
+  min-height: 32px;
+}
+.under-pill {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 999px;
+  padding: 6px 6px 6px 14px;
+  font-size: 13px; color: white;
+}
+.under-pill-rm {
+  width: 22px; height: 22px; border-radius: 50%;
+  background: rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.7);
+  cursor: pointer; font-size: 14px;
+  display: grid; place-items: center;
+}
+.under-pill-rm:hover { background: rgba(240,138,138,0.2); color: #f08a8a; }
+.under-add-row {
+  display: flex; gap: 10px; margin-bottom: 18px;
+}
+.under-add-row .line-input { flex: 1; }
+#underStart { width: 100%; }
+
+/* === Phase de jeu === */
+.under-game { display: flex; flex-direction: column; gap: 20px; }
+.under-card-stage {
+  background: rgba(255,255,255,0.025);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 16px;
+  padding: 28px 24px;
+  text-align: center;
+}
+.uc-prompt {
+  font-size: 13px; color: rgba(255,255,255,0.6); margin-bottom: 24px;
+  font-family: var(--mono); letter-spacing: 0.12em;
+}
+.uc-prompt strong { color: white; font-weight: 600; font-family: var(--font); letter-spacing: 0; font-size: 15px; }
+
+.under-reveal-card {
+  position: relative;
+  width: 100%; max-width: 320px;
+  aspect-ratio: 3 / 4;
+  margin: 0 auto 24px;
+  border: none; padding: 0;
+  border-radius: 22px;
+  cursor: pointer;
+  perspective: 1000px;
+  transform-style: preserve-3d;
+  background: transparent;
+}
+.urc-front, .urc-back {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column;
+  justify-content: center; align-items: center;
+  border-radius: 22px;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  transition: transform 0.6s cubic-bezier(0.5, 0, 0.5, 1);
+  padding: 24px;
+}
+.urc-front {
+  background: linear-gradient(135deg, #14181f 0%, #20242f 100%);
+  border: 1px solid rgba(255,255,255,0.10);
+}
+.urc-back {
+  background: linear-gradient(135deg, #1a1d24 0%, #2a3040 100%);
+  border: 1px solid rgba(255,255,255,0.10);
+  transform: rotateY(180deg);
+}
+.under-reveal-card.revealed .urc-front { transform: rotateY(180deg); }
+.under-reveal-card.revealed .urc-back  { transform: rotateY(360deg); }
+
+.urc-eyebrow {
+  font-family: var(--mono); font-size: 10.5px;
+  letter-spacing: 0.24em;
+  color: rgba(255,255,255,0.50);
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+.urc-icon { font-size: 56px; }
+.urc-mot {
+  font-family: var(--display); font-weight: 600;
+  font-size: 36px; letter-spacing: -0.025em;
+  color: white;
+  margin: 8px 0;
+  text-align: center;
+}
+.urc-hint {
+  font-size: 12px; color: rgba(255,255,255,0.55);
+  text-align: center; padding: 0 18px;
+  line-height: 1.45;
+  margin-top: 14px;
+}
+
+#underNextTurn { display: block; margin: 0 auto; }
+
+/* === Vote phase === */
+.under-vote {
+  background: rgba(255,255,255,0.025);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 16px;
+  padding: 24px 20px;
+}
+.under-vote-title {
+  font-family: var(--display); font-weight: 600;
+  font-size: 22px; letter-spacing: -0.025em;
+  color: white;
+  margin: 0 0 18px;
+  text-align: center;
+}
+.under-vote-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 10px;
+}
+.under-vote-item {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px;
+  padding: 14px 12px;
+  cursor: pointer;
+  color: white;
+  font-size: 14px; font-weight: 500;
+  transition: all 0.2s;
+}
+.under-vote-item:hover {
+  background: rgba(240,138,138,0.12);
+  border-color: rgba(240,138,138,0.4);
+  color: #f08a8a;
+}
+.under-vote-result { margin-top: 18px; text-align: center; }
+.uvr-win {
+  font-family: var(--display); font-weight: 600;
+  font-size: 20px; color: #8fd6a4;
+  margin-bottom: 8px;
+}
+.uvr-lose {
+  font-family: var(--display); font-weight: 600;
+  font-size: 20px; color: #f08a8a;
+  margin-bottom: 8px;
+}
+.uvr-detail {
+  font-size: 13px; color: rgba(255,255,255,0.7);
+  line-height: 1.55;
+}
+.uvr-detail strong { color: white; font-weight: 600; }
