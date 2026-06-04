@@ -217,41 +217,74 @@
 
   // Mosaïque de mini-cards qui défile en boucle au-dessus du hero
   function buildHeroMosaic() {
-    const r1 = document.querySelector('.hm-row.r1');
-    const r2 = document.querySelector('.hm-row.r2');
-    const r3 = document.querySelector('.hm-row.r3');
-    if (!r1 || !r2 || !r3) return;
-    // Top 24 stars (allégé pour perf : 8 par bande × 3 × 2 cycle = 48 cards rendus total)
-    const pool = (window.PLAYERS || []).slice()
-      .filter(p => (window.photoUrl && window.photoUrl(p)))
-      .sort((a, b) => (b.value || 0) - (a.value || 0))
-      .slice(0, 24);
-    function buildRow(target, offset, count) {
-      const items = [];
-      for (let i = 0; i < count; i++) items.push(pool[(offset + i) % pool.length]);
-      const cycle = items.concat(items);  // ×2 pour boucle continue
-      cycle.forEach(p => {
-        const card = el('div', { class: 'hm-card' });
-        const rgb = (typeof glowColorFor === 'function') ? glowColorFor(p) : [214, 139, 60];
-        card.style.setProperty('--glow-r', rgb[0]);
-        card.style.setProperty('--glow-g', rgb[1]);
-        card.style.setProperty('--glow-b', rgb[2]);
-        const url = window.photoUrl(p);
-        if (url) {
-          const img = new Image();
-          img.src = url; img.loading = 'lazy'; img.decoding = 'async';
-          img.referrerPolicy = 'no-referrer';
-          img.alt = p.name;
-          card.appendChild(img);
-        }
-        card.appendChild(el('div', { class: 'hm-name' }, p.name.split(' ').slice(-1)[0]));
-        target.appendChild(card);
-      });
+    const row = document.querySelector('.hm-row.r1');
+    const mosaic = document.getElementById('heroMosaic');
+    if (!row || !mosaic) return;
+
+    // Source des images : 53 photos push user dans assets/ (MOSAIC_IMAGES) si dispo,
+    // sinon fallback photos joueurs depuis Sofifa
+    let images;
+    if (window.MOSAIC_IMAGES && window.MOSAIC_IMAGES.length) {
+      images = window.MOSAIC_IMAGES.slice();
+      // Mélange déterministe pour varier l'ordre
+      for (let i = images.length - 1; i > 0; i--) {
+        const j = (i * 7919) % (i + 1);
+        [images[i], images[j]] = [images[j], images[i]];
+      }
+    } else {
+      images = (window.PLAYERS || []).slice()
+        .filter(p => (window.photoUrl && window.photoUrl(p)))
+        .sort((a, b) => (b.value || 0) - (a.value || 0))
+        .slice(0, 30)
+        .map(p => window.photoUrl(p));
     }
-    // 3 bandes décalées de 8 cards chaque (24 cards × 2 cycle = 48 rendus total au lieu de 270)
-    buildRow(r1, 0, 8);
-    buildRow(r2, 8, 8);
-    buildRow(r3, 16, 8);
+    // Cycle ×2 pour boucle continue
+    const cycle = images.concat(images);
+    cycle.forEach(src => {
+      const card = el('div', { class: 'hm-card' });
+      const img = new Image();
+      img.src = src;
+      img.loading = 'lazy';
+      img.decoding = 'async';
+      img.referrerPolicy = 'no-referrer';
+      card.appendChild(img);
+      row.appendChild(card);
+    });
+
+    // === Effet visionneuse : pour chaque card on calcule sa position relative
+    // au centre du viewport mosaïque, et on injecte --hm-pos (-1..+1) et
+    // --hm-abs (|hm-pos|). Le CSS utilise ces variables pour appliquer
+    // rotateY + translateZ + scale dynamiquement. ===
+    const cards = Array.from(row.querySelectorAll('.hm-card'));
+    let rafToken = null;
+    function updateLensEffect() {
+      const rect = mosaic.getBoundingClientRect();
+      const centerX = rect.left + rect.width / 2;
+      const halfW = rect.width / 2;
+      cards.forEach(card => {
+        const r = card.getBoundingClientRect();
+        const cardCenter = r.left + r.width / 2;
+        // Position normalisée : -1 (extrême gauche) à +1 (extrême droite), 0 = centre
+        let pos = (cardCenter - centerX) / halfW;
+        pos = Math.max(-1.4, Math.min(1.4, pos));
+        const abs = Math.min(1.4, Math.abs(pos));
+        card.style.setProperty('--hm-pos', pos.toFixed(3));
+        card.style.setProperty('--hm-abs', abs.toFixed(3));
+      });
+      rafToken = requestAnimationFrame(updateLensEffect);
+    }
+    // Démarre la boucle quand le hero est visible (et arrête quand caché)
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach(e => {
+        if (e.isIntersecting) {
+          if (!rafToken) rafToken = requestAnimationFrame(updateLensEffect);
+        } else if (rafToken) {
+          cancelAnimationFrame(rafToken);
+          rafToken = null;
+        }
+      });
+    });
+    io.observe(mosaic);
   }
 
   function routeMode(mode) {

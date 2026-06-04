@@ -229,126 +229,79 @@ h1, h2, h3, h4 { margin: 0; font-weight: 800; letter-spacing: -0.02em; color: va
 
 /* === Mosaïque qui défile (style visionneuse / grand angle) === */
 /* ============================================================
-   MOSAÏQUE — Vraie visionneuse (réf Obsidian Arc Appreciations)
-   3 bandes non superposées, sens alternés, effet grand angle réel
+   MOSAÏQUE — Vraie visionneuse style Oli Studio
+   1 row de cards qui défile, cards déformées en 3D selon
+   leur position relative au centre du viewport (JS-driven).
    ============================================================ */
 .hero-mosaic {
   position: relative;
   width: 100%;
-  height: clamp(280px, 32vw, 380px);
+  height: clamp(280px, 30vw, 380px);
   overflow: hidden;
   margin-bottom: 36px;
-  perspective: 1100px;
+  perspective: 1300px;
   perspective-origin: 50% 50%;
-  /* Fade horizontal simple (moins coûteux qu'un radial composite) */
-  -webkit-mask-image: linear-gradient(90deg,
-                       transparent 0%, black 8%, black 92%, transparent 100%);
-          mask-image: linear-gradient(90deg,
-                       transparent 0%, black 8%, black 92%, transparent 100%);
-  contain: layout style;
+  /* Pas de mask : on laisse les cards extrêmes dépasser pour l'effet "qui sort du cadre" */
 }
-/* Halo ambiant cuivre au centre (subtle) */
-.hero-mosaic::before {
-  content: "";
-  position: absolute; inset: 0;
-  z-index: 5; pointer-events: none;
-  background:
-    radial-gradient(60% 60% at 50% 50%, transparent 35%, rgba(8,10,14,0.45) 100%);
-}
-
-/* Container 3D pour appliquer la déformation grand angle aux 3 bandes */
 .hm-stage {
   position: absolute; inset: 0;
   transform-style: preserve-3d;
-  /* Le rotateX subtle donne l'effet de "regarder à travers une vitre courbée" */
-  transform: rotateX(2deg);
 }
-
+/* Row centrée verticalement, défile horizontalement */
 .hm-row {
   position: absolute;
+  top: 50%;
   left: 0;
+  transform: translateY(-50%);
   display: flex;
-  gap: 14px;
+  gap: 18px;
   width: max-content;
   will-change: transform;
-  animation: hmScroll linear infinite;
+  animation: hmScroll 80s linear infinite;
   transform-style: preserve-3d;
+  padding: 0 50vw;   /* espace pour cycle continu */
 }
-/* 3 bandes NON SUPERPOSÉES (chacune sa zone verticale) */
-.hm-row.r1 { top: 4%;  height: 28%; animation-duration: 95s;  animation-direction: normal;  }
-.hm-row.r2 { top: 36%; height: 28%; animation-duration: 80s;  animation-direction: reverse; }
-.hm-row.r3 { top: 68%; height: 28%; animation-duration: 110s; animation-direction: normal;  }
 .hero-mosaic:hover .hm-row { animation-play-state: paused; }
 @keyframes hmScroll {
-  from { transform: translate3d(0, 0, 0); }
-  to   { transform: translate3d(-50%, 0, 0); }
+  from { transform: translateY(-50%) translate3d(0, 0, 0); }
+  to   { transform: translateY(-50%) translate3d(-50%, 0, 0); }
 }
 
+/* Card mosaïque : aspect 4/5 portrait, grande taille pour effet immersif */
 .hm-card {
-  --glow-r: 214; --glow-g: 139; --glow-b: 60;
   flex: 0 0 auto;
-  width: clamp(72px, 8vw, 100px);
+  width: clamp(150px, 16vw, 220px);
   aspect-ratio: 4/5;
-  border-radius: 14px;
+  border-radius: 18px;
   position: relative;
   overflow: hidden;
-  background:
-    radial-gradient(circle at 30% 25%, rgba(255,255,255,0.10) 0%, transparent 50%),
-    linear-gradient(180deg, rgba(28,30,40,0.85) 0%, rgba(14,16,22,0.95) 100%);
-  /* Glow doux par card (couleur du club) — élément clé du rendu Appreciations */
+  background: linear-gradient(180deg, rgba(28,30,40,0.85) 0%, rgba(14,16,22,0.95) 100%);
+  border: 1px solid rgba(255,255,255,0.08);
   box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.20),
-    inset 0 0 0 1px rgba(255,255,255,0.05),
-    0 8px 22px rgba(0,0,0,0.55),
-    0 0 28px rgba(var(--glow-r), var(--glow-g), var(--glow-b), 0.32);
+    inset 0 1px 0 rgba(255,255,255,0.10),
+    0 12px 28px rgba(0,0,0,0.55);
   transform-style: preserve-3d;
-}
-/* Reflet glacé top */
-.hm-card::before {
-  content: "";
-  position: absolute; inset: 0; z-index: 3;
-  border-radius: inherit;
-  pointer-events: none;
-  background: linear-gradient(160deg,
-    rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.04) 25%,
-    transparent 45%, transparent 75%, rgba(0,0,0,0.3) 100%);
+  will-change: transform;
+  /* Transform piloté par JS via CSS variable --hm-pos (-1 = far left, 0 = center, 1 = far right) */
+  --hm-pos: 0;
+  transform:
+    translateZ(calc((1 - var(--hm-abs)) * 100px - 40px))
+    rotateY(calc(var(--hm-pos) * -40deg))
+    scale(calc(0.65 + (1 - var(--hm-abs)) * 0.45));
+  transition: transform 0.18s linear;
 }
 .hm-card img {
   position: absolute; inset: 0;
   width: 100%; height: 100%;
-  object-fit: cover; object-position: center 15%;
+  object-fit: cover;
+  object-position: center 18%;
 }
 .hm-card::after {
   content: "";
   position: absolute; inset: 0;
-  background: linear-gradient(180deg, transparent 60%, rgba(0,0,0,0.88) 100%);
-  pointer-events: none; z-index: 1;
+  background: linear-gradient(180deg, transparent 55%, rgba(0,0,0,0.7) 100%);
+  pointer-events: none;
 }
-.hm-card .hm-name {
-  position: absolute; left: 6px; right: 6px; bottom: 5px;
-  font-family: var(--mono); font-size: 8.5px;
-  color: white; opacity: 0.88;
-  text-transform: uppercase; letter-spacing: 0.04em;
-  text-shadow: 0 1px 2px rgba(0,0,0,0.9);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  z-index: 2;
-}
-
-/* === Vraie déformation grand angle ===
-   Les cards aux extrémités HORIZONTALES de la mosaïque doivent paraître
-   inclinées vers nous (effet barrel/visionneuse). Comme la mosaïque défile,
-   on combine deux effets :
-   1) Perspective globale via .hm-stage (rotateX 2deg)
-   2) Rotation Y permanente par card selon parité (effet "courbure")
-   3) Scale réduit progressif vers les côtés via la mask radial déjà appliquée
-*/
-.hm-card { will-change: transform; transition: none; }
-.hm-row.r1 .hm-card:nth-child(odd)  { transform: rotateY(-6deg) translateZ(-8px) scale(0.96); }
-.hm-row.r1 .hm-card:nth-child(even) { transform: rotateY(6deg)  translateZ(-8px) scale(0.96); }
-.hm-row.r2 .hm-card:nth-child(odd)  { transform: rotateY(5deg)  translateZ(-4px); }
-.hm-row.r2 .hm-card:nth-child(even) { transform: rotateY(-5deg) translateZ(-4px); }
-.hm-row.r3 .hm-card:nth-child(odd)  { transform: rotateY(-6deg) translateZ(-8px) scale(0.96); }
-.hm-row.r3 .hm-card:nth-child(even) { transform: rotateY(6deg)  translateZ(-8px) scale(0.96); }
 
 /* ===== Hero shell ===== */
 .hero-v3 {
@@ -1004,16 +957,21 @@ h1, h2, h3, h4 { margin: 0; font-weight: 800; letter-spacing: -0.02em; color: va
 /* === Nuage gradient en haut du setup — couleur change avec le mode actif === */
 .mode-cloud {
   position: absolute;
-  left: 50%; top: -80px;
+  left: 50%; top: -160px;
   transform: translateX(-50%);
-  width: min(900px, 90vw);
-  height: 280px;
+  width: min(1400px, 130vw);    /* plus large pour que les gradients aient de l'espace */
+  height: 420px;                 /* plus haut, pour fade doux */
   pointer-events: none;
   z-index: 0;
-  filter: blur(32px);
+  filter: blur(60px);            /* blur plus fort, fond fond naturel */
   opacity: 0;
-  transition: opacity 0.7s ease, background 0.7s ease;
-  border-radius: 50%;
+  transition: opacity 0.8s ease, background 0.8s ease;
+  /* Pas de border-radius : on laisse les radial-gradients définir la forme.
+     Mask radial pour fade doux aux bords (plus de coupure brusque) */
+  -webkit-mask-image: radial-gradient(ellipse 70% 60% at center,
+                       black 0%, black 40%, transparent 100%);
+          mask-image: radial-gradient(ellipse 70% 60% at center,
+                       black 0%, black 40%, transparent 100%);
 }
 body[data-mode="draft"] .mode-cloud {
   opacity: 0.75;
@@ -3533,20 +3491,26 @@ body[data-mode="juste"] .mode-cloud {
   align-items: stretch;
   perspective: 1400px;
 }
-.juste-pcard {
+/* Homogénéité forcée : les 2 cards ont les MÊMES dimensions et apparence */
+.juste-pcard, .juste-pcard.juste-pcard-b {
   --glow-r: 214; --glow-g: 139; --glow-b: 60;
   position: relative;
   border-radius: 24px;
-  padding: 28px 22px 22px;
-  display: flex; flex-direction: column; align-items: center; text-align: center;
+  padding: 28px 22px 26px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  text-align: center;
   overflow: hidden;
-  background: #050608;
+  background: #0c0f15;
   border: 1px solid rgba(255,255,255,0.08);
   box-shadow:
     inset 0 1px 0 rgba(255,255,255,0.10),
-    0 30px 60px rgba(0,0,0,0.55);
+    0 24px 50px rgba(0,0,0,0.5);
   transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.5s;
   z-index: 1;
+  min-height: 480px;       /* hauteur minimale identique pour les 2 cards */
 }
 /* Aurora style Noah : forme courbée colorée par la couleur du club */
 .juste-pcard::before {
