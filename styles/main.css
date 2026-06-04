@@ -359,14 +359,13 @@ h1, h2, h3, h4 { margin: 0; font-weight: 800; letter-spacing: -0.02em; color: va
   font-weight: 500;
 }
 .hero-title-v3 .accent {
-  /* Touche de personnalité : serif italic uniquement pour l'accent */
-  font-family: var(--display-serif);
-  font-style: italic;
-  font-weight: 400;
+  /* Sans-serif sobre (pas d'empattements clichés) — juste un gradient nacré */
+  font-family: var(--display);
+  font-style: normal;
+  font-weight: 600;
   background: var(--grad-ink);
   -webkit-background-clip: text; background-clip: text;
   color: transparent;
-  filter: drop-shadow(0 1px 0 rgba(255,255,255,0.06));
 }
 .hero-sub-v3 {
   margin-top: 22px;
@@ -1705,11 +1704,19 @@ body[data-mode="under"] .mode-cloud {
 .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .btn-ghost {
-  background: transparent;
+  /* Glassmorphism : plaque de verre suspendue */
+  background: rgba(255,255,255,0.05);
   color: var(--ink);
-  border-color: var(--line-2);
+  border-color: rgba(255,255,255,0.12);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.10);
 }
-.btn-ghost:hover { background: var(--surface); border-color: var(--ink-soft); }
+.btn-ghost:hover {
+  background: rgba(255,255,255,0.10);
+  border-color: rgba(255,255,255,0.22);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.16), 0 6px 18px rgba(0,0,0,0.3);
+}
 
 .btn-orange {
   background: var(--grad-orange);
