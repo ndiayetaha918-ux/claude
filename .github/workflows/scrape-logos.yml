@@ -1,0 +1,46 @@
+name: Sync club logos
+
+# Télécharge les écussons de clubs depuis Wikipedia dans assets/logos/
+# et régénère scripts/club-logos.js. Manuel (workflow_dispatch).
+on:
+  workflow_dispatch:
+    inputs:
+      force:
+        description: 'Re-télécharger même si déjà présent'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+
+jobs:
+  logos:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run logo scraper
+        run: |
+          if [ "${{ github.event.inputs.force }}" = "true" ]; then
+            node tools/scrape-logos.js --force
+          else
+            node tools/scrape-logos.js
+          fi
+
+      - name: Commit changes
+        run: |
+          git config user.name 'drafter-bot'
+          git config user.email 'bot@drafter'
+          git add assets/logos scripts/club-logos.js
+          if git diff --cached --quiet; then
+            echo "No changes."
+            exit 0
+          fi
+          git commit -m "chore(logos): sync club crests $(date -u +%Y-%m-%d)"
+          git push

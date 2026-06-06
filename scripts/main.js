@@ -4728,6 +4728,13 @@
     return club.replace(/\bFC\b|\bAC\b|\bAS\b|\bAFC\b|\bUS\b/g, '').trim().split(' ').filter(Boolean)
       .map(w => w[0]).join('').slice(0, 4).toUpperCase();
   }
+  // Écusson de club scrapé (Wikipedia) → chemin local, sinon null (fallback initiales)
+  function clubLogoSrc(club) {
+    if (!club || !window.CLUB_LOGOS) return null;
+    return window.CLUB_LOGOS[club]
+      || window.CLUB_LOGOS[club.replace(/\b[FA]\.?C\.?\b/gi, '').trim()]
+      || null;
+  }
 
   function initGuessScreen() {
     document.body.setAttribute('data-mode', 'guess');
@@ -4825,10 +4832,27 @@
         flag.title = playerData ? playerData.nat : '';
         bubble.appendChild(flag);
       } else {
-        // Variante sélection → afficher le badge club
+        // Variante sélection → afficher l'écusson du club (sinon initiales)
+        const club = playerData ? playerData.club : '';
+        const logo = clubLogoSrc(club);
         const clubBg = playerData && playerData.club ? glowColorFor(playerData) : [180, 180, 180];
-        const badge = el('div', { class: 'gp-club-badge', style: `background:rgb(${clubBg[0]},${clubBg[1]},${clubBg[2]})` }, clubBadge(playerData ? playerData.club : ''));
-        badge.title = playerData ? playerData.club : '';
+        const badge = el('div', {
+          class: 'gp-club-badge' + (logo ? ' has-logo' : ''),
+          style: logo ? '' : `background:rgb(${clubBg[0]},${clubBg[1]},${clubBg[2]})`,
+        });
+        if (logo) {
+          const img = el('img', { src: logo, alt: '', loading: 'lazy' });
+          img.addEventListener('error', () => {
+            badge.classList.remove('has-logo');
+            badge.style.background = `rgb(${clubBg[0]},${clubBg[1]},${clubBg[2]})`;
+            img.remove();
+            badge.textContent = clubBadge(club);
+          });
+          badge.appendChild(img);
+        } else {
+          badge.textContent = clubBadge(club);
+        }
+        badge.title = club || '';
         bubble.appendChild(badge);
       }
       slot.appendChild(bubble);
