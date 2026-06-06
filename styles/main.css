@@ -108,11 +108,10 @@
   --r-2xl: 40px;
 
   --font: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-  /* Display sobre (style Söhne / Anthropic) : Inter en weight 500/600, jamais extravagant */
-  --display: 'Inter', system-ui, -apple-system, sans-serif;
-  /* Serif éditorial réservé aux .accent + italiques distinctifs */
+  /* Display "design" géométrique fin (Space Grotesk) au lieu d'Inter classique */
+  --display: 'Space Grotesk', 'Inter', system-ui, sans-serif;
   --display-serif: 'Instrument Serif', Georgia, serif;
-  --display-impact: 'Bebas Neue', 'Inter', sans-serif;   /* à éviter au max */
+  --display-impact: 'Bebas Neue', 'Inter', sans-serif;
   --display-2: 'Space Grotesk', 'Inter', sans-serif;
   --mono: 'JetBrains Mono', ui-monospace, monospace;
 }
@@ -280,6 +279,22 @@ h1, h2, h3, h4 { margin: 0; font-weight: 800; letter-spacing: -0.02em; color: va
   -webkit-mask-image: linear-gradient(90deg, transparent 0%, black 12%, black 88%, transparent 100%);
           mask-image: linear-gradient(90deg, transparent 0%, black 12%, black 88%, transparent 100%);
 }
+/* Aurora dynamique en bas de la visionneuse : prend la couleur du mode actif
+   et fond en dégradé blur vers le texte (transition douce mosaïque → titre) */
+.hero-mosaic::after {
+  content: "";
+  position: absolute; left: 0; right: 0; bottom: 0;
+  height: 55%; z-index: 3; pointer-events: none;
+  background: linear-gradient(180deg,
+    transparent 0%,
+    color-mix(in srgb, var(--neon) 24%, transparent) 55%,
+    var(--bg) 100%);
+  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
+  -webkit-mask-image: linear-gradient(180deg, transparent 0%, black 60%, black 100%);
+          mask-image: linear-gradient(180deg, transparent 0%, black 60%, black 100%);
+  transition: background 0.7s ease;
+}
 .hm-row {
   display: flex;
   gap: 12px;
@@ -350,12 +365,15 @@ h1, h2, h3, h4 { margin: 0; font-weight: 800; letter-spacing: -0.02em; color: va
   background: var(--neon); box-shadow: 0 0 12px var(--neon);
 }
 .hero-title-v3 {
-  font-family: var(--display);  /* Inter sobre */
+  font-family: var(--display);  /* Space Grotesk — design, fin */
   font-size: clamp(50px, 8.5vw, 108px);
-  line-height: 1.02; letter-spacing: -0.035em;
+  line-height: 1.0; letter-spacing: -0.04em;
   color: var(--ink);
   margin: 0;
-  font-weight: 500;
+  font-weight: 400;             /* plus fin */
+  /* léger fondu vers le bas (sans couleur) */
+  -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 78%, rgba(0,0,0,0.72) 100%);
+          mask-image: linear-gradient(180deg, #000 0%, #000 78%, rgba(0,0,0,0.72) 100%);
 }
 .hero-title-v3 .accent {
   /* Sans-serif sobre (pas d'empattements clichés) — juste un gradient nacré */
@@ -388,6 +406,7 @@ h1, h2, h3, h4 { margin: 0; font-weight: 800; letter-spacing: -0.02em; color: va
   perspective: 1600px;
   perspective-origin: 50% 45%;
   transform-style: preserve-3d;
+  cursor: pointer;
 }
 
 /* CHANGEMENT MAJEUR : les cards sont absolument positionnées,
@@ -468,51 +487,72 @@ h1, h2, h3, h4 { margin: 0; font-weight: 800; letter-spacing: -0.02em; color: va
   --px: 0; --py: 0;
   pointer-events: auto;         /* capte le clic (la card parente est none) */
 }
-/* Surface verre glacé (frosted) */
+/* Surface LIQUID GLASS refracted (stripes verticales) */
 .mc-bg {
   position: absolute; inset: 0; z-index: 0;
   border-radius: inherit;
   background:
-    linear-gradient(180deg, rgba(32,36,46,0.55) 0%, rgba(14,16,24,0.72) 100%);
-  -webkit-backdrop-filter: blur(8px) saturate(1.2);
-  backdrop-filter: blur(8px) saturate(1.2);
+    /* stripes verticales fines (verre nervuré / refracted) */
+    repeating-linear-gradient(90deg,
+      rgba(255,255,255,0.05) 0px,
+      rgba(255,255,255,0.05) 1px,
+      transparent 1px, transparent 9px),
+    linear-gradient(180deg, rgba(34,38,50,0.5) 0%, rgba(14,16,24,0.7) 100%);
+  -webkit-backdrop-filter: blur(10px) saturate(1.3);
+  backdrop-filter: blur(10px) saturate(1.3);
   box-shadow:
-    inset 0 1.5px 0 rgba(255,255,255,0.22),
+    inset 0 1.5px 0 rgba(255,255,255,0.24),
     inset 0 0 0 1px rgba(255,255,255,0.10),
     inset 0 -40px 60px rgba(0,0,0,0.2);
   overflow: hidden;
 }
-/* Reflet diagonal glacé sur la surface */
+/* Reflet diagonal liquide + halo qui REBONDIT sur les bords (haut+côtés) */
 .mc-bg::before {
   content: ""; position: absolute; inset: 0;
-  background: linear-gradient(135deg, rgba(255,255,255,0.16) 0%, transparent 32%, transparent 100%);
+  background:
+    linear-gradient(135deg, rgba(255,255,255,0.20) 0%, transparent 30%),
+    radial-gradient(120% 40% at 50% 0%, var(--mc-edge, rgba(255,255,255,0.10)) 0%, transparent 60%),
+    radial-gradient(40% 120% at 0% 50%, var(--mc-edge, rgba(255,255,255,0.08)) 0%, transparent 55%),
+    radial-gradient(40% 120% at 100% 50%, var(--mc-edge, rgba(255,255,255,0.08)) 0%, transparent 55%);
   pointer-events: none;
 }
-/* Joueur découpé (PNG/webp transparents) : posé au sol, tête qui dépasse.
-   object-fit CONTAIN ancré en bas → le sujet entier visible, head out. */
+/* Clip-mask : bottom + côtés clippés au cadre, le HAUT reste ouvert (tête dépasse) */
+.mc-clip {
+  position: absolute; inset: 0; z-index: 1;
+  clip-path: inset(-45% 0% 0% 0% round 0 0 24px 24px);
+  pointer-events: none;
+}
+/* Joueur découpé : posé au sol, tête qui dépasse. Réglable par mode. */
 .mc-player {
   position: absolute;
-  left: 50%; bottom: -1%;
-  width: 116%; height: 128%;
+  left: 50%; bottom: var(--pb, 0%);
+  width: var(--pw, 116%); height: var(--ph, 132%);
   object-fit: contain;
   object-position: center bottom;
-  z-index: 1;
-  /* parallaxe : décalage du sujet vs cadre (auto + souris via --px/--py) */
-  transform: translate(calc(-50% + var(--px) * 16px), calc(var(--py) * -8px));
-  transition: transform 0.3s cubic-bezier(0.16,1,0.3,1);
+  transform: translateX(-50%);
   -webkit-user-drag: none; user-select: none;
-  filter: drop-shadow(0 12px 24px rgba(0,0,0,0.5));
+  filter: drop-shadow(0 12px 26px rgba(0,0,0,0.55));
 }
-/* Parallaxe AUTOMATIQUE de la card centrale (détache le sujet du cadre) */
-.mode-card.is-center .mc-player {
-  animation: mcParallax 7s ease-in-out infinite;
+/* Réglages par sujet (équilibrer hauteur/taille des découpes) */
+.mode-under .mc-player { --ph: 150%; --pb: 0%; --pw: 124%; }   /* Dembélé : plus grand + remonte */
+.mode-draft .mc-player { --ph: 138%; --pb: 1%; --pw: 120%; }   /* Yamal : remonte un peu */
+.mode-guess .mc-player { --ph: 118%; --pb: 0%; --pw: 104%; }   /* Yildiz : plus petit */
+.mode-five  .mc-player { --ph: 134%; --pb: 0%; }
+.mode-juste .mc-player { --ph: 134%; --pb: 0%; }
+
+/* === ANIMATIONS AUTO indépendantes (loop lente-smooth) — pas de souris ===
+   Card centrale : léger 3D rotateXY. Sujet : parallaxe décalée → détache. */
+.mode-card.is-center { animation: mcCard3D 9s ease-in-out infinite; }
+@keyframes mcCard3D {
+  0%, 100% { transform: translate(-50%, -50%) rotateY(-6deg) rotateX(2.5deg); }
+  50%      { transform: translate(-50%, -50%) rotateY(6deg)  rotateX(-2.5deg); }
 }
-@keyframes mcParallax {
-  0%, 100% { transform: translate(calc(-50% - 12px), 2px); }
-  50%      { transform: translate(calc(-50% + 12px), -4px); }
+.mode-card.is-center .mc-player { animation: mcSubject 9s ease-in-out infinite; }
+@keyframes mcSubject {
+  0%, 100% { transform: translate(calc(-50% + 18px), -3px); }
+  50%      { transform: translate(calc(-50% - 18px), 3px); }
 }
-/* BLOOM coloré DOUX en bas — personnalité, motif multi-blobs, frost léger.
-   Hauteur modérée (~48%), opacité douce : c'est un halo, pas un bloc. */
+/* BLOOM coloré DOUX en bas (halo, pas bloc) */
 .mc-grad {
   position: absolute;
   left: 0; right: 0; bottom: 0;
@@ -525,6 +565,13 @@ h1, h2, h3, h4 { margin: 0; font-weight: 800; letter-spacing: -0.02em; color: va
   -webkit-mask-image: linear-gradient(180deg, transparent 0%, black 40%, black 100%);
           mask-image: linear-gradient(180deg, transparent 0%, black 40%, black 100%);
 }
+
+/* Couleur du REBOND sur les bords (haut+côtés) par mode */
+.mode-five  .mc-inner { --mc-edge: rgba(60,180,235,0.16); }
+.mode-draft .mc-inner { --mc-edge: rgba(220,50,60,0.16); }
+.mode-juste .mc-inner { --mc-edge: rgba(230,180,90,0.16); }
+.mode-under .mc-inner { --mc-edge: rgba(110,125,255,0.16); }
+.mode-guess .mc-inner { --mc-edge: rgba(255,110,170,0.16); }
 
 /* === BLOOMS doux multi-blobs par mode (double layering, motif indépendant,
    pas linéaire). Halo lumineux centré + couleur diffuse + bright spot blanc.
@@ -597,12 +644,12 @@ h1, h2, h3, h4 { margin: 0; font-weight: 800; letter-spacing: -0.02em; color: va
 }
 .mc-title {
   font-family: var(--display);
-  font-size: clamp(34px, 4.2vw, 50px);
-  line-height: 0.92;
+  font-size: clamp(32px, 4vw, 46px);
+  line-height: 0.95;
   margin: 0 0 8px;
-  letter-spacing: -0.05em;
+  letter-spacing: -0.04em;
   color: #fff;
-  font-weight: 800;
+  font-weight: 500;            /* plus fin, design */
   text-shadow: 0 3px 18px rgba(0,0,0,0.55), 0 1px 0 rgba(0,0,0,0.4);
 }
 .mc-desc {

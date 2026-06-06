@@ -202,42 +202,18 @@
     }
     applyCoverflow();
 
-    // Parallaxe XY sur la card centrale : le joueur (.mc-inner --px/--py) se
-    // décale légèrement vs le cadre + oscillation d'orientation sur la card.
-    bento.addEventListener('pointermove', (ev) => {
-      const card = bento.querySelector('.mode-card.is-center');
-      if (!card) return;
-      const cr = card.getBoundingClientRect();
-      const nx = ((ev.clientX - cr.left) / cr.width) * 2 - 1;   // -1..1
-      const ny = ((ev.clientY - cr.top) / cr.height) * 2 - 1;
-      const inner = card.querySelector('.mc-inner');
-      if (inner) {
-        inner.style.setProperty('--px', nx.toFixed(3));
-        inner.style.setProperty('--py', ny.toFixed(3));
-      }
-      // léger tilt de la card centrale
-      card.style.setProperty('--tiltx', (ny * -4).toFixed(2) + 'deg');
-      card.style.setProperty('--tilty', (nx * 5).toFixed(2) + 'deg');
-    });
-    bento.addEventListener('pointerleave', () => {
-      const card = bento.querySelector('.mode-card.is-center');
-      if (!card) return;
-      const inner = card.querySelector('.mc-inner');
-      if (inner) { inner.style.setProperty('--px', 0); inner.style.setProperty('--py', 0); }
-      card.style.setProperty('--tiltx', '0deg');
-      card.style.setProperty('--tilty', '0deg');
-    });
-
-    // Clic : si card centrale → lance le mode ; sinon → la card vient au centre
+    // Clic BULLETPROOF basé sur la position X (indépendant des recouvrements
+    // de cards). Centre → lance le mode ; gauche/droite → navigue.
     bento.addEventListener('click', (ev) => {
-      const card = ev.target.closest('.mode-card');
-      if (!card) return;
-      const i = cards.indexOf(card);
-      if (i === activeIdx) {
-        routeMode(card.dataset.bento);
-      } else {
-        activeIdx = i;
-        applyCoverflow();
+      const r = bento.getBoundingClientRect();
+      const dx = ev.clientX - (r.left + r.width / 2);
+      const cardW = (cards[0] && cards[0].offsetWidth) || 320;
+      if (Math.abs(dx) < cardW * 0.40) {
+        routeMode(order[activeIdx]);          // zone centrale → lancer
+      } else if (dx < 0 && activeIdx > 0) {
+        activeIdx--; applyCoverflow();         // gauche → précédent
+      } else if (dx > 0 && activeIdx < cards.length - 1) {
+        activeIdx++; applyCoverflow();         // droite → suivant
       }
     });
 
@@ -308,11 +284,13 @@
       state.fiveMode = false;
       state.justeMode = false;
       refreshFormationDropdown();
+      renderParticipants();          // rebuild les selects avec formations 11v11
       showModeSetup('draft');
     } else if (mode === 'five') {
       state.fiveMode = true;
       state.justeMode = false;
       refreshFormationDropdown();
+      renderParticipants();          // rebuild les selects avec formations 5v5
       const budget = $('#budgetInput'); if (budget) budget.value = '120';
       showModeSetup('five');
     } else if (mode === 'juste') {
