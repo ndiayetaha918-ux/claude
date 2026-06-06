@@ -263,74 +263,59 @@ h1, h2, h3, h4 { margin: 0; font-weight: 800; letter-spacing: -0.02em; color: va
 
 /* === Mosaïque qui défile (style visionneuse / grand angle) === */
 /* ============================================================
-   VISIONNEUSE EN ARC (réf IMG_2715) — cards fanées en demi-cercle
-   13 cards positionnées sur un arc, tangentes, déformées par
-   leur angle. Léger balancement continu (vie). Images = 53 push user.
+   MOSAÏQUE — 3 lignes de photos qui défilent (sens alternés)
+   Source = mes 53 photos, randomisées, sans doublon entre lignes.
+   Fade flou doux aux bords gauche/droite.
    ============================================================ */
 .hero-mosaic {
   position: relative;
   width: 100%;
-  height: clamp(300px, 34vw, 440px);
+  height: clamp(280px, 30vw, 380px);
   overflow: hidden;
   margin-bottom: 0;
-  perspective: 1400px;
-  perspective-origin: 50% 60%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 12px;
+  -webkit-mask-image: linear-gradient(90deg, transparent 0%, black 12%, black 88%, transparent 100%);
+          mask-image: linear-gradient(90deg, transparent 0%, black 12%, black 88%, transparent 100%);
 }
-/* Conteneur de l'arc : pivot bas-centre, balancement doux */
-.hm-arc {
-  position: absolute;
-  left: 50%; bottom: -8%;
-  width: 1px; height: 1px;
-  transform-style: preserve-3d;
-  transform: translateX(-50%);
-  animation: hmSway 14s ease-in-out infinite;
-}
-@keyframes hmSway {
-  0%, 100% { transform: translateX(-50%) rotate(-2.2deg); }
-  50%      { transform: translateX(-50%) rotate(2.2deg); }
-}
-/* Card de l'arc : position calculée par JS via --ang (deg) + --rad (px) */
-.hm-card {
-  position: absolute;
-  left: 0; top: 0;
-  width: clamp(96px, 10vw, 138px);
-  aspect-ratio: 3/4;
-  border-radius: 16px;
-  overflow: hidden;
-  background: linear-gradient(180deg, rgba(30,32,42,0.85) 0%, rgba(16,18,26,0.95) 100%);
-  border: 1px solid rgba(255,255,255,0.10);
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.14),
-    0 12px 28px rgba(0,0,0,0.5);
-  transform-origin: 50% 50%;
-  --depth: 1;
-  /* centre la card sur le pivot, puis place sur l'arc (rayon --rad, angle --ang) */
-  transform:
-    translate(-50%, -50%)
-    rotate(var(--ang))
-    translateY(calc(var(--rad) * -1))
-    rotate(calc(var(--ang) * -0.45))     /* redresse partiellement → effet éventail */
-    scale(var(--depth));
+.hm-row {
+  display: flex;
+  gap: 12px;
+  width: max-content;
   will-change: transform;
+}
+.hm-row.r1 { animation: hmScroll 70s linear infinite; }
+.hm-row.r2 { animation: hmScroll 90s linear infinite reverse; }
+.hm-row.r3 { animation: hmScroll 80s linear infinite; }
+.hero-mosaic:hover .hm-row { animation-play-state: paused; }
+@keyframes hmScroll {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+.hm-card {
+  flex: 0 0 auto;
+  width: clamp(78px, 8vw, 104px);
+  aspect-ratio: 1/1;
+  border-radius: 14px;
+  overflow: hidden;
+  position: relative;
+  background: rgba(20,22,30,0.9);
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.10), 0 8px 18px rgba(0,0,0,0.4);
 }
 .hm-card img {
   position: absolute; inset: 0;
   width: 100%; height: 100%;
   object-fit: cover;
-  object-position: center 30%;
+  object-position: center 28%;
 }
 .hm-card::after {
   content: "";
   position: absolute; inset: 0;
-  background: linear-gradient(180deg, transparent 55%, rgba(0,0,0,0.5) 100%);
+  background: linear-gradient(180deg, transparent 60%, rgba(0,0,0,0.45) 100%);
   pointer-events: none;
-}
-.hm-card::before {
-  content: "";
-  position: absolute; inset: 0; z-index: 1;
-  pointer-events: none;
-  border-radius: inherit;
-  background: linear-gradient(160deg, rgba(255,255,255,0.16) 0%, transparent 35%);
 }
 
 /* ===== Hero shell ===== */
@@ -347,10 +332,8 @@ h1, h2, h3, h4 { margin: 0; font-weight: 800; letter-spacing: -0.02em; color: va
   margin-bottom: 52px;
   position: relative;
   z-index: 3;
-  margin-top: -24px;
-  padding-top: 24px;
-  background: radial-gradient(ellipse 80% 120% at 50% 50%,
-              var(--bg) 40%, rgba(10,12,16,0.55) 65%, transparent 90%);
+  margin-top: 28px;
+  padding-top: 0;
 }
 .hero-eyebrow {
   display: inline-flex; align-items: center; gap: 8px;
@@ -419,6 +402,7 @@ h1, h2, h3, h4 { margin: 0; font-weight: 800; letter-spacing: -0.02em; color: va
   border: none;
   overflow: visible;          /* la tête du joueur déborde du cadre */
   cursor: pointer;
+  pointer-events: none;       /* seul .mc-inner capte le clic (cards latérales cliquables) */
   padding: 0;
   background: transparent;
   transform-style: preserve-3d;
@@ -448,14 +432,7 @@ h1, h2, h3, h4 { margin: 0; font-weight: 800; letter-spacing: -0.02em; color: va
   z-index: calc(10 - var(--abs));
   --tiltx: 0deg; --tilty: 0deg;
 }
-/* Oscillation idle douce de la card centrale (profondeur vivante) */
-.mode-card.is-center .mc-inner {
-  animation: mcFloat 6s ease-in-out infinite;
-}
-@keyframes mcFloat {
-  0%, 100% { transform: translateY(0) rotate(0deg); }
-  50%      { transform: translateY(-6px) rotate(0.4deg); }
-}
+/* (oscillation gérée par la parallaxe auto du sujet .mc-player) */
 
 /* === Ombre colorée sous la carte centrale (subtile, pas gaming) === */
 .mode-card::after {
@@ -480,112 +457,112 @@ h1, h2, h3, h4 { margin: 0; font-weight: 800; letter-spacing: -0.02em; color: va
 .mode-card::after { opacity: 0; }
 .mode-card.is-center::after { opacity: 0.85; }
 
-/* Inner container — fond noir, aurora en dessous, contenu au-dessus */
-.mc-inner { width: 100%; height: 100%; position: relative; border-radius: inherit; overflow: hidden; }
-
-/* Photo joueur PLEIN CADRE — débordement haut comme dans la ref carousel */
-.mc-player {
-  position: absolute;
-  inset: 0;
-  width: 100%; height: 100%;
-  object-fit: cover;
-  object-position: center 18%;
-  z-index: 1;
-  transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
-  -webkit-user-drag: none; user-select: none;
-}
-.mode-card:hover .mc-player { transform: scale(1.04); }
-
 /* ============================================================
-   CARDS MODE — structure en couches avec head-overflow + glass
-   .mc-inner (overflow visible — la tête dépasse)
-     .mc-bg     : surface sombre clippée arrondie (z0)
-     .mc-player : photo, déborde en haut (head out), parallaxe (z1)
-     .mc-grad   : gradient FORT varié + layer-blur sous le gradient (z2)
-     .mc-body   : textes en bas, typo contrastée (z3)
+   CARDS MODE — couches : bg verre / joueur (head-overflow + parallaxe
+   auto) / bloom coloré doux + frost / textes
    ============================================================ */
 .mc-inner {
   position: relative;
   width: 100%; height: 100%;
-  overflow: visible;           /* la tête du joueur dépasse */
-  --px: 0; --py: 0;            /* parallaxe posée par JS */
+  overflow: visible;            /* la tête du joueur dépasse */
+  --px: 0; --py: 0;
+  pointer-events: auto;         /* capte le clic (la card parente est none) */
 }
-/* Surface sombre arrondie (le "verre" de la card) */
+/* Surface verre glacé (frosted) */
 .mc-bg {
   position: absolute; inset: 0; z-index: 0;
   border-radius: inherit;
   background:
-    linear-gradient(180deg, rgba(26,29,38,0.92) 0%, rgba(12,14,20,0.96) 100%);
+    linear-gradient(180deg, rgba(32,36,46,0.55) 0%, rgba(14,16,24,0.72) 100%);
+  -webkit-backdrop-filter: blur(8px) saturate(1.2);
+  backdrop-filter: blur(8px) saturate(1.2);
   box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.14),
-    inset 0 0 0 1px rgba(255,255,255,0.06);
+    inset 0 1.5px 0 rgba(255,255,255,0.22),
+    inset 0 0 0 1px rgba(255,255,255,0.10),
+    inset 0 -40px 60px rgba(0,0,0,0.2);
   overflow: hidden;
 }
-/* Photo joueur : déborde en haut, légèrement décalée du cadre (parallaxe) */
+/* Reflet diagonal glacé sur la surface */
+.mc-bg::before {
+  content: ""; position: absolute; inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.16) 0%, transparent 32%, transparent 100%);
+  pointer-events: none;
+}
+/* Joueur découpé (PNG/webp transparents) : posé au sol, tête qui dépasse.
+   object-fit CONTAIN ancré en bas → le sujet entier visible, head out. */
 .mc-player {
   position: absolute;
-  left: 50%; bottom: 0;
-  width: 102%; height: 118%;        /* plus haute que la card → tête dépasse */
-  object-fit: cover;
-  object-position: center 8%;
+  left: 50%; bottom: -1%;
+  width: 116%; height: 128%;
+  object-fit: contain;
+  object-position: center bottom;
   z-index: 1;
-  transform: translate(calc(-50% + var(--px) * 14px), calc(var(--py) * -10px));
-  transition: transform 0.25s cubic-bezier(0.16,1,0.3,1);
+  /* parallaxe : décalage du sujet vs cadre (auto + souris via --px/--py) */
+  transform: translate(calc(-50% + var(--px) * 16px), calc(var(--py) * -8px));
+  transition: transform 0.3s cubic-bezier(0.16,1,0.3,1);
   -webkit-user-drag: none; user-select: none;
-  /* clip seulement les côtés/bas à la card, le haut dépasse librement */
-  -webkit-mask-image: linear-gradient(180deg, black 0%, black 100%);
+  filter: drop-shadow(0 12px 24px rgba(0,0,0,0.5));
 }
-/* GRADIENT FORT varié (radial + conic blobs) + LAYER-BLUR du même bas
-   → frost le bas du joueur derrière une couleur saturée (réf glassmorphism) */
+/* Parallaxe AUTOMATIQUE de la card centrale (détache le sujet du cadre) */
+.mode-card.is-center .mc-player {
+  animation: mcParallax 7s ease-in-out infinite;
+}
+@keyframes mcParallax {
+  0%, 100% { transform: translate(calc(-50% - 12px), 2px); }
+  50%      { transform: translate(calc(-50% + 12px), -4px); }
+}
+/* BLOOM coloré DOUX en bas — personnalité, motif multi-blobs, frost léger.
+   Hauteur modérée (~48%), opacité douce : c'est un halo, pas un bloc. */
 .mc-grad {
   position: absolute;
   left: 0; right: 0; bottom: 0;
-  height: 56%; z-index: 2;
+  height: 48%; z-index: 2;
   pointer-events: none;
   border-radius: 0 0 inherit inherit;
   background: var(--mc-aurora);
-  -webkit-backdrop-filter: blur(14px);
-  backdrop-filter: blur(14px);
-  /* fondu du blur vers le haut pour qu'il n'ait pas de bord net */
-  -webkit-mask-image: linear-gradient(180deg, transparent 0%, black 28%, black 100%);
-          mask-image: linear-gradient(180deg, transparent 0%, black 28%, black 100%);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  -webkit-mask-image: linear-gradient(180deg, transparent 0%, black 40%, black 100%);
+          mask-image: linear-gradient(180deg, transparent 0%, black 40%, black 100%);
 }
 
-/* === Gradients VARIÉS et FORTS par mode (radial + conic, pas linéaire) === */
-/* FIVE : bleu City — blobs cyan + bleu profond + halo blanc, motif conique */
+/* === BLOOMS doux multi-blobs par mode (double layering, motif indépendant,
+   pas linéaire). Halo lumineux centré + couleur diffuse + bright spot blanc.
+   Opacité contenue — c'est une lueur, pas un bloc. === */
+/* FIVE : bleu azur City */
 .mode-five .mc-inner {
   --mc-aurora:
-    radial-gradient(60% 70% at 30% 100%, rgba(0,210,255,0.95) 0%, transparent 60%),
-    radial-gradient(55% 80% at 75% 95%, rgba(255,255,255,0.85) 0%, transparent 55%),
-    conic-gradient(from 200deg at 50% 120%, rgba(24,90,180,0.9), rgba(0,160,230,0.85), rgba(40,120,200,0.9));
+    radial-gradient(60% 55% at 50% 102%, rgba(180,235,255,0.85) 0%, transparent 55%),
+    radial-gradient(85% 75% at 35% 115%, rgba(40,165,224,0.75) 0%, transparent 62%),
+    radial-gradient(80% 90% at 72% 120%, rgba(20,90,160,0.62) 0%, transparent 68%);
 }
-/* DRAFT : feu — rouge + or + blanc, blobs décalés */
+/* DRAFT : ROUGE GRENADE */
 .mode-draft .mc-inner {
   --mc-aurora:
-    radial-gradient(55% 70% at 28% 100%, rgba(255,90,40,0.95) 0%, transparent 58%),
-    radial-gradient(50% 80% at 72% 92%, rgba(255,255,255,0.85) 0%, transparent 52%),
-    conic-gradient(from 210deg at 50% 120%, rgba(190,40,30,0.92), rgba(255,160,60,0.9), rgba(230,70,40,0.92));
+    radial-gradient(58% 52% at 50% 102%, rgba(255,210,210,0.8) 0%, transparent 55%),
+    radial-gradient(85% 75% at 34% 115%, rgba(200,30,45,0.8) 0%, transparent 62%),
+    radial-gradient(80% 90% at 72% 122%, rgba(120,12,28,0.66) 0%, transparent 68%);
 }
-/* JUSTE PRIX : or champagne — or + cuivre + nacré */
+/* JUSTE PRIX : or champagne */
 .mode-juste .mc-inner {
   --mc-aurora:
-    radial-gradient(55% 70% at 32% 100%, rgba(255,210,90,0.95) 0%, transparent 58%),
-    radial-gradient(50% 80% at 72% 92%, rgba(255,250,235,0.9) 0%, transparent 55%),
-    conic-gradient(from 205deg at 50% 120%, rgba(150,100,30,0.92), rgba(240,200,110,0.9), rgba(200,150,50,0.92));
+    radial-gradient(58% 52% at 50% 102%, rgba(255,245,220,0.82) 0%, transparent 55%),
+    radial-gradient(85% 75% at 34% 115%, rgba(224,178,80,0.75) 0%, transparent 62%),
+    radial-gradient(80% 90% at 72% 122%, rgba(150,100,30,0.6) 0%, transparent 68%);
 }
-/* UNDERCOVER : navy + violet électrique + blanc nacré */
+/* UNDERCOVER : navy + violet électrique */
 .mode-under .mc-inner {
   --mc-aurora:
-    radial-gradient(58% 72% at 30% 100%, rgba(90,120,255,0.95) 0%, transparent 60%),
-    radial-gradient(52% 80% at 74% 92%, rgba(225,230,255,0.85) 0%, transparent 55%),
-    conic-gradient(from 210deg at 50% 120%, rgba(30,40,110,0.92), rgba(110,90,230,0.88), rgba(50,70,180,0.92));
+    radial-gradient(60% 55% at 50% 102%, rgba(210,218,255,0.82) 0%, transparent 55%),
+    radial-gradient(85% 75% at 35% 115%, rgba(106,120,255,0.78) 0%, transparent 62%),
+    radial-gradient(80% 90% at 72% 120%, rgba(28,38,110,0.66) 0%, transparent 68%);
 }
-/* GUESS : rose vif + saumon + blanc */
+/* GUESS : rose saumon */
 .mode-guess .mc-inner {
   --mc-aurora:
-    radial-gradient(58% 72% at 30% 100%, rgba(255,90,160,0.95) 0%, transparent 60%),
-    radial-gradient(52% 80% at 74% 92%, rgba(255,235,235,0.9) 0%, transparent 55%),
-    conic-gradient(from 210deg at 50% 120%, rgba(220,60,120,0.92), rgba(255,170,160,0.9), rgba(240,90,140,0.92));
+    radial-gradient(60% 55% at 50% 102%, rgba(255,225,225,0.85) 0%, transparent 55%),
+    radial-gradient(85% 75% at 35% 115%, rgba(255,120,170,0.78) 0%, transparent 62%),
+    radial-gradient(80% 90% at 72% 120%, rgba(180,40,90,0.6) 0%, transparent 68%);
 }
 
 /* Bord ciselé translucide (verre des références) */

@@ -250,12 +250,16 @@
     });
   }
 
-  // Visionneuse en ARC (réf IMG_2715) : cards fanées en demi-cercle.
-  // Images = 53 photos push user (MOSAIC_IMAGES), fallback photos joueurs.
+  // Mosaïque : 3 lignes de photos qui défilent (sens alternés).
+  // Source = mes 53 photos (MOSAIC_IMAGES), randomisées, AUCUN doublon entre
+  // les lignes (chaque photo n'apparaît que dans une seule ligne).
   function buildHeroMosaic() {
-    const arc = document.getElementById('hmArc');
-    const mosaic = document.getElementById('heroMosaic');
-    if (!arc || !mosaic) return;
+    const rows = [
+      document.querySelector('.hm-row.r1'),
+      document.querySelector('.hm-row.r2'),
+      document.querySelector('.hm-row.r3'),
+    ].filter(Boolean);
+    if (!rows.length) return;
 
     // Source images
     let images;
@@ -265,39 +269,30 @@
       images = (window.PLAYERS || []).slice()
         .filter(p => window.photoUrl && window.photoUrl(p))
         .sort((a, b) => (b.value || 0) - (a.value || 0))
-        .slice(0, 24).map(p => window.photoUrl(p));
+        .slice(0, 36).map(p => window.photoUrl(p));
     }
-    // Mélange déterministe
+    // Mélange aléatoire (Fisher-Yates avec Math.random pour un ordre différent
+    // à chaque chargement → évite les clusters de même club)
     for (let i = images.length - 1; i > 0; i--) {
-      const j = ((i + 1) * 7919) % (i + 1);
+      const j = Math.floor(Math.random() * (i + 1));
       [images[i], images[j]] = [images[j], images[i]];
     }
 
-    // 13 cards sur un arc de -78° à +78°, rayon responsive
-    const N = 13;
-    const SPREAD = 78;                       // demi-angle de l'éventail
-    const isMobile = window.innerWidth < 760;
-    const RAD = isMobile ? 230 : 360;        // rayon de l'arc en px
-    let imgIdx = 0;
-    for (let i = 0; i < N; i++) {
-      const t = N === 1 ? 0 : (i / (N - 1)) * 2 - 1;   // -1..1
-      const ang = t * SPREAD;
-      const card = el('div', { class: 'hm-card' });
-      card.style.setProperty('--ang', ang.toFixed(2) + 'deg');
-      card.style.setProperty('--rad', RAD + 'px');
-      // profondeur : cards du centre plus grandes/devant
-      const depthScale = 1 - Math.abs(t) * 0.18;
-      card.style.opacity = (1 - Math.abs(t) * 0.35).toFixed(2);
-      card.style.zIndex = String(20 - Math.round(Math.abs(t) * 10));
-      const img = new Image();
-      img.src = images[imgIdx % images.length]; imgIdx++;
-      img.loading = 'lazy'; img.decoding = 'async';
-      img.referrerPolicy = 'no-referrer';
-      card.appendChild(img);
-      // applique le depthScale par-dessus le transform d'arc via une wrapper var
-      card.style.setProperty('--depth', depthScale.toFixed(3));
-      arc.appendChild(card);
-    }
+    // Répartition SANS chevauchement : chaque ligne reçoit un tiers distinct
+    const per = Math.floor(images.length / rows.length);
+    rows.forEach((row, ri) => {
+      const slice = images.slice(ri * per, ri * per + per);
+      // ×2 pour boucle continue (seam) — duplication interne à la ligne
+      slice.concat(slice).forEach(src => {
+        const card = el('div', { class: 'hm-card' });
+        const img = new Image();
+        img.src = src;
+        img.loading = 'lazy'; img.decoding = 'async';
+        img.referrerPolicy = 'no-referrer';
+        card.appendChild(img);
+        row.appendChild(card);
+      });
+    });
   }
 
   function routeMode(mode) {
