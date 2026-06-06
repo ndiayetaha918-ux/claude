@@ -50,12 +50,7 @@
       <!-- HERO — mosaïque qui défile + 3 cards modes en arc spatial -->
       <div class="hero-v3">
         <div class="hero-mosaic" id="heroMosaic" aria-hidden="true">
-          <div class="hm-bg-gradient"></div>
-          <div class="hm-stage">
-            <div class="hm-row r1"></div>
-            <div class="hm-row r2"></div>
-            <div class="hm-row r3"></div>
-          </div>
+          <div class="hm-arc" id="hmArc"></div>
         </div>
         <div class="hero-intro">
           <div class="hero-eyebrow">SAISON 2025/26 · TRANSFERMARKT LIVE</div>
@@ -72,83 +67,66 @@
           <!-- Carousel 5 cards : Undercover - Five - Draft - Juste - Guess -->
           <button class="mode-card mode-under" data-bento="under" aria-label="Undercover Foot">
             <div class="mc-inner">
-              <div class="mc-glow"></div>
-              <div class="mc-shine"></div>
+              <div class="mc-bg"></div>
               <img class="mc-player" src="assets/IMG_2620.png" alt="Undercover" loading="lazy" decoding="async" onerror="this.style.display='none'" />
-              <div class="mc-emblem">
-                <!-- Masque mystère (silence/bluff) -->
-                <svg viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M20 35 C20 55 35 75 50 75 C65 75 80 55 80 35 C80 30 75 26 70 26 L30 26 C25 26 20 30 20 35 Z"/>
-                  <circle cx="35" cy="42" r="3" fill="currentColor"/>
-                  <circle cx="65" cy="42" r="3" fill="currentColor"/>
-                  <path d="M40 60 Q50 65 60 60"/>
-                </svg>
-              </div>
+              <div class="mc-grad"></div>
               <div class="mc-body">
-                <div class="mc-eyebrow">Bluff</div>
+                <div class="mc-eyebrow">Bluff &amp; déduction</div>
                 <h2 class="mc-title">Undercover</h2>
+                <p class="mc-desc">Un imposteur se cache. Démasque-le avant qu'il ne te piège.</p>
               </div>
-              <p class="mc-desc">Bluff, déduction et révélations. Démasque l'imposteur.</p>
             </div>
           </button>
 
           <button class="mode-card mode-five" data-bento="five" aria-label="Mode Five">
             <div class="mc-inner">
-              <div class="mc-glow"></div>
-              <div class="mc-shine"></div>
+              <div class="mc-bg"></div>
               <img class="mc-player" src="assets/IMG_2576.webp" alt="Cherki" loading="eager" decoding="async" />
+              <div class="mc-grad"></div>
               <div class="mc-body">
                 <div class="mc-eyebrow">5 vs 5</div>
                 <h2 class="mc-title">Five</h2>
+                <p class="mc-desc">Espaces réduits, transitions et duels décisifs.</p>
               </div>
-              <p class="mc-desc">Espaces réduits, technique décisive.</p>
             </div>
           </button>
 
           <button class="mode-card mode-draft" data-bento="draft" aria-label="Mode Draft">
             <div class="mc-inner">
-              <div class="mc-glow"></div>
-              <div class="mc-shine"></div>
+              <div class="mc-bg"></div>
               <img class="mc-player" src="assets/IMG_2575.webp" alt="Mbappé" loading="eager" decoding="async" />
+              <div class="mc-grad"></div>
               <div class="mc-body">
                 <div class="mc-eyebrow">Mode phare</div>
                 <h2 class="mc-title">Draft</h2>
+                <p class="mc-desc">Snake draft, budget, tactique et simulation positionnelle.</p>
               </div>
-              <p class="mc-desc">Snake draft 2 à 4 joueurs, budget réglable, simulation positionnelle.</p>
             </div>
           </button>
 
           <button class="mode-card mode-juste" data-bento="juste" aria-label="Mode Juste Prix">
             <div class="mc-inner">
-              <div class="mc-glow"></div>
-              <div class="mc-shine"></div>
+              <div class="mc-bg"></div>
               <img class="mc-player" src="assets/IMG_2577.webp" alt="Yamal" loading="eager" decoding="async" />
+              <div class="mc-grad"></div>
               <div class="mc-body">
                 <div class="mc-eyebrow">Party game</div>
                 <h2 class="mc-title">Juste Prix</h2>
+                <p class="mc-desc">Estime la valeur d'un joueur. Plus, ou moins ?</p>
               </div>
-              <p class="mc-desc">Plus ou moins. Estimer la valeur d'un joueur.</p>
             </div>
           </button>
 
           <button class="mode-card mode-guess" data-bento="guess" aria-label="Guess The Team">
             <div class="mc-inner">
-              <div class="mc-glow"></div>
-              <div class="mc-shine"></div>
+              <div class="mc-bg"></div>
               <img class="mc-player" src="assets/IMG_2619.png" alt="Guess The Team" loading="lazy" decoding="async" onerror="this.style.display='none'" />
-              <div class="mc-emblem">
-                <!-- Cible / point d'interrogation -->
-                <svg viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                  <circle cx="50" cy="50" r="32"/>
-                  <path d="M40 40 Q40 28 50 28 Q60 28 60 38 Q60 46 50 50 L50 56"/>
-                  <circle cx="50" cy="66" r="1.8" fill="currentColor"/>
-                </svg>
-              </div>
+              <div class="mc-grad"></div>
               <div class="mc-body">
                 <div class="mc-eyebrow">Devine</div>
                 <h2 class="mc-title">Guess</h2>
+                <p class="mc-desc">Identifie le club ou la sélection à partir de sa compo.</p>
               </div>
-              <p class="mc-desc">Identifie le club ou la sélection à partir de la compo.</p>
             </div>
           </button>
         </div>

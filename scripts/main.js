@@ -202,13 +202,30 @@
     }
     applyCoverflow();
 
-    // Glow mouse-tracking sur la card centrale
+    // Parallaxe XY sur la card centrale : le joueur (.mc-inner --px/--py) se
+    // décale légèrement vs le cadre + oscillation d'orientation sur la card.
     bento.addEventListener('pointermove', (ev) => {
-      const card = ev.target.closest && ev.target.closest('.mode-card.is-center');
+      const card = bento.querySelector('.mode-card.is-center');
       if (!card) return;
       const cr = card.getBoundingClientRect();
-      card.style.setProperty('--mx-px', ((ev.clientX - cr.left) / cr.width * 100) + '%');
-      card.style.setProperty('--my-px', ((ev.clientY - cr.top) / cr.height * 100) + '%');
+      const nx = ((ev.clientX - cr.left) / cr.width) * 2 - 1;   // -1..1
+      const ny = ((ev.clientY - cr.top) / cr.height) * 2 - 1;
+      const inner = card.querySelector('.mc-inner');
+      if (inner) {
+        inner.style.setProperty('--px', nx.toFixed(3));
+        inner.style.setProperty('--py', ny.toFixed(3));
+      }
+      // léger tilt de la card centrale
+      card.style.setProperty('--tiltx', (ny * -4).toFixed(2) + 'deg');
+      card.style.setProperty('--tilty', (nx * 5).toFixed(2) + 'deg');
+    });
+    bento.addEventListener('pointerleave', () => {
+      const card = bento.querySelector('.mode-card.is-center');
+      if (!card) return;
+      const inner = card.querySelector('.mc-inner');
+      if (inner) { inner.style.setProperty('--px', 0); inner.style.setProperty('--py', 0); }
+      card.style.setProperty('--tiltx', '0deg');
+      card.style.setProperty('--tilty', '0deg');
     });
 
     // Clic : si card centrale → lance le mode ; sinon → la card vient au centre
@@ -233,68 +250,54 @@
     });
   }
 
-  // Mosaïque visionneuse 1-row : photos de JOUEURS, jamais répétées
+  // Visionneuse en ARC (réf IMG_2715) : cards fanées en demi-cercle.
+  // Images = 53 photos push user (MOSAIC_IMAGES), fallback photos joueurs.
   function buildHeroMosaic() {
-    const row = document.querySelector('.hm-row.r1');
+    const arc = document.getElementById('hmArc');
     const mosaic = document.getElementById('heroMosaic');
-    if (!row || !mosaic) return;
+    if (!arc || !mosaic) return;
 
-    // Source : photos de joueurs (Sofascore/Fotmob/TM) — pool large pour
-    // garantir l'absence de répétition. On prend les 40 stars avec photo.
-    const players = (window.PLAYERS || []).slice()
-      .filter(p => (window.photoUrl && window.photoUrl(p)))
-      .sort((a, b) => (b.value || 0) - (a.value || 0))
-      .slice(0, 40);
-
-    // Mélange déterministe puis ×2 pour la boucle continue
-    const shuffled = players.slice();
-    for (let i = shuffled.length - 1; i > 0; i--) {
+    // Source images
+    let images;
+    if (window.MOSAIC_IMAGES && window.MOSAIC_IMAGES.length) {
+      images = window.MOSAIC_IMAGES.slice();
+    } else {
+      images = (window.PLAYERS || []).slice()
+        .filter(p => window.photoUrl && window.photoUrl(p))
+        .sort((a, b) => (b.value || 0) - (a.value || 0))
+        .slice(0, 24).map(p => window.photoUrl(p));
+    }
+    // Mélange déterministe
+    for (let i = images.length - 1; i > 0; i--) {
       const j = ((i + 1) * 7919) % (i + 1);
-      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      [images[i], images[j]] = [images[j], images[i]];
     }
-    shuffled.concat(shuffled).forEach(p => {
-      const card = el('div', { class: 'hm-card' });
-      const img = new Image();
-      img.src = window.photoUrl(p);
-      img.loading = 'lazy';
-      img.decoding = 'async';
-      img.referrerPolicy = 'no-referrer';
-      img.alt = p.name;
-      card.appendChild(img);
-      row.appendChild(card);
-    });
 
-    // === Coverflow : déformation selon position au centre ===
-    const allCards = Array.from(mosaic.querySelectorAll('.hm-card'));
-    let rafToken = null;
-    function updateLensEffect() {
-      const rect = mosaic.getBoundingClientRect();
-      const centerX = rect.left + rect.width / 2;
-      const halfW = rect.width / 2;
-      for (let i = 0; i < allCards.length; i++) {
-        const card = allCards[i];
-        const r = card.getBoundingClientRect();
-        if (r.right < rect.left - 100 || r.left > rect.right + 100) continue;
-        const cardCenter = r.left + r.width / 2;
-        let pos = (cardCenter - centerX) / halfW;
-        pos = Math.max(-1.5, Math.min(1.5, pos));
-        const abs = Math.min(1.5, Math.abs(pos));
-        card.style.setProperty('--hm-pos', pos.toFixed(3));
-        card.style.setProperty('--hm-abs', abs.toFixed(3));
-      }
-      rafToken = requestAnimationFrame(updateLensEffect);
+    // 13 cards sur un arc de -78° à +78°, rayon responsive
+    const N = 13;
+    const SPREAD = 78;                       // demi-angle de l'éventail
+    const isMobile = window.innerWidth < 760;
+    const RAD = isMobile ? 230 : 360;        // rayon de l'arc en px
+    let imgIdx = 0;
+    for (let i = 0; i < N; i++) {
+      const t = N === 1 ? 0 : (i / (N - 1)) * 2 - 1;   // -1..1
+      const ang = t * SPREAD;
+      const card = el('div', { class: 'hm-card' });
+      card.style.setProperty('--ang', ang.toFixed(2) + 'deg');
+      card.style.setProperty('--rad', RAD + 'px');
+      // profondeur : cards du centre plus grandes/devant
+      const depthScale = 1 - Math.abs(t) * 0.18;
+      card.style.opacity = (1 - Math.abs(t) * 0.35).toFixed(2);
+      card.style.zIndex = String(20 - Math.round(Math.abs(t) * 10));
+      const img = new Image();
+      img.src = images[imgIdx % images.length]; imgIdx++;
+      img.loading = 'lazy'; img.decoding = 'async';
+      img.referrerPolicy = 'no-referrer';
+      card.appendChild(img);
+      // applique le depthScale par-dessus le transform d'arc via une wrapper var
+      card.style.setProperty('--depth', depthScale.toFixed(3));
+      arc.appendChild(card);
     }
-    const io = new IntersectionObserver((entries) => {
-      entries.forEach(e => {
-        if (e.isIntersecting) {
-          if (!rafToken) rafToken = requestAnimationFrame(updateLensEffect);
-        } else if (rafToken) {
-          cancelAnimationFrame(rafToken);
-          rafToken = null;
-        }
-      });
-    });
-    io.observe(mosaic);
   }
 
   function routeMode(mode) {
@@ -302,6 +305,9 @@
     // Tous les modes scrollent vers le setup, qui se reconfigure visuellement
     state.activeMode = mode;
     document.body.setAttribute('data-mode', mode);
+    // Theming couleur global persistant (boutons, accents, logo)
+    document.body.classList.remove('mode-hover-five','mode-hover-draft','mode-hover-juste','mode-hover-under','mode-hover-guess');
+    document.body.classList.add('mode-hover-' + mode);
 
     if (mode === 'draft') {
       state.fiveMode = false;
@@ -3155,12 +3161,21 @@
       pawn.num.setAttribute('x', x);   pawn.num.setAttribute('y', y + 4.5);
       pawn.nm.setAttribute('x', x);    pawn.nm.setAttribute('y', y + 26);
     }
-    // Le porteur du ballon a juste un halo qui pulse — il NE court PAS
-    // (on ne déforme plus la formation : on respecte le placement tactique)
+    // Mouvement individuel COHÉRENT : le porteur avance légèrement vers le
+    // but adverse (appel court), puis revient à sa position de formation.
+    // Pas de chaos : seul le porteur bouge, de façon mesurée et dirigée.
     function pulsePawn(pid, side) {
       const p = pawnById[pid]; if (!p) return;
       p.ring.classList.add('pawn-on-ball');
-      setTimeout(() => p.ring.classList.remove('pawn-on-ball'), 800);
+      const dir = side === 'A' ? 1 : -1;          // A attaque vers la droite
+      const baseX = p.baseX != null ? p.baseX : (p.baseX = p.x);
+      const baseY = p.baseY != null ? p.baseY : (p.baseY = p.y);
+      // appel court vers l'avant (18px) + léger réajustement latéral
+      movePawnTo(p, baseX + 18 * dir, baseY);
+      setTimeout(() => {
+        p.ring.classList.remove('pawn-on-ball');
+        movePawnTo(p, baseX, baseY);              // retour à sa zone
+      }, 760);
     }
 
     // === HEAT ZONE : illumine la zone du terrain où se passe l'action ===
@@ -4963,7 +4978,35 @@
     ['Rodri', 'Casemiro'],
     ['Rashford', 'Sancho'],
   ];
+  // Deck de questions de déduction (façon apps Undercover mobiles)
+  const UNDER_QUESTIONS = [
+    'Quel premier mot vous vient à l\'esprit en pensant à ce joueur ?',
+    'Ce joueur est-il surcoté ou sous-coté ? Pourquoi ?',
+    'Un personnage de fiction auquel il vous fait penser ?',
+    'Dans quel club le verriez-vous parfaitement ?',
+    'Une qualité, un défaut — en un mot chacun.',
+    'Plutôt Ballon d\'Or ou éternel second ?',
+    'Un animal qui lui correspond ?',
+    'Le décririez-vous comme un leader ou un suiveur ?',
+    'Une couleur qui lui va bien ?',
+    'Titulaire ou remplaçant dans votre équipe de rêve ?',
+    'Plutôt génie ou travailleur acharné ?',
+    'En une émotion, qu\'est-ce qu\'il vous inspire ?',
+  ];
+
+  const UNDER_STAGE_HTML =
+    '<div class="uc-prompt" id="underPrompt">Téléphone à <strong id="underTurn">—</strong></div>' +
+    '<button class="under-reveal-card" id="underRevealCard">' +
+      '<div class="urc-front"><div class="urc-eyebrow">Touche pour révéler</div><div class="urc-icon">🔒</div></div>' +
+      '<div class="urc-back"><div class="urc-eyebrow" id="underRoleLabel">CIVIL</div><div class="urc-mot" id="underMot">—</div>' +
+      '<div class="urc-hint">Garde-le secret. Repasse l\'appareil quand tu as compris.</div></div>' +
+    '</button>' +
+    '<button class="btn btn-ghost" id="underNextTurn">Joueur suivant →</button>';
+
   function startUnderRound() {
+    // Restaure le stage (la discussion l'a peut-être remplacé)
+    const stage = $('.under-card-stage');
+    if (stage) stage.innerHTML = UNDER_STAGE_HTML;
     const pair = UNDER_WORDS[Math.floor(Math.random() * UNDER_WORDS.length)];
     const civilWord = pair[0];
     const impostorWord = pair[1];
@@ -4975,32 +5018,61 @@
       p.revealed = false;
       p.alive = true;
     });
-    underState.round = { civilWord, impostorWord, turnIdx: 0 };
+    // 3 questions aléatoires distinctes pour la discussion
+    const qs = UNDER_QUESTIONS.slice().sort(() => Math.random() - 0.5).slice(0, 3);
+    underState.players = playersShuffled;
+    underState.round = { civilWord, impostorWord, turnIdx: 0, questions: qs, phase: 'handoff' };
     $('#underSetup').style.display = 'none';
     $('#underGame').style.display = '';
     $('#underVotePhase').style.display = 'none';
-    showUnderTurn();
+    showUnderHandoff();
   }
-  function showUnderTurn() {
+
+  // Interstitiel "passe l'appareil à X" — on sait clairement à qui donner
+  function showUnderHandoff() {
     const round = underState.round;
     const p = underState.players[round.turnIdx];
     if (!p) return;
-    $('#underTurn').textContent = p.name;
-    $('#underPrompt').firstChild && ($('#underPrompt').firstChild.textContent = 'Téléphone à ');
     const card = $('#underRevealCard');
     card.classList.remove('revealed');
+    const prompt = $('#underPrompt');
+    prompt.innerHTML = '📱 Passe l\'appareil à <strong>' + p.name + '</strong>';
     $('#underRoleLabel').textContent = p.role === 'impostor' ? 'IMPOSTEUR' : 'CIVIL';
     $('#underMot').textContent = p.word;
+    // Le front de la carte montre "Je suis X — toucher pour mon mot"
+    const front = card.querySelector('.urc-front .urc-eyebrow');
+    if (front) front.textContent = 'Je suis ' + p.name + ' — toucher';
+    const nextBtn = $('#underNextTurn');
+    nextBtn.textContent = (round.turnIdx >= underState.players.length - 1) ? 'Lancer la discussion →' : 'Joueur suivant →';
     card.onclick = () => card.classList.add('revealed');
-    $('#underNextTurn').onclick = () => {
+    nextBtn.onclick = () => {
       round.turnIdx++;
       if (round.turnIdx >= underState.players.length) {
-        // Phase indices terminée → vote
-        startUnderVotePhase();
+        showUnderDiscussion();
       } else {
-        showUnderTurn();
+        showUnderHandoff();
       }
     };
+  }
+
+  // Phase discussion : questions aléatoires affichées pour guider la déduction
+  function showUnderDiscussion() {
+    const round = underState.round;
+    const stage = $('.under-card-stage');
+    if (stage) {
+      stage.innerHTML =
+        '<div class="uc-prompt">Phase de discussion</div>' +
+        '<div class="under-questions">' +
+          round.questions.map((q, i) =>
+            '<div class="under-q"><span class="uq-num">' + (i+1) + '</span><span>' + q + '</span></div>'
+          ).join('') +
+        '</div>' +
+        '<p class="under-q-hint">Chacun répond à voix haute, à tour de rôle. Repérez l\'intrus.</p>' +
+        '<button class="btn btn-primary" id="underToVote">Passer au vote →</button>';
+      $('#underToVote').onclick = () => startUnderVotePhase();
+    } else {
+      startUnderVotePhase();
+    }
   }
   function startUnderVotePhase() {
     $('#underVotePhase').style.display = '';

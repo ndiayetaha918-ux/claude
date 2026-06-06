@@ -186,25 +186,59 @@ body {
   transition: background-color 0.7s ease, background-image 0.7s ease;
 }
 
-/* === Ambiance globale qui change selon le mode survolé === */
+/* === Ambiance + ACCENT couleur qui changent selon le mode actif ===
+   On retheme --neon / --gold globalement → boutons, eyebrows, accents,
+   logo, anneaux… tout module avec le mode. Transition douce. */
+body { transition: background-image 0.7s ease; }
+.btn-primary, .hero-eyebrow, .logo-glyph, .hero-title-v3 .accent,
+.mc-eyebrow, .section-title .num { transition: all 0.6s ease; }
+
 body.mode-hover-five {
+  --neon: #2aa8e0; --neon-d: #1c6fa0; --gold: #6fc8ec;
+  --grad-ink: linear-gradient(125deg, #eaf6ff 0%, #b6dcef 30%, #4aa6dd 60%, #1c6fa0 100%);
+  --grad-cta: linear-gradient(135deg, #d8f1ff 0%, #7fc4e8 35%, #2aa8e0 65%, #15577f 100%);
   background-image:
-    radial-gradient(80% 60% at 50% 100%, rgba(58, 127, 181, 0.20), transparent 65%),
-    radial-gradient(1400px 700px at 85% -300px, rgba(58, 127, 181, 0.06), transparent 70%),
-    radial-gradient(1000px 600px at -100px 50%, rgba(110, 178, 212, 0.04), transparent 70%);
+    radial-gradient(80% 60% at 50% 100%, rgba(42,168,224,0.22), transparent 65%),
+    radial-gradient(1400px 700px at 85% -300px, rgba(42,168,224,0.07), transparent 70%);
 }
 body.mode-hover-draft {
+  --neon: #e05a2f; --neon-d: #a63c1e; --gold: #f0a050;
+  --grad-ink: linear-gradient(125deg, #ffe8d8 0%, #f0b070 30%, #e05a2f 60%, #8a2126 100%);
+  --grad-cta: linear-gradient(135deg, #ffe0c8 0%, #f09a52 35%, #e05a2f 65%, #8a2126 100%);
   background-image:
-    radial-gradient(80% 60% at 50% 100%, rgba(200, 84, 47, 0.22), transparent 65%),
-    radial-gradient(1400px 700px at 85% -300px, rgba(200, 84, 47, 0.07), transparent 70%),
-    radial-gradient(1000px 600px at -100px 50%, rgba(138, 33, 38, 0.05), transparent 70%);
+    radial-gradient(80% 60% at 50% 100%, rgba(224,90,47,0.24), transparent 65%),
+    radial-gradient(1400px 700px at 85% -300px, rgba(224,90,47,0.08), transparent 70%);
 }
 body.mode-hover-juste {
+  --neon: #d6a93c; --neon-d: #a67e20; --gold: #f0d27a;
+  --grad-ink: linear-gradient(125deg, #fff8e8 0%, #f0d6a0 30%, #d6a93c 60%, #8a5c2a 100%);
+  --grad-cta: linear-gradient(135deg, #fff4d8 0%, #f0d27a 35%, #d6a93c 65%, #8a5c2a 100%);
   background-image:
-    radial-gradient(80% 60% at 50% 100%, rgba(224, 193, 119, 0.22), transparent 65%),
-    radial-gradient(1400px 700px at 85% -300px, rgba(224, 193, 119, 0.07), transparent 70%),
-    radial-gradient(1000px 600px at -100px 50%, rgba(184, 140, 74, 0.05), transparent 70%);
+    radial-gradient(80% 60% at 50% 100%, rgba(224,193,119,0.22), transparent 65%),
+    radial-gradient(1400px 700px at 85% -300px, rgba(224,193,119,0.07), transparent 70%);
 }
+body.mode-hover-under {
+  --neon: #6a78ff; --neon-d: #3a48c0; --gold: #9aa8ff;
+  --grad-ink: linear-gradient(125deg, #eaeeff 0%, #b6c0ff 30%, #6a78ff 60%, #2a3280 100%);
+  --grad-cta: linear-gradient(135deg, #e0e6ff 0%, #8f9cff 35%, #6a78ff 65%, #2a3280 100%);
+  background-image:
+    radial-gradient(80% 60% at 50% 100%, rgba(106,120,255,0.22), transparent 65%),
+    radial-gradient(1400px 700px at 85% -300px, rgba(106,120,255,0.07), transparent 70%);
+}
+body.mode-hover-guess {
+  --neon: #ff5aa0; --neon-d: #c03070; --gold: #ff9ab8;
+  --grad-ink: linear-gradient(125deg, #ffe8f0 0%, #ffb6cf 30%, #ff5aa0 60%, #a01e5a 100%);
+  --grad-cta: linear-gradient(135deg, #ffe0ec 0%, #ff8fb8 35%, #ff5aa0 65%, #a01e5a 100%);
+  background-image:
+    radial-gradient(80% 60% at 50% 100%, rgba(255,90,160,0.22), transparent 65%),
+    radial-gradient(1400px 700px at 85% -300px, rgba(255,90,160,0.07), transparent 70%);
+}
+/* Logo orbe : tinté selon le mode via hue-rotate (l'orbe SVG est cuivre par défaut) */
+body.mode-hover-five  .logo-glyph { filter: hue-rotate(170deg) saturate(1.2) drop-shadow(0 4px 10px rgba(42,168,224,0.5)); }
+body.mode-hover-draft .logo-glyph { filter: hue-rotate(-12deg) saturate(1.2) drop-shadow(0 4px 10px rgba(224,90,47,0.5)); }
+body.mode-hover-juste .logo-glyph { filter: hue-rotate(8deg) saturate(1.1) drop-shadow(0 4px 10px rgba(214,169,60,0.5)); }
+body.mode-hover-under .logo-glyph { filter: hue-rotate(210deg) saturate(1.3) drop-shadow(0 4px 10px rgba(106,120,255,0.5)); }
+body.mode-hover-guess .logo-glyph { filter: hue-rotate(290deg) saturate(1.3) drop-shadow(0 4px 10px rgba(255,90,160,0.5)); }
 
 /* Background uni — pas de rayures */
 body::before {
@@ -229,91 +263,74 @@ h1, h2, h3, h4 { margin: 0; font-weight: 800; letter-spacing: -0.02em; color: va
 
 /* === Mosaïque qui défile (style visionneuse / grand angle) === */
 /* ============================================================
-   MOSAÏQUE — Visionneuse 1-row coverflow (photos joueurs en face)
-   1 rangée qui défile, cards déformées en 3D selon position au
-   centre (JS-driven), fade flou doux aux bords.
+   VISIONNEUSE EN ARC (réf IMG_2715) — cards fanées en demi-cercle
+   13 cards positionnées sur un arc, tangentes, déformées par
+   leur angle. Léger balancement continu (vie). Images = 53 push user.
    ============================================================ */
 .hero-mosaic {
   position: relative;
   width: 100%;
-  height: clamp(260px, 28vw, 340px);
+  height: clamp(300px, 34vw, 440px);
   overflow: hidden;
-  margin-bottom: 0;            /* le texte hero remonte par-dessus */
-  perspective: 1300px;
-  perspective-origin: 50% 50%;
-  /* Fade flou doux aux bords (mask gradient horizontal large) */
-  -webkit-mask-image: linear-gradient(90deg,
-                       transparent 0%, black 14%, black 86%, transparent 100%);
-          mask-image: linear-gradient(90deg,
-                       transparent 0%, black 14%, black 86%, transparent 100%);
+  margin-bottom: 0;
+  perspective: 1400px;
+  perspective-origin: 50% 60%;
 }
-.hm-bg-gradient { display: none; }
-.hm-stage {
-  position: absolute; inset: 0;
-  transform-style: preserve-3d;
-  z-index: 1;
-}
-/* 1 row centrée verticalement */
-.hm-row {
+/* Conteneur de l'arc : pivot bas-centre, balancement doux */
+.hm-arc {
   position: absolute;
-  top: 50%; left: 0;
-  transform: translateY(-50%);
-  display: flex;
-  gap: 16px;
-  width: max-content;
-  will-change: transform;
-  animation: hmScroll 90s linear infinite;
+  left: 50%; bottom: -8%;
+  width: 1px; height: 1px;
   transform-style: preserve-3d;
-  padding: 0 50vw;
+  transform: translateX(-50%);
+  animation: hmSway 14s ease-in-out infinite;
 }
-.hm-row.r2, .hm-row.r3 { display: none; }   /* on n'utilise qu'une rangée */
-.hero-mosaic:hover .hm-row { animation-play-state: paused; }
-@keyframes hmScroll {
-  from { transform: translateY(-50%) translate3d(0, 0, 0); }
-  to   { transform: translateY(-50%) translate3d(-50%, 0, 0); }
+@keyframes hmSway {
+  0%, 100% { transform: translateX(-50%) rotate(-2.2deg); }
+  50%      { transform: translateX(-50%) rotate(2.2deg); }
 }
-
-/* Card visionneuse : portrait, déformée selon --hm-pos / --hm-abs (JS) */
+/* Card de l'arc : position calculée par JS via --ang (deg) + --rad (px) */
 .hm-card {
-  flex: 0 0 auto;
-  width: clamp(140px, 15vw, 200px);
-  aspect-ratio: 4/5;
-  border-radius: 20px;
-  position: relative;
+  position: absolute;
+  left: 0; top: 0;
+  width: clamp(96px, 10vw, 138px);
+  aspect-ratio: 3/4;
+  border-radius: 16px;
   overflow: hidden;
   background: linear-gradient(180deg, rgba(30,32,42,0.85) 0%, rgba(16,18,26,0.95) 100%);
   border: 1px solid rgba(255,255,255,0.10);
   box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.12),
-    0 14px 32px rgba(0,0,0,0.55);
-  transform-style: preserve-3d;
-  will-change: transform;
-  --hm-pos: 0; --hm-abs: 0;
-  /* Coverflow : les cards aux bords tournent vers le centre et reculent */
+    inset 0 1px 0 rgba(255,255,255,0.14),
+    0 12px 28px rgba(0,0,0,0.5);
+  transform-origin: 50% 50%;
+  --depth: 1;
+  /* centre la card sur le pivot, puis place sur l'arc (rayon --rad, angle --ang) */
   transform:
-    translateZ(calc(var(--hm-abs) * -90px))
-    rotateY(calc(var(--hm-pos) * -38deg))
-    scale(calc(1 - var(--hm-abs) * 0.12));
-  transition: transform 0.16s linear;
+    translate(-50%, -50%)
+    rotate(var(--ang))
+    translateY(calc(var(--rad) * -1))
+    rotate(calc(var(--ang) * -0.45))     /* redresse partiellement → effet éventail */
+    scale(var(--depth));
+  will-change: transform;
 }
 .hm-card img {
   position: absolute; inset: 0;
   width: 100%; height: 100%;
   object-fit: cover;
-  object-position: center 14%;
+  object-position: center 30%;
 }
 .hm-card::after {
   content: "";
   position: absolute; inset: 0;
-  background: linear-gradient(180deg, transparent 58%, rgba(0,0,0,0.6) 100%);
+  background: linear-gradient(180deg, transparent 55%, rgba(0,0,0,0.5) 100%);
   pointer-events: none;
 }
 .hm-card::before {
   content: "";
   position: absolute; inset: 0; z-index: 1;
   pointer-events: none;
-  background: linear-gradient(160deg, rgba(255,255,255,0.14) 0%, transparent 35%);
   border-radius: inherit;
+  background: linear-gradient(160deg, rgba(255,255,255,0.16) 0%, transparent 35%);
 }
 
 /* ===== Hero shell ===== */
@@ -330,11 +347,10 @@ h1, h2, h3, h4 { margin: 0; font-weight: 800; letter-spacing: -0.02em; color: va
   margin-bottom: 52px;
   position: relative;
   z-index: 3;
-  /* Remonte par-dessus le bas de la mosaïque + halo derrière le texte pour contraste */
-  margin-top: -70px;
-  padding-top: 30px;
-  background: radial-gradient(ellipse 80% 120% at 50% 60%,
-              var(--bg) 35%, rgba(10,12,16,0.6) 60%, transparent 85%);
+  margin-top: -24px;
+  padding-top: 24px;
+  background: radial-gradient(ellipse 80% 120% at 50% 50%,
+              var(--bg) 40%, rgba(10,12,16,0.55) 65%, transparent 90%);
 }
 .hero-eyebrow {
   display: inline-flex; align-items: center; gap: 8px;
@@ -400,19 +416,16 @@ h1, h2, h3, h4 { margin: 0; font-weight: 800; letter-spacing: -0.02em; color: va
   width: clamp(280px, 32vw, 380px);
   aspect-ratio: 5 / 7;
   border-radius: 24px;
-  border: 1px solid rgba(255,255,255,0.08);
-  overflow: hidden;
+  border: none;
+  overflow: visible;          /* la tête du joueur déborde du cadre */
   cursor: pointer;
   padding: 0;
-  background: var(--surface);
+  background: transparent;
   transform-style: preserve-3d;
   transition: transform 0.55s cubic-bezier(0.22, 1, 0.36, 1),
               opacity 0.4s ease;
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.08),
-    0 22px 44px rgba(0,0,0,0.55);
+  box-shadow: none;
   isolation: isolate;
-  contain: layout style paint;
 }
 
 /* Variables par card : position dans l'arc (coverflow --slot ci-dessous) */
@@ -428,10 +441,20 @@ h1, h2, h3, h4 { margin: 0; font-weight: 800; letter-spacing: -0.02em; color: va
     translate(-50%, -50%)
     translateX(calc(var(--slot) * 78%))
     translateZ(calc(var(--abs) * -150px))
-    rotateY(calc(var(--slot) * -34deg))
+    rotateY(calc(var(--slot) * -34deg + var(--tilty, 0deg)))
+    rotateX(var(--tiltx, 0deg))
     scale(calc(1 - var(--abs) * 0.05));
   opacity: calc(1 - var(--abs) * 0.26);
   z-index: calc(10 - var(--abs));
+  --tiltx: 0deg; --tilty: 0deg;
+}
+/* Oscillation idle douce de la card centrale (profondeur vivante) */
+.mode-card.is-center .mc-inner {
+  animation: mcFloat 6s ease-in-out infinite;
+}
+@keyframes mcFloat {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50%      { transform: translateY(-6px) rotate(0.4deg); }
 }
 
 /* === Ombre colorée sous la carte centrale (subtile, pas gaming) === */
@@ -473,107 +496,99 @@ h1, h2, h3, h4 { margin: 0; font-weight: 800; letter-spacing: -0.02em; color: va
 }
 .mode-card:hover .mc-player { transform: scale(1.04); }
 
-.mc-bg { display: none; }   /* plus de background image */
-.mc-glow {                    /* glow mouse-tracking encore subtil */
-  position: absolute; inset: 0;
-  pointer-events: none; z-index: 2;
-  background: radial-gradient(circle at var(--mx-px, 50%) var(--my-px, 35%),
-              rgba(255,255,255,0.10), transparent 55%);
-  opacity: 0;
-  transition: opacity 0.35s ease;
-}
-.mode-card:hover .mc-glow { opacity: 1; }
-
 /* ============================================================
-   AURORA style Noah / réf prem_uiux (layer blur uniforme massif)
-   Une seule forme courbée colorée + blanc dense au sommet,
-   floutée à 50px+ sur fond NOIR profond.
-   Construction : ellipse positionnée bas, gradient vertical
-   transparent → couleur → blanc, blur uniforme.
+   CARDS MODE — structure en couches avec head-overflow + glass
+   .mc-inner (overflow visible — la tête dépasse)
+     .mc-bg     : surface sombre clippée arrondie (z0)
+     .mc-player : photo, déborde en haut (head out), parallaxe (z1)
+     .mc-grad   : gradient FORT varié + layer-blur sous le gradient (z2)
+     .mc-body   : textes en bas, typo contrastée (z3)
    ============================================================ */
 .mc-inner {
-  background: #1a1d24;
+  position: relative;
+  width: 100%; height: 100%;
+  overflow: visible;           /* la tête du joueur dépasse */
+  --px: 0; --py: 0;            /* parallaxe posée par JS */
 }
-/* GRADIENT FORT en bas — assumé, dense, occupe ~58% de la card.
-   La couleur monte de saturée (bas) à transparente (milieu). Le texte
-   se pose PAR-DESSUS ce gradient, en bas. */
-.mc-inner::after {
-  content: "";
+/* Surface sombre arrondie (le "verre" de la card) */
+.mc-bg {
+  position: absolute; inset: 0; z-index: 0;
+  border-radius: inherit;
+  background:
+    linear-gradient(180deg, rgba(26,29,38,0.92) 0%, rgba(12,14,20,0.96) 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.14),
+    inset 0 0 0 1px rgba(255,255,255,0.06);
+  overflow: hidden;
+}
+/* Photo joueur : déborde en haut, légèrement décalée du cadre (parallaxe) */
+.mc-player {
   position: absolute;
-  left: 0; right: 0;
-  bottom: 0;
-  height: 60%; z-index: 2;
+  left: 50%; bottom: 0;
+  width: 102%; height: 118%;        /* plus haute que la card → tête dépasse */
+  object-fit: cover;
+  object-position: center 8%;
+  z-index: 1;
+  transform: translate(calc(-50% + var(--px) * 14px), calc(var(--py) * -10px));
+  transition: transform 0.25s cubic-bezier(0.16,1,0.3,1);
+  -webkit-user-drag: none; user-select: none;
+  /* clip seulement les côtés/bas à la card, le haut dépasse librement */
+  -webkit-mask-image: linear-gradient(180deg, black 0%, black 100%);
+}
+/* GRADIENT FORT varié (radial + conic blobs) + LAYER-BLUR du même bas
+   → frost le bas du joueur derrière une couleur saturée (réf glassmorphism) */
+.mc-grad {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 56%; z-index: 2;
   pointer-events: none;
+  border-radius: 0 0 inherit inherit;
   background: var(--mc-aurora);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  /* fondu du blur vers le haut pour qu'il n'ait pas de bord net */
+  -webkit-mask-image: linear-gradient(180deg, transparent 0%, black 28%, black 100%);
+          mask-image: linear-gradient(180deg, transparent 0%, black 28%, black 100%);
 }
-/* Léger voile haut pour fondre la photo */
-.mc-inner::before {
-  content: "";
-  position: absolute;
-  inset: 0; z-index: 1;
-  pointer-events: none;
-  background: linear-gradient(180deg, rgba(10,12,16,0.30) 0%, transparent 30%);
-}
-/* Le .mc-veil n'est plus nécessaire avec le noir profond — le texte est lisible */
-.mc-inner > .mc-veil { display: none; }
 
-/* Auroras VRAIES (réf prem_uiux) : forme courbée DENSE + blanc dense au sommet
-   3 radial-gradients superposés :
-   1) Blanc dense en bas centré (la "crête" de la vague blanche)
-   2) Couleur secondaire chaude/intense
-   3) Couleur dominante saturée (le plus large)
-   → l'opacity reste à 1, la saturation porte le rendu */
-
-/* FIVE : bleu City (cyan + bleu profond + blanc dense) */
+/* === Gradients VARIÉS et FORTS par mode (radial + conic, pas linéaire) === */
+/* FIVE : bleu City — blobs cyan + bleu profond + halo blanc, motif conique */
 .mode-five .mc-inner {
   --mc-aurora:
-    radial-gradient(ellipse 100% 30% at 50% 100%, rgba(255,255,255,1) 0%, rgba(255,255,255,0) 60%),
-    radial-gradient(ellipse 80% 60% at 40% 105%, rgba(0,200,255,0.95) 0%, transparent 60%),
-    radial-gradient(ellipse 110% 75% at 60% 115%, rgba(24,100,173,0.95) 0%, transparent 65%);
+    radial-gradient(60% 70% at 30% 100%, rgba(0,210,255,0.95) 0%, transparent 60%),
+    radial-gradient(55% 80% at 75% 95%, rgba(255,255,255,0.85) 0%, transparent 55%),
+    conic-gradient(from 200deg at 50% 120%, rgba(24,90,180,0.9), rgba(0,160,230,0.85), rgba(40,120,200,0.9));
 }
-/* DRAFT : orange chaud (rouge + or + blanc dense) */
+/* DRAFT : feu — rouge + or + blanc, blobs décalés */
 .mode-draft .mc-inner {
   --mc-aurora:
-    radial-gradient(ellipse 100% 30% at 50% 100%, rgba(255,255,255,1) 0%, rgba(255,255,255,0) 60%),
-    radial-gradient(ellipse 80% 60% at 40% 105%, rgba(255,200,80,0.95) 0%, transparent 60%),
-    radial-gradient(ellipse 110% 75% at 60% 115%, rgba(255,80,40,0.95) 0%, transparent 65%);
+    radial-gradient(55% 70% at 28% 100%, rgba(255,90,40,0.95) 0%, transparent 58%),
+    radial-gradient(50% 80% at 72% 92%, rgba(255,255,255,0.85) 0%, transparent 52%),
+    conic-gradient(from 210deg at 50% 120%, rgba(190,40,30,0.92), rgba(255,160,60,0.9), rgba(230,70,40,0.92));
 }
-/* JUSTE PRIX : or champagne (or pur + cuivre + blanc dense) */
+/* JUSTE PRIX : or champagne — or + cuivre + nacré */
 .mode-juste .mc-inner {
   --mc-aurora:
-    radial-gradient(ellipse 100% 30% at 50% 100%, rgba(255,255,255,1) 0%, rgba(255,255,255,0) 60%),
-    radial-gradient(ellipse 80% 60% at 40% 105%, rgba(255,217,107,0.95) 0%, transparent 60%),
-    radial-gradient(ellipse 110% 75% at 60% 115%, rgba(180,120,30,0.95) 0%, transparent 65%);
+    radial-gradient(55% 70% at 32% 100%, rgba(255,210,90,0.95) 0%, transparent 58%),
+    radial-gradient(50% 80% at 72% 92%, rgba(255,250,235,0.9) 0%, transparent 55%),
+    conic-gradient(from 205deg at 50% 120%, rgba(150,100,30,0.92), rgba(240,200,110,0.9), rgba(200,150,50,0.92));
 }
-/* UNDERCOVER : navy + violet électrique + blanc nacré (mystère, bluff) */
+/* UNDERCOVER : navy + violet électrique + blanc nacré */
 .mode-under .mc-inner {
   --mc-aurora:
-    radial-gradient(ellipse 100% 30% at 50% 100%, rgba(225,232,255,1) 0%, rgba(225,232,255,0) 60%),
-    radial-gradient(ellipse 80% 60% at 40% 105%, rgba(80,140,255,0.95) 0%, transparent 60%),
-    radial-gradient(ellipse 110% 75% at 60% 115%, rgba(26,42,110,0.95) 0%, transparent 65%);
+    radial-gradient(58% 72% at 30% 100%, rgba(90,120,255,0.95) 0%, transparent 60%),
+    radial-gradient(52% 80% at 74% 92%, rgba(225,230,255,0.85) 0%, transparent 55%),
+    conic-gradient(from 210deg at 50% 120%, rgba(30,40,110,0.92), rgba(110,90,230,0.88), rgba(50,70,180,0.92));
 }
-/* GUESS : rose vif + saumon + blanc (chaleureux, fun) */
+/* GUESS : rose vif + saumon + blanc */
 .mode-guess .mc-inner {
   --mc-aurora:
-    radial-gradient(ellipse 100% 30% at 50% 100%, rgba(255,255,255,1) 0%, rgba(255,255,255,0) 60%),
-    radial-gradient(ellipse 80% 60% at 40% 105%, rgba(255,180,170,0.95) 0%, transparent 60%),
-    radial-gradient(ellipse 110% 75% at 60% 115%, rgba(255,90,160,0.95) 0%, transparent 65%);
+    radial-gradient(58% 72% at 30% 100%, rgba(255,90,160,0.95) 0%, transparent 60%),
+    radial-gradient(52% 80% at 74% 92%, rgba(255,235,235,0.9) 0%, transparent 55%),
+    conic-gradient(from 210deg at 50% 120%, rgba(220,60,120,0.92), rgba(255,170,160,0.9), rgba(240,90,140,0.92));
 }
 
-/* (Reflet glassy déplacé dans la classe .mc-shine pour éviter conflit ::before) */
-.mc-shine {
-  position: absolute; inset: 0; z-index: 3;
-  pointer-events: none;
-  border-radius: inherit;
-  background: linear-gradient(115deg, transparent 30%, rgba(255,255,255,0.14) 50%, transparent 70%);
-  background-size: 250% 100%;
-  background-position: -50% 0%;
-  transition: background-position 0.9s ease;
-  opacity: 0.6;
-}
-.mode-card:hover .mc-shine { background-position: 150% 0%; opacity: 1; }
-
-/* Bord ciselé translucide qui simule le verre des références */
+/* Bord ciselé translucide (verre des références) */
 .mode-card::before {
   content: "";
   position: absolute; inset: 0; z-index: 4;
@@ -581,68 +596,64 @@ h1, h2, h3, h4 { margin: 0; font-weight: 800; letter-spacing: -0.02em; color: va
   pointer-events: none;
   box-shadow:
     inset 0 0 0 1px rgba(255,255,255,0.16),
-    inset 0 1px 0 rgba(255,255,255,0.32),
+    inset 0 1px 0 rgba(255,255,255,0.30),
     inset 0 -1px 0 rgba(0,0,0,0.4);
 }
 
-/* Texte du mode EN BAS, par-dessus le gradient fort */
+/* === Textes EN BAS, typographies CONTRASTÉES & COMPLÉMENTAIRES ===
+   eyebrow = mono technique fin · titre = display gras serré · desc = sans light */
 .mc-body {
   position: absolute;
-  left: 0; right: 0; bottom: 64px;
+  left: 22px; right: 22px; bottom: 22px;
   z-index: 5;
-  display: flex; flex-direction: column;
-  align-items: center;
-  text-align: center;
-  padding: 0 24px;
+  text-align: left;
   color: #fff;
   pointer-events: none;
 }
 .mc-eyebrow {
-  font-family: var(--mono); font-size: 10px;
+  font-family: var(--mono); font-size: 9.5px; font-weight: 600;
   letter-spacing: 0.30em;
-  color: rgba(255,255,255,0.88);
+  color: rgba(255,255,255,0.85);
   text-transform: uppercase;
-  margin-bottom: 6px;
-  text-shadow: 0 2px 8px rgba(0,0,0,0.5);
+  margin-bottom: 4px;
+  text-shadow: 0 1px 6px rgba(0,0,0,0.6);
 }
-.mc-eyebrow svg { display: none; }
 .mc-title {
   font-family: var(--display);
-  font-size: clamp(38px, 4.4vw, 54px);
-  line-height: 0.95;
-  margin: 0;
-  letter-spacing: -0.045em;
+  font-size: clamp(34px, 4.2vw, 50px);
+  line-height: 0.92;
+  margin: 0 0 8px;
+  letter-spacing: -0.05em;
   color: #fff;
-  font-weight: 700;
-  text-shadow:
-    0 3px 16px rgba(0,0,0,0.6),
-    0 1px 0 rgba(0,0,0,0.4);
+  font-weight: 800;
+  text-shadow: 0 3px 18px rgba(0,0,0,0.55), 0 1px 0 rgba(0,0,0,0.4);
 }
 .mc-desc {
-  position: absolute;
-  left: 22px; right: 22px; bottom: 22px;
   font-family: var(--font);
-  font-size: 12px; line-height: 1.45;
+  font-size: 12.5px; line-height: 1.45;
   margin: 0;
-  font-weight: 500;
-  color: rgba(255,255,255,0.92);
-  text-align: center;
-  z-index: 5;
+  font-weight: 400;
+  color: rgba(255,255,255,0.88);
   letter-spacing: -0.005em;
-  text-shadow: 0 1px 6px rgba(0,0,0,0.7);
+  max-width: 92%;
+  text-shadow: 0 1px 6px rgba(0,0,0,0.65);
 }
 
 /* Box-shadow forte + texte/gradient pleins uniquement sur la card centrale */
-.mode-card.is-center {
+/* Ombre portée sur la surface (la card est transparente) */
+.mc-bg { box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.14),
+    inset 0 0 0 1px rgba(255,255,255,0.06),
+    0 22px 44px rgba(0,0,0,0.5); }
+.mode-card.is-center .mc-bg {
   box-shadow:
-    0 1px 0 rgba(255,255,255,0.22) inset,
-    0 60px 120px rgba(0,0,0,0.75),
-    0 24px 50px rgba(0,0,0,0.55);
-  cursor: pointer;
+    inset 0 1px 0 rgba(255,255,255,0.22),
+    inset 0 0 0 1px rgba(255,255,255,0.08),
+    0 60px 120px rgba(0,0,0,0.72),
+    0 24px 50px rgba(0,0,0,0.5);
 }
-.mode-card:not(.is-center) { cursor: pointer; }
 .mode-card:not(.is-center) .mc-body,
-.mode-card:not(.is-center) .mc-desc { opacity: 0.6; }
+.mode-card:not(.is-center) .mc-desc { opacity: 0.62; }
 
 /* Mobile : coverflow resserré (la centrale grande, les voisines en aperçu) */
 @media (max-width: 760px) {
@@ -4956,3 +4967,22 @@ body[data-mode="under"] .mode-cloud {
 .sr-rp-note.good  { background: rgba(214,139,60,0.15); color: var(--gold); }
 .sr-rp-note.mid   { background: rgba(255,255,255,0.04); color: rgba(255,255,255,0.7); }
 .sr-rp-note.bad   { background: rgba(240,138,138,0.15); color: #f08a8a; }
+
+/* === Undercover : phase discussion (questions de déduction) === */
+.under-questions { display: flex; flex-direction: column; gap: 10px; margin: 18px 0; }
+.under-q {
+  display: flex; align-items: flex-start; gap: 12px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px; padding: 14px 16px;
+  font-size: 14px; line-height: 1.4; color: #fff; text-align: left;
+}
+.uq-num {
+  flex-shrink: 0; width: 24px; height: 24px; border-radius: 50%;
+  background: var(--neon); color: #1a0e00;
+  display: grid; place-items: center;
+  font-family: var(--display); font-weight: 800; font-size: 13px;
+}
+.under-q-hint { font-size: 12px; color: rgba(255,255,255,0.55); margin: 0 0 16px; text-align: center; }
+#underToVote { display: block; margin: 0 auto; }
+.under-reveal-card.revealed .urc-front .urc-icon { content: '🔓'; }
