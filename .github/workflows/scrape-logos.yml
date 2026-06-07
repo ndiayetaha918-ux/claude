@@ -3,6 +3,14 @@ name: Sync club logos
 # Télécharge les écussons de clubs depuis Wikipedia dans assets/logos/
 # et régénère scripts/club-logos.js. Manuel (workflow_dispatch).
 on:
+  # Auto : se relance quand le scraper ou ce workflow changent.
+  # (un push fait par le GITHUB_TOKEN ne re-déclenche pas → pas de boucle)
+  push:
+    branches:
+      - claude/drafter-football-app-ZhrSH
+    paths:
+      - tools/scrape-logos.js
+      - .github/workflows/scrape-logos.yml
   workflow_dispatch:
     inputs:
       force:
