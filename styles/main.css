@@ -487,36 +487,46 @@ h1, h2, h3, h4 { margin: 0; font-weight: 800; letter-spacing: -0.02em; color: va
   --px: 0; --py: 0;
   pointer-events: auto;         /* capte le clic (la card parente est none) */
 }
-/* Surface LIQUID GLASS refracted (stripes verticales) */
+/* Surface LIQUID GLASS iOS 26 : très translucide, blur + saturation forts,
+   fines nervures de réfraction, le fond coloré transparaît à travers. */
 .mc-bg {
   position: absolute; inset: 0; z-index: 0;
   border-radius: inherit;
   background:
-    /* stripes verticales fines (verre nervuré / refracted) */
+    /* nervures verticales fines (réfraction du verre) */
     repeating-linear-gradient(90deg,
-      rgba(255,255,255,0.05) 0px,
-      rgba(255,255,255,0.05) 1px,
-      transparent 1px, transparent 9px),
-    linear-gradient(180deg, rgba(34,38,50,0.5) 0%, rgba(14,16,24,0.7) 100%);
-  -webkit-backdrop-filter: blur(10px) saturate(1.3);
-  backdrop-filter: blur(10px) saturate(1.3);
+      rgba(255,255,255,0.045) 0px,
+      rgba(255,255,255,0.045) 1px,
+      transparent 1px, transparent 11px),
+    /* base claire en haut → s'assombrit en bas pour la lisibilité du texte */
+    linear-gradient(180deg,
+      rgba(255,255,255,0.13) 0%,
+      rgba(255,255,255,0.02) 38%,
+      rgba(12,14,22,0.55) 100%);
+  -webkit-backdrop-filter: blur(18px) saturate(1.8) brightness(1.05);
+  backdrop-filter: blur(18px) saturate(1.8) brightness(1.05);
   box-shadow:
-    inset 0 1.5px 0 rgba(255,255,255,0.24),
-    inset 0 0 0 1px rgba(255,255,255,0.10),
-    inset 0 -40px 60px rgba(0,0,0,0.2);
+    inset 0 1.5px 0 rgba(255,255,255,0.30),
+    inset 0 0 0 1px rgba(255,255,255,0.08),
+    inset 0 -40px 60px rgba(0,0,0,0.18);
   overflow: hidden;
 }
-/* Reflet diagonal liquide + halo qui REBONDIT sur les bords (haut+côtés) */
+/* Reflet diagonal GLOSSY (specular liquide) + halo qui rebondit sur les bords */
 .mc-bg::before {
   content: ""; position: absolute; inset: 0;
   background:
-    linear-gradient(135deg, rgba(255,255,255,0.20) 0%, transparent 30%),
-    radial-gradient(120% 40% at 50% 0%, var(--mc-edge, rgba(255,255,255,0.10)) 0%, transparent 60%),
-    radial-gradient(40% 120% at 0% 50%, var(--mc-edge, rgba(255,255,255,0.08)) 0%, transparent 55%),
-    radial-gradient(40% 120% at 100% 50%, var(--mc-edge, rgba(255,255,255,0.08)) 0%, transparent 55%);
+    /* sheen diagonal large et brillant, comme la lumière sur le verre */
+    linear-gradient(125deg,
+      rgba(255,255,255,0.32) 0%,
+      rgba(255,255,255,0.08) 18%,
+      transparent 38%),
+    radial-gradient(140% 45% at 50% 0%, var(--mc-edge, rgba(255,255,255,0.12)) 0%, transparent 62%),
+    radial-gradient(40% 120% at 0% 45%, var(--mc-edge, rgba(255,255,255,0.10)) 0%, transparent 55%),
+    radial-gradient(40% 120% at 100% 45%, var(--mc-edge, rgba(255,255,255,0.10)) 0%, transparent 55%);
   pointer-events: none;
 }
-/* Clip-mask : bottom + côtés clippés au cadre, le HAUT reste ouvert (tête dépasse) */
+/* Clip-mask : bottom + côtés clippés au cadre, le HAUT reste OUVERT
+   (la tête du joueur dépasse au-dessus de la box). */
 .mc-clip {
   position: absolute; inset: 0; z-index: 1;
   clip-path: inset(-45% 0% 0% 0% round 0 0 24px 24px);
@@ -533,24 +543,37 @@ h1, h2, h3, h4 { margin: 0; font-weight: 800; letter-spacing: -0.02em; color: va
   -webkit-user-drag: none; user-select: none;
   filter: drop-shadow(0 12px 26px rgba(0,0,0,0.55));
 }
-/* Réglages par sujet (équilibrer hauteur/taille des découpes) */
+/* Réglages par sujet (la tête dépasse au-dessus du cadre) */
 .mode-under .mc-player { --ph: 150%; --pb: 0%; --pw: 124%; }   /* Dembélé : plus grand + remonte */
 .mode-draft .mc-player { --ph: 138%; --pb: 1%; --pw: 120%; }   /* Yamal : remonte un peu */
 .mode-guess .mc-player { --ph: 118%; --pb: 0%; --pw: 104%; }   /* Yildiz : plus petit */
 .mode-five  .mc-player { --ph: 134%; --pb: 0%; }
 .mode-juste .mc-player { --ph: 134%; --pb: 0%; }
 
-/* === ANIMATIONS AUTO indépendantes (loop lente-smooth) — pas de souris ===
-   Card centrale : léger 3D rotateXY. Sujet : parallaxe décalée → détache. */
-.mode-card.is-center { animation: mcCard3D 9s ease-in-out infinite; }
-@keyframes mcCard3D {
-  0%, 100% { transform: translate(-50%, -50%) rotateY(-6deg) rotateX(2.5deg); }
-  50%      { transform: translate(-50%, -50%) rotateY(6deg)  rotateX(-2.5deg); }
+/* === ANIMATIONS AUTO (loop lente-smooth) — déclenchées par le SURVOL ===
+   La carte centrale (= survolée) joue le mouvement. Les couches sont
+   SÉPARÉES pour qu'elles se composent en 3D sans s'écraser :
+   - .mode-card   = placement coverflow (translate/slot/scale)  [intact]
+   - .mc-inner    = ROTATION X + Y (le cadre s'incline dans l'espace)
+   - .mc-player   = PARALLAXE X + Y (le sujet, posé en avant, dérive en décalé)
+   Le sujet est avancé en translateZ → la rotation du cadre crée une vraie
+   parallaxe de profondeur (le sujet se détache du fond). */
+.mc-inner {
+  transform-style: preserve-3d;
+  transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
 }
-.mode-card.is-center .mc-player { animation: mcSubject 9s ease-in-out infinite; }
-@keyframes mcSubject {
-  0%, 100% { transform: translate(calc(-50% + 18px), -3px); }
-  50%      { transform: translate(calc(-50% - 18px), 3px); }
+.mode-card.is-center .mc-inner { animation: mcTilt 9s ease-in-out infinite; }
+@keyframes mcTilt {
+  0%, 100% { transform: rotateY(-8deg) rotateX(4deg); }
+  50%      { transform: rotateY(8deg)  rotateX(-4deg); }
+}
+/* Sujet : dérive X/Y en phase décalée de l'inclinaison du cadre → parallaxe.
+   (amplitude plus forte + déphasage que la rotation pour bien le détacher) */
+.mode-card.is-center .mc-player { animation: mcParallax 9s ease-in-out infinite; }
+@keyframes mcParallax {
+  0%   { transform: translate(calc(-50% + 16px), 10px); }
+  50%  { transform: translate(calc(-50% - 16px), -10px); }
+  100% { transform: translate(calc(-50% + 16px), 10px); }
 }
 /* BLOOM coloré DOUX en bas (halo, pas bloc) */
 .mc-grad {
@@ -612,16 +635,23 @@ h1, h2, h3, h4 { margin: 0; font-weight: 800; letter-spacing: -0.02em; color: va
     radial-gradient(80% 90% at 72% 120%, rgba(180,40,90,0.6) 0%, transparent 68%);
 }
 
-/* Bord ciselé translucide (verre des références) */
+/* Bord ciselé translucide (verre des références) — liseré DÉGRADÉ :
+   quasi invisible tout en haut (là où la tête sort → pas de trait qui
+   coupe le cou), révélé sur les côtés et le bas. */
 .mode-card::before {
   content: "";
   position: absolute; inset: 0; z-index: 4;
   border-radius: inherit;
   pointer-events: none;
-  box-shadow:
-    inset 0 0 0 1px rgba(255,255,255,0.16),
-    inset 0 1px 0 rgba(255,255,255,0.30),
-    inset 0 -1px 0 rgba(0,0,0,0.4);
+  padding: 1px;
+  background: linear-gradient(180deg,
+    rgba(255,255,255,0.04) 0%,
+    rgba(255,255,255,0.22) 16%,
+    rgba(255,255,255,0.10) 55%,
+    rgba(0,0,0,0.30) 100%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+          mask-composite: exclude;
 }
 
 /* === Textes EN BAS, typographies CONTRASTÉES & COMPLÉMENTAIRES ===
@@ -666,8 +696,9 @@ h1, h2, h3, h4 { margin: 0; font-weight: 800; letter-spacing: -0.02em; color: va
 /* Box-shadow forte + texte/gradient pleins uniquement sur la card centrale */
 /* Ombre portée sur la surface (la card est transparente) */
 .mc-bg { box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.14),
-    inset 0 0 0 1px rgba(255,255,255,0.06),
+    inset 0 1.5px 0 rgba(255,255,255,0.28),
+    inset 0 0 0 1px rgba(255,255,255,0.07),
+    inset 0 -40px 60px rgba(0,0,0,0.16),
     0 22px 44px rgba(0,0,0,0.5); }
 .mode-card.is-center .mc-bg {
   box-shadow:

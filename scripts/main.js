@@ -202,19 +202,29 @@
     }
     applyCoverflow();
 
-    // Clic BULLETPROOF basé sur la position X (indépendant des recouvrements
-    // de cards). Centre → lance le mode ; gauche/droite → navigue.
+    // === SURVOL → la carte passe devant de façon fluide (pas de clic) ===
+    // Dès que la souris est au-dessus d'un cadre, cette carte devient la
+    // centrale (transition CSS douce) et joue son animation rotation/parallaxe.
+    cards.forEach((card, i) => {
+      const hit = card.querySelector('.mc-inner') || card;
+      hit.addEventListener('mouseenter', () => {
+        if (activeIdx !== i) { activeIdx = i; applyCoverflow(); }
+      });
+      // Clic : lance le mode de la carte (déjà ramenée au centre par le survol)
+      hit.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        if (activeIdx === i) routeMode(order[i]);
+        else { activeIdx = i; applyCoverflow(); }
+      });
+    });
+
+    // Clic hors cartes (zones latérales du bento) : navigue
     bento.addEventListener('click', (ev) => {
+      if (ev.target.closest('.mc-inner')) return;     // géré par la carte
       const r = bento.getBoundingClientRect();
       const dx = ev.clientX - (r.left + r.width / 2);
-      const cardW = (cards[0] && cards[0].offsetWidth) || 320;
-      if (Math.abs(dx) < cardW * 0.40) {
-        routeMode(order[activeIdx]);          // zone centrale → lancer
-      } else if (dx < 0 && activeIdx > 0) {
-        activeIdx--; applyCoverflow();         // gauche → précédent
-      } else if (dx > 0 && activeIdx < cards.length - 1) {
-        activeIdx++; applyCoverflow();         // droite → suivant
-      }
+      if (dx < 0 && activeIdx > 0) { activeIdx--; applyCoverflow(); }
+      else if (dx > 0 && activeIdx < cards.length - 1) { activeIdx++; applyCoverflow(); }
     });
 
     // Flèches clavier pour naviguer
