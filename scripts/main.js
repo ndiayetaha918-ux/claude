@@ -4791,18 +4791,35 @@
     if ($('#guessVariants')) $('#guessVariants').style.display = '';
     if ($('#guessGame')) $('#guessGame').style.display = 'none';
     if ($('#guessFeedback')) $('#guessFeedback').textContent = '';
-    if ($('#guessBack')) $('#guessBack').onclick = () => showScreen('home');
+    if ($('#guessBack')) $('#guessBack').onclick = () => { stopGuessTimer(); showScreen('home'); };
     $$('#guessVariants .guess-variant').forEach(b => {
       b.onclick = () => startGuess(b.dataset.variant);
     });
   }
+  function fillGuessParticipants() {
+    const wrap = $('#guessParticipants');
+    if (!wrap || wrap.children.length) return;
+    for (let i = 0; i < 4; i++) {
+      const row = el('div', { class: 'mr-guess-row' });
+      row.appendChild(el('label', {}, 'Joueur ' + (i + 1)));
+      row.appendChild(el('input', { type: 'text', value: i < 2 ? ['Alex', 'Sam'][i] : '', placeholder: 'Pseudo (vide = absent)' }));
+      wrap.appendChild(row);
+    }
+  }
+  function toggleGuessPlayers() {
+    const isMulti = (($('#setupGuessPanel .guess-mode-btn.active') || {}).dataset || {}).guessMode === 'multi';
+    if ($('#guessPlayers')) $('#guessPlayers').style.display = isMulti ? 'block' : 'none';
+  }
   function bindInlineGuessSetup() {
     if (!$('#setupGuessPanel')) return;
+    fillGuessParticipants();
+    toggleGuessPlayers();
     // Mode pick (solo/multi)
     $$('#setupGuessPanel .guess-mode-btn').forEach(b => {
       b.onclick = () => {
         $$('#setupGuessPanel .guess-mode-btn').forEach(x => x.classList.remove('active'));
         b.classList.add('active');
+        toggleGuessPlayers();
       };
     });
     // Variant pick
@@ -4817,11 +4834,19 @@
     if (startBtn) startBtn.onclick = () => {
       const variant = ($('#setupGuessPanel .guess-variant-card.active') || {}).dataset?.variant || 'club';
       const mode = ($('#setupGuessPanel .guess-mode-btn.active') || {}).dataset?.guessMode || 'solo';
+      let players = null;
+      if (mode === 'multi') {
+        players = $$('#guessParticipants input').map(i => i.value.trim()).filter(Boolean);
+        if (players.length < 2) return toast('Pas assez de joueurs', 'Le mode Tour à tour demande au moins 2 joueurs.');
+      }
       showScreen('guess');
-      startGuess(variant, mode);
+      startGuess(variant, mode, players);
     };
   }
-  function startGuess(variant, mode) {
+  let guessTimer = null;
+  const GUESS_SECONDS = 20;
+  function stopGuessTimer() { if (guessTimer) { clearInterval(guessTimer); guessTimer = null; } }
+  function startGuess(variant, mode, players) {
     const pool = variant === 'club' ? GUESS_CLUB_LINEUPS : GUESS_NATION_LINEUPS;
     guessState = {
       variant,
@@ -4830,6 +4855,8 @@
       idx: 0,
       score: 0,
       streak: 0,
+      players: (mode === 'multi' && players) ? players.map(n => ({ name: n, score: 0 })) : null,
+      turn: 0,
     };
     if ($('#guessVariants')) $('#guessVariants').style.display = 'none';
     if ($('#guessGame')) $('#guessGame').style.display = '';
@@ -4841,6 +4868,7 @@
     renderGuessRound();
   }
   function renderGuessRound() {
+    stopGuessTimer();
     const s = guessState;
     if (s.idx >= s.pool.length) {
       s.pool = (s.variant === 'club' ? GUESS_CLUB_LINEUPS : GUESS_NATION_LINEUPS).slice().sort(() => Math.random() - 0.5);
@@ -4848,6 +4876,25 @@
     }
     const target = s.pool[s.idx];
     s._target = target;
+    // Mode Tour à tour : indicateur de tour + scoreboard par joueur
+    const turnEl = $('#guessTurn'), sbEl = $('#guessScoreboard');
+    if (s.players) {
+      if (turnEl) { turnEl.style.display = ''; turnEl.textContent = 'Au tour de ' + s.players[s.turn].name; }
+      if (sbEl) {
+        sbEl.style.display = '';
+        sbEl.innerHTML = '';
+        const best = Math.max.apply(null, s.players.map(p => p.score));
+        s.players.forEach((p, i) => {
+          const tile = el('div', { class: 'gsb-tile' + (i === s.turn ? ' active' : '') + (p.score === best && best > 0 ? ' lead' : '') });
+          tile.appendChild(el('span', { class: 'gsb-name' }, p.name));
+          tile.appendChild(el('span', { class: 'gsb-pts' }, String(p.score)));
+          sbEl.appendChild(tile);
+        });
+      }
+    } else {
+      if (turnEl) turnEl.style.display = 'none';
+      if (sbEl) sbEl.style.display = 'none';
+    }
     $('#guessVariantLabel').textContent = s.variant === 'club' ? 'CLUB INCONNU' : 'SÉLECTION INCONNUE';
     $('#guessHint').textContent = s.variant === 'club'
       ? '11 joueurs masqués par leur drapeau de nationalité'
@@ -4910,6 +4957,36 @@
       lineup.appendChild(slot);
     });
     setTimeout(() => $('#guessInput') && $('#guessInput').focus(), 100);
+
+    // Timer du tour : à 0 → manche perdue (révèle la réponse, joueur suivant)
+    let left = GUESS_SECONDS;
+    const tn = $('#guessTimerNum'), tEl = $('#guessTimer');
+    if (tn) tn.textContent = String(left);
+    if (tEl) tEl.classList.remove('urgent');
+    guessTimer = setInterval(() => {
+      left--;
+      if (tn) tn.textContent = String(Math.max(0, left));
+      if (tEl && left <= 5) tEl.classList.add('urgent');
+      if (left <= 0) { stopGuessTimer(); guessTimeout(); }
+    }, 1000);
+  }
+  // Avance au tour suivant (multi) puis à la manche suivante
+  function guessAdvance(delay) {
+    const s = guessState;
+    setTimeout(() => {
+      if (s.players) s.turn = (s.turn + 1) % s.players.length;
+      s.idx++;
+      renderGuessRound();
+    }, delay);
+  }
+  function guessTimeout() {
+    const s = guessState;
+    s.streak = 0;
+    const fb = $('#guessFeedback');
+    fb.textContent = '⏱ Temps écoulé — réponse : ' + s._target.team;
+    fb.className = 'guess-feedback wrong';
+    $('#guessStreak').textContent = 'Série · 0';
+    guessAdvance(1800);
   }
   function updateSuggestions() {
     const s = guessState;
@@ -4931,33 +5008,37 @@
   function submitGuessAnswer() {
     const s = guessState;
     if (!s || !s._target) return;
+    stopGuessTimer();
     const ans = $('#guessInput').value.trim().toLowerCase();
     const target = s._target.team.toLowerCase();
     const fb = $('#guessFeedback');
     if (ans === target || target.includes(ans) && ans.length >= 4) {
       s.score++;
       s.streak++;
-      fb.textContent = '✓ Bonne réponse : ' + s._target.team;
+      if (s.players) s.players[s.turn].score++;     // point au joueur du tour
+      fb.textContent = '✓ Bonne réponse : ' + s._target.team
+        + (s.players ? ' · +1 ' + s.players[s.turn].name : '');
       fb.className = 'guess-feedback correct';
       $('#guessScore').textContent = s.score;
       $('#guessStreak').textContent = 'Série · ' + s.streak;
       $('#guessSuggestions').innerHTML = '';
-      setTimeout(() => { s.idx++; renderGuessRound(); }, 1500);
+      guessAdvance(1500);
     } else {
       s.streak = 0;
       fb.textContent = '✗ Réponse : ' + s._target.team;
       fb.className = 'guess-feedback wrong';
       $('#guessStreak').textContent = 'Série · 0';
-      setTimeout(() => { s.idx++; renderGuessRound(); }, 2000);
+      guessAdvance(2000);
     }
   }
   function skipGuess() {
     const s = guessState;
+    stopGuessTimer();
     s.streak = 0;
     const fb = $('#guessFeedback');
     fb.textContent = '⏭ ' + s._target.team;
     fb.className = 'guess-feedback wrong';
-    setTimeout(() => { s.idx++; renderGuessRound(); }, 1300);
+    guessAdvance(1300);
   }
 
   // ============================================================

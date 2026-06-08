@@ -391,6 +391,12 @@
             </button>
           </div>
 
+          <!-- Joueurs (mode Tour à tour) -->
+          <div class="guess-players" id="guessPlayers">
+            <div class="guess-players-label">Joueurs — chacun son tour, contre la montre</div>
+            <div id="guessParticipants"></div>
+          </div>
+
           <div class="guess-variants-inline">
             <button class="guess-variant-card active" data-variant="club">
               <div class="gv-eyebrow">VARIANTE</div>
@@ -825,8 +831,11 @@
             <div class="guess-hud">
               <div class="gh-score">Score · <span id="guessScore">0</span></div>
               <div class="gh-streak" id="guessStreak">Série · 0</div>
+              <div class="gh-timer" id="guessTimer"><span id="guessTimerNum">20</span><small>s</small></div>
               <button class="btn btn-ghost gh-skip" id="guessSkip">Passer</button>
             </div>
+            <div class="gh-turn" id="guessTurn" style="display:none"></div>
+            <div class="guess-scoreboard" id="guessScoreboard" style="display:none"></div>
             <div class="guess-target" id="guessTarget">
               <div class="gt-info">
                 <div class="gt-eyebrow" id="guessVariantLabel">CLUB</div>

@@ -4397,6 +4397,46 @@ body[data-mode="under"] .mode-cloud {
 .gh-score span { color: var(--gold); font-weight: 700; }
 .gh-skip { margin-left: auto; }
 
+/* Timer du tour (Guess The Team) */
+.gh-timer {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-weight: 800; color: var(--neon);
+  font-variant-numeric: tabular-nums;
+  min-width: 46px; text-align: center;
+}
+.gh-timer small { font-weight: 500; opacity: 0.6; margin-left: 1px; }
+.gh-timer.urgent { color: #ff5a6a; border-color: rgba(255,90,106,0.5); animation: ghPulse 1s ease-in-out infinite; }
+@keyframes ghPulse { 0%,100% { opacity: 1; } 50% { opacity: 0.55; } }
+/* Indicateur de tour + scoreboard multi */
+.gh-turn {
+  font-family: var(--mono); font-size: 12px; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--gold);
+  margin: -10px 0 14px;
+}
+.guess-scoreboard {
+  display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px;
+}
+.gsb-tile {
+  display: flex; gap: 8px; align-items: baseline;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 8px; padding: 6px 12px;
+  font-family: var(--mono); font-size: 12px;
+}
+.gsb-tile.active { border-color: var(--neon); background: rgba(0,224,255,0.08); }
+.gsb-tile.lead .gsb-pts { color: var(--gold); }
+.gsb-name { color: rgba(255,255,255,0.8); }
+.gsb-pts { font-weight: 800; color: var(--neon); }
+/* Saisie joueurs (setup Tour à tour) */
+.guess-players { margin: 18px 0 4px; }
+.guess-players-label {
+  font-family: var(--mono); font-size: 11px; letter-spacing: 0.12em;
+  text-transform: uppercase; color: var(--slate); margin-bottom: 10px;
+}
+
 .guess-target {
   background: linear-gradient(180deg, rgba(28,30,40,0.6) 0%, rgba(14,16,22,0.85) 100%);
   border: 1px solid rgba(255,255,255,0.08);
