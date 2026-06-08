@@ -3678,6 +3678,28 @@ body[data-mode="under"] .mode-cloud {
 .mr-score-tile .name { font-family: var(--display); text-transform: uppercase; }
 .mr-score-tile .pts { font-family: var(--mono); font-weight: 800; color: var(--neon); }
 
+/* Timer de manche (Juste Prix multi) */
+.mr-timer {
+  display: flex; align-items: center; gap: 10px;
+  margin: 14px 0 4px;
+}
+.mr-timer-label {
+  font-family: var(--mono); font-size: 11px; letter-spacing: 0.12em;
+  text-transform: uppercase; color: var(--slate);
+}
+.mr-timer-num {
+  font-family: var(--mono); font-weight: 800; font-size: 18px;
+  color: var(--neon); min-width: 28px; text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.mr-timer-bar {
+  flex: 1; height: 6px; border-radius: 99px;
+  background: linear-gradient(90deg, var(--neon), #fff);
+  transition: width 1s linear;
+}
+.mr-timer.urgent .mr-timer-num { color: #ff5a6a; }
+.mr-timer.urgent .mr-timer-bar { background: linear-gradient(90deg, #ff5a6a, #ffb199); }
+
 /* ==========================================================================
    SEASON
    ========================================================================== */

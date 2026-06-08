@@ -4096,6 +4096,7 @@
   }
 
   function showMultiSetup() {
+    stopMultiTimer();
     $('#justeUpDown').style.display = 'none';
     $('#justeMulti').style.display = 'block';
     $('#multiSetup').style.display = 'block';
@@ -4122,7 +4123,12 @@
     };
   }
 
+  let multiTimer = null;
+  const MULTI_ROUND_SECONDS = 30;
+  function stopMultiTimer() { if (multiTimer) { clearInterval(multiTimer); multiTimer = null; } }
+
   function renderMultiRound() {
+    stopMultiTimer();
     const s = window.JustePrix.state;
     const wrap = $('#multiRound'); wrap.innerHTML = '';
     // Target card
@@ -4146,6 +4152,15 @@
     tgt.appendChild(el('div', { class: 'mr-club' }, 'Manche ' + (s.round + 1) + ' / ' + s.rounds));
     wrap.appendChild(tgt);
 
+    // Timer de manche : à 0, on attribue les points avec les réponses données
+    const timerEl = el('div', { class: 'mr-timer' });
+    const timerBar = el('div', { class: 'mr-timer-bar' });
+    const timerNum = el('span', { class: 'mr-timer-num' }, String(MULTI_ROUND_SECONDS));
+    timerEl.appendChild(el('span', { class: 'mr-timer-label' }, 'Temps'));
+    timerEl.appendChild(timerNum);
+    timerEl.appendChild(timerBar);
+    wrap.appendChild(timerEl);
+
     // Guess inputs
     const list = el('div', { class: 'mr-guesses' });
     s.participants.forEach((p, i) => {
@@ -4160,7 +4175,7 @@
         const res = window.JustePrix.submitGuess(i, v);
         row.classList.add('locked');
         btn.disabled = true;
-        if (res.resolved) renderMultiReveal(res);
+        if (res.resolved) { stopMultiTimer(); renderMultiReveal(res); }
       };
       row.appendChild(btn);
       list.appendChild(row);
@@ -4176,15 +4191,35 @@
       sb.appendChild(tile);
     });
     wrap.appendChild(sb);
+
+    // Démarrage du décompte
+    let left = MULTI_ROUND_SECONDS;
+    timerBar.style.width = '100%';
+    multiTimer = setInterval(() => {
+      left--;
+      timerNum.textContent = String(Math.max(0, left));
+      timerBar.style.width = (Math.max(0, left) / MULTI_ROUND_SECONDS * 100) + '%';
+      if (left <= 5) timerEl.classList.add('urgent');
+      if (left <= 0) {
+        stopMultiTimer();
+        renderMultiReveal(window.JustePrix.resolveMulti());
+      }
+    }, 1000);
   }
   function renderMultiReveal(res) {
+    stopMultiTimer();
     const s = window.JustePrix.state;
     const wrap = $('#multiRound');
     const rev = el('div', { class: 'mr-reveal' });
-    const winnerName = s.participants[res.winnerIdx].name;
-    let html = '<strong>Vraie valeur : ' + res.target + ' M€</strong><br>Gagnant de la manche : ' + winnerName + '.<br>';
+    const winnerName = res.winnerIdx >= 0 ? s.participants[res.winnerIdx].name : null;
+    let html = '<strong>Vraie valeur : ' + res.target + ' M€</strong><br>';
+    if (res.timedOut) html += '<em>⏱ Temps écoulé.</em><br>';
+    html += winnerName
+      ? 'Gagnant de la manche : ' + winnerName + '.<br>'
+      : 'Personne n\'a répondu à temps — aucun point.<br>';
     s.participants.forEach((p, i) => {
       const g = res.history.guesses[i];
+      if (g == null) { html += '<br>' + p.name + ' : — (pas de réponse)'; return; }
       const diff = Math.abs(g - res.target);
       html += '<br>' + p.name + ' : ' + g + ' M€ (Δ ' + diff + ')';
     });

@@ -123,6 +123,24 @@
       }
       return { resolved: false };
     },
+    // Résolution forcée (timer écoulé) : on tranche avec les réponses données.
+    // Ceux qui n'ont pas répondu ne peuvent pas gagner la manche.
+    resolveMulti() {
+      const s = this.state;
+      const target = s.target.value;
+      let bestIdx = -1, bestDiff = Infinity;
+      s.participants.forEach((p, i) => {
+        if (s.guesses[i] == null) return;          // pas répondu → hors course
+        const d = Math.abs(s.guesses[i] - target);
+        if (d < bestDiff) { bestDiff = d; bestIdx = i; }
+      });
+      if (bestIdx >= 0) s.scores[bestIdx]++;
+      s.history.unshift({ target: s.target, guesses: Object.assign({}, s.guesses), winner: bestIdx });
+      s.guesses = {};
+      s.round++;
+      if (s.round < s.rounds) s.target = pickBalanced(this.pool);
+      return { resolved: true, winnerIdx: bestIdx, target, history: s.history[0], scores: s.scores, finished: s.round >= s.rounds, timedOut: true };
+    },
   };
 
   function pickRandom(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
