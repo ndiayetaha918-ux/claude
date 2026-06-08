@@ -110,15 +110,53 @@ function get(url, binary = false) {
   });
 }
 
-async function resolveImage(title) {
-  const api = 'https://en.wikipedia.org/w/api.php?action=query&format=json&redirects=1'
-    + '&prop=pageimages&piprop=original|name&titles=' + encodeURIComponent(title);
-  const json = JSON.parse(await get(api));
-  const pages = json.query && json.query.pages;
-  if (!pages) return null;
-  const page = Object.values(pages)[0];
-  if (!page || !page.original || !page.original.source) return null;
-  return page.original.source; // URL directe upload.wikimedia.org
+const API = 'https://en.wikipedia.org/w/api.php?format=json&redirects=1&';
+const norm = s => (s || '').toLowerCase().replace(/\.[a-z0-9]+$/, '').replace(/^file:/, '').replace(/[^a-z0-9]+/g, ' ').trim();
+// mots qui DISQUALIFIENT un fichier (pas un écusson)
+const BAD = ['stadium', 'kit', 'map', 'flag', 'locator', 'uefa', 'premier league', 'la liga',
+  'bundesliga', 'serie a', 'ligue 1', 'champions league', 'commons', 'wikimedia', 'wikipedia',
+  'edit icon', 'pog', 'pictogram', 'football pitch', 'soccer', 'question', 'padlock', 'ambox',
+  'wiki letter', 'red x', 'green check', 'sound', 'speaker', 'star full', 'folder', 'nuvola',
+  'magnify', 'increase', 'decrease', 'arrow', 'symbol', 'disambig', 'p football', 'p vip'];
+const GOOD = ['crest', 'logo', 'badge', 'escudo', 'wappen', 'stemma', 'emblem'];
+
+// Liste les fichiers d'une page, choisit le meilleur candidat "écusson", renvoie son URL.
+async function resolveImage(title, clubName) {
+  // mots distinctifs du club (>=4 lettres, hors génériques)
+  const generic = new Set(['club', 'football', 'futbol', 'calcio', 'fussball', 'sport', 'sporting', 'real', 'olympique']);
+  const words = norm(clubName).split(' ').filter(w => w.length >= 4 && !generic.has(w));
+
+  const listJson = JSON.parse(await get(API + 'action=query&prop=images&imlimit=80&titles=' + encodeURIComponent(title)));
+  const pages = listJson.query && listJson.query.pages;
+  const page = pages && Object.values(pages)[0];
+  const images = (page && page.images) || [];
+
+  let best = null, bestScore = 0;
+  for (const im of images) {
+    const t = im.title; // "File:Arsenal FC.svg"
+    if (!/\.(svg|png)$/i.test(t)) continue;     // écussons = svg/png
+    const n = norm(t);
+    if (BAD.some(b => n.includes(b))) continue;
+    let score = /\.svg$/i.test(t) ? 2 : 1;
+    if (GOOD.some(g => n.includes(g))) score += 4;
+    if (words.some(w => n.includes(w))) score += 3;
+    if (score > bestScore) { bestScore = score; best = t; }
+  }
+
+  let fileTitle = best;
+  // fallback : image principale de la page (logos libres)
+  if (!fileTitle) {
+    const pj = JSON.parse(await get(API + 'action=query&prop=pageimages&piprop=name&titles=' + encodeURIComponent(title)));
+    const p = pj.query && pj.query.pages && Object.values(pj.query.pages)[0];
+    if (p && p.pageimage) fileTitle = 'File:' + p.pageimage;
+  }
+  if (!fileTitle) return null;
+
+  // URL directe du fichier
+  const infoJson = JSON.parse(await get(API + 'action=query&prop=imageinfo&iiprop=url&titles=' + encodeURIComponent(fileTitle)));
+  const ip = infoJson.query && infoJson.query.pages && Object.values(infoJson.query.pages)[0];
+  const info = ip && ip.imageinfo && ip.imageinfo[0];
+  return info ? info.url : null;
 }
 
 async function main() {
@@ -129,7 +167,7 @@ async function main() {
 
   for (const club of CLUBS) {
     try {
-      const src = await resolveImage(club.title);
+      const src = await resolveImage(club.title, club.name);
       if (!src) { console.log('✗ pas d\'image  ', club.name, '(' + club.title + ')'); fail++; await sleep(DELAY_MS); continue; }
 
       const ext = (src.split('.').pop().split('?')[0] || 'png').toLowerCase();

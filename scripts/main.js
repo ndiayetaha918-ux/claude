@@ -4727,19 +4727,24 @@
       { type:'LW', name:'Vinicius Jr.' }, { type:'ST', name:'Endrick' }, { type:'RW', name:'Rodrygo' },
     ]},
     { team: 'Allemagne', formation: '4-2-3-1', slots: [
-      { type:'GK', name:'Neuer' }, { type:'LB', name:'Raum' }, { type:'CB', name:'Rüdiger' }, { type:'CB', name:'Tah' }, { type:'RB', name:'Kimmich' },
+      { type:'GK', name:'ter Stegen' }, { type:'LB', name:'Raum' }, { type:'CB', name:'Rüdiger' }, { type:'CB', name:'Tah' }, { type:'RB', name:'Kimmich' },
       { type:'DM', name:'Andrich' }, { type:'CM', name:'Goretzka' }, { type:'AM', name:'Wirtz' },
-      { type:'LW', name:'Sané' }, { type:'ST', name:'Havertz' }, { type:'RW', name:'Musiala' },
+      { type:'LW', name:'Gnabry' }, { type:'ST', name:'Havertz' }, { type:'RW', name:'Musiala' },
     ]},
     { team: 'Portugal', formation: '4-3-3', slots: [
-      { type:'GK', name:'Diogo Costa' }, { type:'LB', name:'Mendes' }, { type:'CB', name:'Dias' }, { type:'CB', name:'Pepe' }, { type:'RB', name:'Cancelo' },
+      { type:'GK', name:'Diogo Costa' }, { type:'LB', name:'Mendes' }, { type:'CB', name:'Dias' }, { type:'CB', name:'António Silva' }, { type:'RB', name:'Cancelo' },
       { type:'DM', name:'João Palhinha' }, { type:'CM', name:'Bruno Fernandes' }, { type:'CM', name:'Vitinha' },
       { type:'LW', name:'Bernardo Silva' }, { type:'ST', name:'Cristiano Ronaldo' }, { type:'RW', name:'Leão' },
+    ]},
+    { team: 'Pays-Bas', formation: '4-3-3', slots: [
+      { type:'GK', name:'Verbruggen' }, { type:'LB', name:'Aké' }, { type:'CB', name:'van Dijk' }, { type:'CB', name:'de Vrij' }, { type:'RB', name:'Dumfries' },
+      { type:'DM', name:'Schouten' }, { type:'CM', name:'Reijnders' }, { type:'CM', name:'Gravenberch' },
+      { type:'LW', name:'Gakpo' }, { type:'ST', name:'Depay' }, { type:'RW', name:'Simons' },
     ]},
     { team: 'Argentine', formation: '4-3-3', slots: [
       { type:'GK', name:'Emiliano Martínez' }, { type:'LB', name:'Tagliafico' }, { type:'CB', name:'Romero' }, { type:'CB', name:'Otamendi' }, { type:'RB', name:'Molina' },
       { type:'DM', name:'Paredes' }, { type:'CM', name:'Enzo Fernández' }, { type:'CM', name:'Mac Allister' },
-      { type:'LW', name:'Di María' }, { type:'ST', name:'Alvarez' }, { type:'RW', name:'Messi' },
+      { type:'LW', name:'Nico González' }, { type:'ST', name:'Alvarez' }, { type:'RW', name:'Messi' },
     ]},
     { team: 'Italie', formation: '4-3-3', slots: [
       { type:'GK', name:'Donnarumma' }, { type:'LB', name:'Dimarco' }, { type:'CB', name:'Bastoni' }, { type:'CB', name:'Calafiori' }, { type:'RB', name:'Di Lorenzo' },
