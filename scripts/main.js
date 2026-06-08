@@ -4650,9 +4650,9 @@
       { type:'LW', name:'Martinelli' }, { type:'ST', name:'Gyökeres' }, { type:'RW', name:'Saka' },
     ]},
     { team: 'Liverpool', formation: '4-3-3', slots: [
-      { type:'GK', name:'Alisson' }, { type:'LB', name:'Robertson' }, { type:'CB', name:'van Dijk' }, { type:'CB', name:'Konaté' }, { type:'RB', name:'Bradley' },
-      { type:'CM', name:'Mac Allister' }, { type:'DM', name:'Gravenberch' }, { type:'CM', name:'Szoboszlai' },
-      { type:'LW', name:'Díaz' }, { type:'ST', name:'Isak' }, { type:'RW', name:'Salah' },
+      { type:'GK', name:'Alisson' }, { type:'LB', name:'Kerkez' }, { type:'CB', name:'van Dijk' }, { type:'CB', name:'Konaté' }, { type:'RB', name:'Frimpong' },
+      { type:'CM', name:'Mac Allister' }, { type:'DM', name:'Gravenberch' }, { type:'CM', name:'Wirtz' },
+      { type:'LW', name:'Gakpo' }, { type:'ST', name:'Isak' }, { type:'RW', name:'Salah' },
     ]},
     { team: 'Paris SG', formation: '4-3-3', slots: [
       { type:'GK', name:'Donnarumma' }, { type:'LB', name:'Mendes' }, { type:'CB', name:'Marquinhos' }, { type:'CB', name:'Beraldo' }, { type:'RB', name:'Hakimi' },
@@ -4662,7 +4662,7 @@
     { team: 'Bayern Munich', formation: '4-2-3-1', slots: [
       { type:'GK', name:'Neuer' }, { type:'LB', name:'Davies' }, { type:'CB', name:'Upamecano' }, { type:'CB', name:'Kim' }, { type:'RB', name:'Kimmich' },
       { type:'DM', name:'Pavlovic' }, { type:'CM', name:'Goretzka' }, { type:'AM', name:'Musiala' },
-      { type:'LW', name:'Sané' }, { type:'ST', name:'Kane' }, { type:'RW', name:'Olise' },
+      { type:'LW', name:'Luis Díaz' }, { type:'ST', name:'Kane' }, { type:'RW', name:'Olise' },
     ]},
     { team: 'Inter', formation: '3-5-2', slots: [
       { type:'GK', name:'Sommer' }, { type:'CB', name:'Bastoni' }, { type:'CB', name:'Acerbi' }, { type:'CB', name:'Pavard' },
@@ -4678,6 +4678,31 @@
       { type:'GK', name:'Oblak' }, { type:'LB', name:'Lino' }, { type:'CB', name:'Witsel' }, { type:'CB', name:'Le Normand' }, { type:'RB', name:'Llorente' },
       { type:'LM', name:'Koke' }, { type:'CM', name:'De Paul' }, { type:'CM', name:'Barrios' }, { type:'RM', name:'Griezmann' },
       { type:'ST', name:'Alvarez' }, { type:'ST', name:'Sørloth' },
+    ]},
+    { team: 'Chelsea', formation: '4-2-3-1', slots: [
+      { type:'GK', name:'Robert Sánchez' }, { type:'LB', name:'Cucurella' }, { type:'CB', name:'Colwill' }, { type:'CB', name:'Chalobah' }, { type:'RB', name:'James' },
+      { type:'DM', name:'Caicedo' }, { type:'CM', name:'Enzo Fernández' }, { type:'AM', name:'Palmer' },
+      { type:'LW', name:'Pedro Neto' }, { type:'ST', name:'João Pedro' }, { type:'RW', name:'Estêvão' },
+    ]},
+    { team: 'Tottenham', formation: '4-3-3', slots: [
+      { type:'GK', name:'Vicario' }, { type:'LB', name:'Udogie' }, { type:'CB', name:'Romero' }, { type:'CB', name:'van de Ven' }, { type:'RB', name:'Porro' },
+      { type:'DM', name:'Bissouma' }, { type:'CM', name:'Bentancur' }, { type:'CM', name:'Sarr' },
+      { type:'LW', name:'Kudus' }, { type:'ST', name:'Richarlison' }, { type:'RW', name:'Brennan Johnson' },
+    ]},
+    { team: 'Newcastle', formation: '4-3-3', slots: [
+      { type:'GK', name:'Pope' }, { type:'LB', name:'Hall' }, { type:'CB', name:'Burn' }, { type:'CB', name:'Schär' }, { type:'RB', name:'Trippier' },
+      { type:'CM', name:'Bruno Guimarães' }, { type:'DM', name:'Tonali' }, { type:'CM', name:'Joelinton' },
+      { type:'LW', name:'Gordon' }, { type:'ST', name:'Woltemade' }, { type:'RW', name:'Barnes' },
+    ]},
+    { team: 'Napoli', formation: '4-3-3', slots: [
+      { type:'GK', name:'Meret' }, { type:'LB', name:'Spinazzola' }, { type:'CB', name:'Buongiorno' }, { type:'CB', name:'Rrahmani' }, { type:'RB', name:'Di Lorenzo' },
+      { type:'CM', name:'De Bruyne' }, { type:'DM', name:'Lobotka' }, { type:'CM', name:'McTominay' },
+      { type:'LW', name:'Neres' }, { type:'ST', name:'Højlund' }, { type:'RW', name:'Politano' },
+    ]},
+    { team: 'AC Milan', formation: '4-2-3-1', slots: [
+      { type:'GK', name:'Maignan' }, { type:'LB', name:'Estupiñán' }, { type:'CB', name:'Tomori' }, { type:'CB', name:'Pavlović' }, { type:'RB', name:'Saelemaekers' },
+      { type:'DM', name:'Modrić' }, { type:'CM', name:'Fofana' }, { type:'AM', name:'Loftus-Cheek' },
+      { type:'LW', name:'Leão' }, { type:'ST', name:'Giménez' }, { type:'RW', name:'Pulisic' },
     ]},
   ];
   const GUESS_NATION_LINEUPS = [
