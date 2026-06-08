@@ -160,32 +160,34 @@ window.FORMATIONS = {
 // ============================================================
 // Formations FIVE (5 vs 5) — slots = 5
 // ============================================================
+// Note : en futsal le gardien est implicite dans la notation (1-2-1 = GK + 4).
+// On le rend EXPLICITE dans le libellé ("GK · …") pour lever toute ambiguïté.
 window.FIVE_FORMATIONS = {
-  '1-2-1':   { label: '1-2-1 (diamant)', slots: [
-    { id: 'gk',  type: 'GK', x: 50, y: 92 },
-    { id: 'cb',  type: 'CB', x: 50, y: 72 },
-    { id: 'lm',  type: 'LM', x: 22, y: 48 },
-    { id: 'rm',  type: 'RM', x: 78, y: 48 },
+  '1-2-1':   { label: 'GK · 1-2-1 (diamant)', slots: [
+    { id: 'gk',  type: 'GK', x: 50, y: 88 },
+    { id: 'cb',  type: 'CB', x: 50, y: 70 },
+    { id: 'lm',  type: 'LM', x: 22, y: 46 },
+    { id: 'rm',  type: 'RM', x: 78, y: 46 },
     { id: 'st',  type: 'ST', x: 50, y: 18 },
   ]},
-  '2-1-1':   { label: '2-1-1', slots: [
-    { id: 'gk',  type: 'GK', x: 50, y: 92 },
-    { id: 'lcb', type: 'CB', x: 30, y: 74 },
-    { id: 'rcb', type: 'CB', x: 70, y: 74 },
+  '2-1-1':   { label: 'GK · 2-1-1', slots: [
+    { id: 'gk',  type: 'GK', x: 50, y: 88 },
+    { id: 'lcb', type: 'CB', x: 30, y: 72 },
+    { id: 'rcb', type: 'CB', x: 70, y: 72 },
     { id: 'am',  type: 'AM', x: 50, y: 46 },
     { id: 'st',  type: 'ST', x: 50, y: 18 },
   ]},
-  '1-1-2':   { label: '1-1-2 (deux pointes)', slots: [
-    { id: 'gk',  type: 'GK', x: 50, y: 92 },
-    { id: 'cb',  type: 'CB', x: 50, y: 72 },
+  '1-1-2':   { label: 'GK · 1-1-2 (deux pointes)', slots: [
+    { id: 'gk',  type: 'GK', x: 50, y: 88 },
+    { id: 'cb',  type: 'CB', x: 50, y: 70 },
     { id: 'cm',  type: 'CM', x: 50, y: 48 },
     { id: 'lst', type: 'ST', x: 32, y: 18 },
     { id: 'rst', type: 'ST', x: 68, y: 18 },
   ]},
-  '2-2':     { label: '2-2 (boîte)', slots: [
-    { id: 'gk',  type: 'GK', x: 50, y: 92 },
-    { id: 'lcb', type: 'CB', x: 30, y: 70 },
-    { id: 'rcb', type: 'CB', x: 70, y: 70 },
+  '2-2':     { label: 'GK · 2-2 (boîte)', slots: [
+    { id: 'gk',  type: 'GK', x: 50, y: 88 },
+    { id: 'lcb', type: 'CB', x: 30, y: 68 },
+    { id: 'rcb', type: 'CB', x: 70, y: 68 },
     { id: 'lst', type: 'ST', x: 30, y: 22 },
     { id: 'rst', type: 'ST', x: 70, y: 22 },
   ]},
