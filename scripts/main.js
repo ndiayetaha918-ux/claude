@@ -202,20 +202,35 @@
     }
     applyCoverflow();
 
-    // === SURVOL → la carte passe devant de façon fluide (pas de clic) ===
-    // Dès que la souris est au-dessus d'un cadre, cette carte devient la
-    // centrale (transition CSS douce) et joue son animation rotation/parallaxe.
+    // === RÉACTIF À LA SOURIS ===
+    // Survol d'un cadre : il MONTE (--liftY) et devient la carte focus.
+    // Mouvement souris : tilt perspective (rotateX/Y) du cadre + PARALLAXE du
+    // sujet (--px/--py, sens inverse) → il bouge en perspective, sans oscillation.
     cards.forEach((card, i) => {
       const hit = card.querySelector('.mc-inner') || card;
+      const player = card.querySelector('.mc-player');
       hit.addEventListener('mouseenter', () => {
         if (activeIdx !== i) { activeIdx = i; applyCoverflow(); }
+        card.style.setProperty('--liftY', '-18px');
       });
-      // Clic : lance le mode de la carte (déjà ramenée au centre par le survol)
-      hit.addEventListener('click', (ev) => {
-        ev.stopPropagation();
-        if (activeIdx === i) routeMode(order[i]);
-        else { activeIdx = i; applyCoverflow(); }
+      hit.addEventListener('mousemove', (ev) => {
+        const r = card.getBoundingClientRect();
+        const nx = ((ev.clientX - r.left) / r.width - 0.5) * 2;   // -1 → 1
+        const ny = ((ev.clientY - r.top) / r.height - 0.5) * 2;
+        card.style.setProperty('--mrx', (nx * 9).toFixed(2) + 'deg');   // rotateY ← X
+        card.style.setProperty('--mry', (-ny * 7).toFixed(2) + 'deg');  // rotateX ← Y
+        if (player) {
+          player.style.setProperty('--px', (-nx * 20).toFixed(1) + 'px');
+          player.style.setProperty('--py', (-ny * 14).toFixed(1) + 'px');
+        }
       });
+      hit.addEventListener('mouseleave', () => {
+        card.style.setProperty('--liftY', '0px');
+        card.style.setProperty('--mrx', '0deg');
+        card.style.setProperty('--mry', '0deg');
+        if (player) { player.style.setProperty('--px', '0px'); player.style.setProperty('--py', '0px'); }
+      });
+      hit.addEventListener('click', (ev) => { ev.stopPropagation(); routeMode(order[i]); });
     });
 
     // Clic hors cartes (zones latérales du bento) : navigue
