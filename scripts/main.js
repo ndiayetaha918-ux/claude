@@ -4769,8 +4769,28 @@
     'Lithuania':'🇱🇹','North Macedonia':'🇲🇰','Montenegro':'🇲🇪',
   };
   function flagFor(nationality) {
-    if (!nationality) return '🌍';
+    if (!nationality) return '·';
     return NATION_FLAGS[nationality] || nationality.slice(0,3).toUpperCase();
+  }
+  // Normalisation robuste (accents + lettres spéciales) pour matcher les noms
+  function normName(s) {
+    return (s || '').normalize('NFD').replace(/[̀-ͯ]/g, '')
+      .replace(/ø/gi, 'o').replace(/å/gi, 'a').replace(/[æ]/gi, 'ae')
+      .replace(/ł/gi, 'l').replace(/[đð]/gi, 'd').replace(/ı/gi, 'i')
+      .replace(/ß/gi, 'ss').toLowerCase().trim();
+  }
+  // Retrouve un joueur de la DB depuis un nom de compo (tolérant aux accents)
+  function findGuessPlayer(name) {
+    const q = normName(name);
+    if (!q) return null;
+    const P = window.PLAYERS;
+    let p = P.find(x => normName(x.name) === q);
+    if (p) return p;
+    p = P.find(x => { const n = normName(x.name); return n.endsWith(' ' + q) || n === q; });
+    if (p) return p;
+    const ql = q.split(' ').pop();
+    p = P.find(x => normName(x.name).split(' ').pop() === ql);
+    return p || null;
   }
   // Badge club court : initiales (max 4 chars) avec accent couleur
   function clubBadge(club) {
@@ -4920,7 +4940,7 @@
     target.slots.forEach((slotData, i) => {
       const formSlot = formation.slots[i];
       if (!formSlot) return;
-      const playerData = window.PLAYERS.find(p => p.name === slotData.name || p.name.endsWith(slotData.name));
+      const playerData = findGuessPlayer(slotData.name);
       const slot = el('div', { class: 'gp-slot', style: `left:${formSlot.x}%; top:${formSlot.y}%` });
       const bubble = el('div', { class: 'gp-bubble' });
       if (s.variant === 'club') {
@@ -5166,8 +5186,20 @@
     const prompt = $('#underPrompt');
     prompt.innerHTML = '📱 Passe l\'appareil à <strong>' + p.name + '</strong>';
     $('#underRoleLabel').textContent = p.role === 'impostor' ? 'IMPOSTEUR' : 'CIVIL';
-    $('#underMot').textContent = p.word;
-    // Le front de la carte montre "Je suis X — toucher pour mon mot"
+    // Affiche le JOUEUR secret en PHOTO (pas un mot)
+    const mot = $('#underMot');
+    mot.innerHTML = '';
+    const secret = findGuessPlayer(p.word);
+    if (secret) {
+      const ph = el('div', { class: 'uc-secret-photo', style: `background:${gradientFor(secret)}` });
+      attachPhoto(ph, secret, 'uc-secret-img');
+      ph.appendChild(el('span', { class: 'uc-secret-fb' }, initials(secret)));
+      mot.appendChild(ph);
+      mot.appendChild(el('div', { class: 'uc-secret-name' }, secret.name));
+    } else {
+      mot.textContent = p.word;
+    }
+    // Le front de la carte montre "Je suis X — toucher pour voir mon joueur"
     const front = card.querySelector('.urc-front .urc-eyebrow');
     if (front) front.textContent = 'Je suis ' + p.name + ' — toucher';
     const nextBtn = $('#underNextTurn');
@@ -5222,13 +5254,13 @@
     const result = $('#underVoteResult');
     if (wasImpostor) {
       result.innerHTML = '<div class="uvr-win">✓ Les civils ont démasqué l\'imposteur !</div>' +
-        '<div class="uvr-detail">Mot civil : <strong>' + underState.round.civilWord + '</strong> · Mot imposteur : <strong>' + underState.round.impostorWord + '</strong></div>';
+        '<div class="uvr-detail">Joueur civil : <strong>' + underState.round.civilWord + '</strong> · Joueur imposteur : <strong>' + underState.round.impostorWord + '</strong></div>';
       underState.players.filter(p => p.role === 'civil').forEach(p => {
         underState.scores[p.id] = (underState.scores[p.id] || 0) + 1;
       });
     } else {
       result.innerHTML = '<div class="uvr-lose">✗ Mauvaise cible. ' + accused.name + ' était un CIVIL.</div>' +
-        '<div class="uvr-detail">L\'imposteur s\'en sort. Mot civil : <strong>' + underState.round.civilWord + '</strong></div>';
+        '<div class="uvr-detail">L\'imposteur s\'en sort. Joueur civil : <strong>' + underState.round.civilWord + '</strong></div>';
       const impostor = underState.players.find(p => p.role === 'impostor');
       if (impostor) underState.scores[impostor.id] = (underState.scores[impostor.id] || 0) + 2;
     }
