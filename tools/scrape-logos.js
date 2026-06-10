@@ -78,7 +78,7 @@ const CLUBS = [
   { name: 'Al-Hilal',          title: 'Al-Hilal SFC', aliases: ['Al Hilal'] },
   { name: 'Inter Miami',       title: 'Inter Miami CF', aliases: ['Inter Miami CF'] },
   // — couverture étendue (variante Sélection : club de chaque international) —
-  { name: 'Tottenham',         title: 'Tottenham Hotspur F.C.', aliases: ['Tottenham Hotspur'] },
+  { name: 'Tottenham',         title: 'Tottenham Hotspur F.C.', file: 'File:Tottenham Hotspur.svg', aliases: ['Tottenham Hotspur'] },
   { name: 'Everton',           title: 'Everton F.C.' },
   { name: 'Brighton',          title: 'Brighton & Hove Albion F.C.', aliases: ['Brighton & Hove Albion'] },
   { name: 'Brentford',         title: 'Brentford F.C.' },
@@ -162,7 +162,14 @@ const BAD = ['stadium', 'kit', 'map', 'flag', 'locator', 'uefa', 'premier league
 const GOOD = ['crest', 'logo', 'badge', 'escudo', 'wappen', 'stemma', 'emblem'];
 
 // Liste les fichiers d'une page, choisit le meilleur candidat "écusson", renvoie son URL.
-async function resolveImage(title, clubName) {
+// `forcedFile` (champ `file:` de CLUBS) court-circuite la détection.
+async function resolveImage(title, clubName, forcedFile) {
+  if (forcedFile) {
+    const fj = JSON.parse(await get(API + 'action=query&prop=imageinfo&iiprop=url&titles=' + encodeURIComponent(forcedFile)));
+    const fp = fj.query && fj.query.pages && Object.values(fj.query.pages)[0];
+    const fi = fp && fp.imageinfo && fp.imageinfo[0];
+    if (fi) return fi.url;
+  }
   // mots distinctifs du club (>=4 lettres, hors génériques)
   const generic = new Set(['club', 'football', 'futbol', 'calcio', 'fussball', 'sport', 'sporting', 'real', 'olympique']);
   const words = norm(clubName).split(' ').filter(w => w.length >= 4 && !generic.has(w));
@@ -208,7 +215,7 @@ async function main() {
 
   for (const club of CLUBS) {
     try {
-      const src = await resolveImage(club.title, club.name);
+      const src = await resolveImage(club.title, club.name, club.file);
       if (!src) { console.log('✗ pas d\'image  ', club.name, '(' + club.title + ')'); fail++; await sleep(DELAY_MS); continue; }
 
       const ext = (src.split('.').pop().split('?')[0] || 'png').toLowerCase();
