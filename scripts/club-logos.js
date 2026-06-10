@@ -96,6 +96,8 @@ window.CLUB_LOGOS = {
   "Sunderland AFC": "assets/logos/sunderland.svg",
   "São Paulo": "assets/logos/sao-paulo.svg",
   "Torino": "assets/logos/torino.svg",
+  "Tottenham": "assets/logos/tottenham.svg",
+  "Tottenham Hotspur": "assets/logos/tottenham.svg",
   "UD Almería": "assets/logos/ud-almeria.svg",
   "Valencia": "assets/logos/valencia.svg",
   "Villarreal": "assets/logos/villarreal.svg",
