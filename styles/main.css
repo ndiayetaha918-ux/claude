@@ -289,8 +289,6 @@ h1, h2, h3, h4 { margin: 0; font-weight: 800; letter-spacing: -0.02em; color: va
     color-mix(in srgb, var(--neon) 18%, transparent) 48%,
     rgba(0,0,0,0.35) 82%,
     var(--bg) 100%);
-  -webkit-backdrop-filter: blur(2px);
-  backdrop-filter: blur(2px);
   -webkit-mask-image: linear-gradient(0deg, transparent 0%, black 58%, black 100%);
           mask-image: linear-gradient(0deg, transparent 0%, black 58%, black 100%);
   transition: background 0.7s ease;
@@ -306,8 +304,6 @@ h1, h2, h3, h4 { margin: 0; font-weight: 800; letter-spacing: -0.02em; color: va
     color-mix(in srgb, var(--neon) 24%, transparent) 52%,
     rgba(0,0,0,0.38) 82%,
     var(--bg) 100%);
-  -webkit-backdrop-filter: blur(2px);
-  backdrop-filter: blur(2px);
   -webkit-mask-image: linear-gradient(180deg, transparent 0%, black 60%, black 100%);
           mask-image: linear-gradient(180deg, transparent 0%, black 60%, black 100%);
   transition: background 0.7s ease;
@@ -493,7 +489,7 @@ h1, h2, h3, h4 { margin: 0; font-weight: 800; letter-spacing: -0.02em; color: va
 
 /* La carte centrale + la carte SURVOLÉE passent au-dessus de toutes les autres */
 .mode-card.is-center { z-index: 20; }
-.mode-card:has(.mc-inner:hover) { z-index: 50; }
+.mode-card.is-hover { z-index: 50; }
 
 /* ============================================================
    CARDS MODE — couches : bg verre / joueur (head-overflow + parallaxe
@@ -502,26 +498,28 @@ h1, h2, h3, h4 { margin: 0; font-weight: 800; letter-spacing: -0.02em; color: va
 .mc-inner {
   position: relative;
   width: 100%; height: 100%;
+  border-radius: 28px;          /* CLEF : les enfants héritent de cet arrondi */
   overflow: visible;            /* la tête du joueur dépasse */
   --px: 0; --py: 0;
   pointer-events: auto;         /* capte le clic (la card parente est none) */
+  cursor: pointer;
 }
-/* LIQUID GLASS PUR (réf lemon login) — AUCUNE stripe. Frost translucide,
-   blur fort, le fond transparaît, liseré lumineux. */
+/* LIQUID GLASS sombre (réfs Unleash / Inbox Sorting) — verre fumé foncé en
+   haut, le glow coloré irradie du bas. Aucune stripe. */
 .mc-bg {
   position: absolute; inset: 0; z-index: 0;
   border-radius: inherit;
   background:
     linear-gradient(180deg,
-      rgba(255,255,255,0.18) 0%,
-      rgba(255,255,255,0.07) 45%,
-      rgba(255,255,255,0.03) 100%);
-  -webkit-backdrop-filter: blur(22px) saturate(1.8) brightness(1.06);
-  backdrop-filter: blur(22px) saturate(1.8) brightness(1.06);
+      rgba(18,21,32,0.72) 0%,
+      rgba(13,15,24,0.55) 50%,
+      rgba(10,12,20,0.38) 100%);
+  -webkit-backdrop-filter: blur(14px) saturate(1.5);
+  backdrop-filter: blur(14px) saturate(1.5);
   box-shadow:
-    inset 0 1.5px 0 rgba(255,255,255,0.55),
-    inset 0 0 0 1px rgba(255,255,255,0.14),
-    inset 0 -60px 70px rgba(0,0,0,0.25);
+    inset 0 1.5px 0 rgba(255,255,255,0.32),
+    inset 0 0 0 1px rgba(255,255,255,0.09),
+    inset 0 -60px 70px rgba(0,0,0,0.22);
   overflow: hidden;
 }
 /* Reflet diagonal GLOSSY (specular liquide) + halo qui rebondit sur les bords */
@@ -556,40 +554,42 @@ h1, h2, h3, h4 { margin: 0; font-weight: 800; letter-spacing: -0.02em; color: va
   transform: translate(calc(-50% + var(--px, 0px)), var(--py, 0px));
   transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   -webkit-user-drag: none; user-select: none;
-  filter: drop-shadow(0 14px 28px rgba(0,0,0,0.55));
+  filter: drop-shadow(0 10px 18px rgba(0,0,0,0.45));   /* allégé (perf) */
 }
-/* Réglages par sujet (largeurs contenues : plus de clip latéral) */
-.mode-under .mc-player { --ph: 175%; --pb: 2%; --pw: 138%; }   /* Dembélé : plus grand, remonte, tête qui dépasse */
-.mode-draft .mc-player { --ph: 136%; --pb: 1%; --pw: 110%; }   /* Yamal */
-.mode-guess .mc-player { --ph: 118%; --pb: 0%; --pw: 100%; }   /* Yildiz */
-.mode-five  .mc-player { --ph: 132%; --pb: 0%; --pw: 106%; }
-.mode-juste .mc-player { --ph: 132%; --pb: 0%; --pw: 106%; }
+/* Réglages par sujet : CENTRÉS (pw raisonnable), tête qui dépasse en haut */
+.mode-under .mc-player { --ph: 150%; --pb: 0%; --pw: 116%; }   /* Dembélé */
+.mode-draft .mc-player { --ph: 138%; --pb: 0%; --pw: 110%; }   /* Yamal */
+.mode-guess .mc-player { --ph: 120%; --pb: 0%; --pw: 100%; }   /* Yildiz */
+.mode-five  .mc-player { --ph: 134%; --pb: 0%; --pw: 104%; }
+.mode-juste .mc-player { --ph: 134%; --pb: 0%; --pw: 104%; }
 
-/* === BLOOM INTENSE multi-couleurs (réf "Cu / SnCu / Digital Bloom") ===
-   Pas de stripes. Un dégradé radial RICHE (3-4 tons vifs) qui irradie du bas,
-   en blend "screen" pour bien éclater à travers le verre. */
+/* === GLOW réf "Unleash / Inbox Sorting" : bloom radial DOUX qui monte du
+   bas, cœur presque blanc au ras du bord, fondu très progressif vers le
+   verre sombre. Blend screen, pas de filter (perf). === */
 .mc-grad {
   position: absolute;
   inset: 0; z-index: 2;
   pointer-events: none;
   border-radius: inherit;
   background:
-    /* halo secondaire décalé (profondeur d'aurora) */
-    radial-gradient(75% 60% at 72% 122%,
-      rgba(var(--c1), 0.70) 0%,
-      rgba(var(--c2), 0.45) 40%,
-      transparent 68%),
-    /* bloom principal : cœur clair → ton vif → ton profond → noir */
-    radial-gradient(130% 92% at 42% 124%,
-      rgba(var(--c1), 0.98) 0%,
-      rgba(var(--c2), 0.92) 26%,
-      rgba(var(--c3), 0.82) 52%,
-      transparent 82%);
-  filter: saturate(1.5) blur(3px);
+    /* cœur lumineux au ras du bord bas */
+    radial-gradient(60% 28% at 50% 104%,
+      rgba(var(--c1), 0.95) 0%,
+      transparent 70%),
+    /* nappe principale : vif → profond → fondu long */
+    radial-gradient(135% 95% at 50% 122%,
+      rgba(var(--c1), 0.85) 0%,
+      rgba(var(--c2), 0.80) 24%,
+      rgba(var(--c3), 0.55) 50%,
+      rgba(var(--c3), 0.22) 68%,
+      transparent 85%);
   mix-blend-mode: screen;
-  -webkit-mask-image: linear-gradient(0deg, #000 0%, #000 42%, transparent 90%);
-          mask-image: linear-gradient(0deg, #000 0%, #000 42%, transparent 90%);
+  -webkit-mask-image: linear-gradient(0deg, #000 0%, #000 40%, transparent 92%);
+          mask-image: linear-gradient(0deg, #000 0%, #000 40%, transparent 92%);
 }
+/* halo extérieur sous la carte (le glow "déborde" comme dans les réfs) */
+.mode-card.is-center .mc-grad,
+.mode-card.is-hover  .mc-grad { opacity: 1; }
 
 /* Couleur du REBOND sur les bords (haut+côtés) par mode */
 .mode-five  .mc-inner { --mc-edge: rgba(60,180,235,0.16); }
@@ -1069,15 +1069,13 @@ body[data-mode="under"] .mode-cloud {
   gap: 22px;
 }
 .setup-field-wide { grid-column: 1 / -1; }
-/* Chaque réglage = bloc de verre arrondi (style verre demandé) */
+/* Chaque réglage = bloc de verre arrondi (sans backdrop-filter : perf) */
 .setup-field {
   position: relative;
   background: linear-gradient(180deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0.02) 100%);
   border: 1px solid rgba(255,255,255,0.10);
   border-radius: 16px;
   padding: 18px 18px 20px;
-  -webkit-backdrop-filter: blur(8px) saturate(1.3);
-  backdrop-filter: blur(8px) saturate(1.3);
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.12), 0 10px 24px rgba(0,0,0,0.18);
 }
 .setup-field > label {
@@ -3682,10 +3680,40 @@ body[data-mode="under"] .mode-cloud {
 .mr-guess-row label { font-family: var(--mono); font-size: 12px; }
 .mr-guess-row input { padding: 9px 12px; border-radius: 8px; background: var(--bg); border: 1px solid var(--line); color: var(--ink); }
 .mr-reveal {
-  margin-top: 18px; padding: 14px; background: var(--bg);
-  border-left: 3px solid var(--neon); border-radius: 8px;
-  font-family: var(--mono); font-size: 12px;
+  margin-top: 18px; padding: 20px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 100%);
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 16px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.10), 0 14px 30px rgba(0,0,0,0.25);
 }
+.mrr-value { display: flex; align-items: baseline; gap: 12px; }
+.mrr-label {
+  font-family: var(--mono); font-size: 11px; letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--slate);
+}
+.mrr-num {
+  font-family: var(--display); font-size: 34px; font-weight: 600;
+  color: var(--gold); letter-spacing: -0.02em;
+}
+.mrr-winner {
+  font-family: var(--mono); font-size: 13px; color: var(--neon);
+  margin: 6px 0 14px;
+}
+.mrr-rows { display: flex; flex-direction: column; gap: 8px; }
+.mrr-row {
+  display: grid; grid-template-columns: 1fr 70px minmax(60px, 160px) 56px;
+  gap: 12px; align-items: center;
+  padding: 10px 14px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 10px;
+}
+.mrr-row.win { border-color: var(--gold); background: rgba(214,169,60,0.08); }
+.mrr-name { font-family: var(--display); text-transform: uppercase; font-size: 14px; }
+.mrr-guess { font-family: var(--mono); font-weight: 700; font-size: 13px; text-align: right; }
+.mrr-bar { height: 6px; border-radius: 99px; background: rgba(255,255,255,0.08); overflow: hidden; }
+.mrr-bar-fill { height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--neon), var(--gold)); }
+.mrr-delta { font-family: var(--mono); font-size: 11px; color: var(--slate); text-align: right; }
 .mr-scoreboard {
   display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 10px; margin-top: 18px;

@@ -203,34 +203,46 @@
     applyCoverflow();
 
     // === RÉACTIF À LA SOURIS ===
-    // Survol d'un cadre : il MONTE (--liftY) et devient la carte focus.
-    // Mouvement souris : tilt perspective (rotateX/Y) du cadre + PARALLAXE du
-    // sujet (--px/--py, sens inverse) → il bouge en perspective, sans oscillation.
+    // Survol : la carte MONTE et passe au-dessus — SANS re-centrer le carrousel
+    // (le re-centrage déplaçait les cartes sous le curseur → clics vers le
+    // mauvais mode + nervosité). Tilt perspective + parallaxe du sujet via rAF.
     cards.forEach((card, i) => {
       const hit = card.querySelector('.mc-inner') || card;
       const player = card.querySelector('.mc-player');
+      let raf = 0;
       hit.addEventListener('mouseenter', () => {
-        if (activeIdx !== i) { activeIdx = i; applyCoverflow(); }
-        card.style.setProperty('--liftY', '-18px');
+        card.style.setProperty('--liftY', '-16px');
+        card.classList.add('is-hover');
       });
       hit.addEventListener('mousemove', (ev) => {
-        const r = card.getBoundingClientRect();
-        const nx = ((ev.clientX - r.left) / r.width - 0.5) * 2;   // -1 → 1
-        const ny = ((ev.clientY - r.top) / r.height - 0.5) * 2;
-        card.style.setProperty('--mrx', (nx * 9).toFixed(2) + 'deg');   // rotateY ← X
-        card.style.setProperty('--mry', (-ny * 7).toFixed(2) + 'deg');  // rotateX ← Y
-        if (player) {
-          player.style.setProperty('--px', (-nx * 20).toFixed(1) + 'px');
-          player.style.setProperty('--py', (-ny * 14).toFixed(1) + 'px');
-        }
+        if (raf) return;                       // 1 update max par frame (perf)
+        raf = requestAnimationFrame(() => {
+          raf = 0;
+          const r = card.getBoundingClientRect();
+          const nx = ((ev.clientX - r.left) / r.width - 0.5) * 2;   // -1 → 1
+          const ny = ((ev.clientY - r.top) / r.height - 0.5) * 2;
+          card.style.setProperty('--mrx', (nx * 8).toFixed(2) + 'deg');   // rotateY ← X
+          card.style.setProperty('--mry', (-ny * 6).toFixed(2) + 'deg');  // rotateX ← Y
+          if (player) {
+            player.style.setProperty('--px', (-nx * 18).toFixed(1) + 'px');
+            player.style.setProperty('--py', (-ny * 12).toFixed(1) + 'px');
+          }
+        });
       });
       hit.addEventListener('mouseleave', () => {
+        if (raf) { cancelAnimationFrame(raf); raf = 0; }
+        card.classList.remove('is-hover');
         card.style.setProperty('--liftY', '0px');
         card.style.setProperty('--mrx', '0deg');
         card.style.setProperty('--mry', '0deg');
         if (player) { player.style.setProperty('--px', '0px'); player.style.setProperty('--py', '0px'); }
       });
-      hit.addEventListener('click', (ev) => { ev.stopPropagation(); routeMode(order[i]); });
+      // Clic = lance LE mode de CETTE carte (et la met au centre visuellement)
+      hit.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        if (activeIdx !== i) { activeIdx = i; applyCoverflow(); }
+        routeMode(order[i]);
+      });
     });
 
     // Clic hors cartes (zones latérales du bento) : navigue
@@ -4181,14 +4193,25 @@
     const s = window.JustePrix.state;
     const wrap = $('#multiRound');
     const rev = el('div', { class: 'mr-reveal' });
-    const winnerName = s.participants[res.winnerIdx].name;
-    let html = '<strong>Vraie valeur : ' + res.target + ' M€</strong><br>Gagnant de la manche : ' + winnerName + '.<br>';
+    rev.appendChild(el('div', { class: 'mrr-value' },
+      el('span', { class: 'mrr-label' }, 'Vraie valeur'),
+      el('span', { class: 'mrr-num' }, res.target + ' M€')));
+    rev.appendChild(el('div', { class: 'mrr-winner' }, '🏆 Manche pour ' + s.participants[res.winnerIdx].name));
+    const rows = el('div', { class: 'mrr-rows' });
+    const maxDiff = Math.max(1, ...s.participants.map((p, i) => Math.abs((res.history.guesses[i] || 0) - res.target)));
     s.participants.forEach((p, i) => {
       const g = res.history.guesses[i];
       const diff = Math.abs(g - res.target);
-      html += '<br>' + p.name + ' : ' + g + ' M€ (Δ ' + diff + ')';
+      const row = el('div', { class: 'mrr-row' + (i === res.winnerIdx ? ' win' : '') });
+      row.appendChild(el('span', { class: 'mrr-name' }, p.name));
+      row.appendChild(el('span', { class: 'mrr-guess' }, g + ' M€'));
+      const bar = el('div', { class: 'mrr-bar' });
+      bar.appendChild(el('div', { class: 'mrr-bar-fill', style: `width:${Math.max(6, 100 - diff / maxDiff * 100)}%` }));
+      row.appendChild(bar);
+      row.appendChild(el('span', { class: 'mrr-delta' }, 'Δ ' + diff));
+      rows.appendChild(row);
     });
-    rev.innerHTML = html;
+    rev.appendChild(rows);
     wrap.appendChild(rev);
     if (!res.finished) {
       const nextBtn = el('button', { class: 'btn btn-primary' }, 'Manche suivante');
@@ -4635,9 +4658,9 @@
       { type:'LW', name:'Vinicius Jr.' }, { type:'ST', name:'Mbappé' }, { type:'RW', name:'Rodrygo' },
     ]},
     { team: 'Manchester City', formation: '4-3-3', slots: [
-      { type:'GK', name:'Ederson' }, { type:'LB', name:'Gvardiol' }, { type:'CB', name:'Dias' }, { type:'CB', name:'Akanji' }, { type:'RB', name:'Walker' },
-      { type:'DM', name:'Rodri' }, { type:'CM', name:'De Bruyne' }, { type:'CM', name:'Bernardo Silva' },
-      { type:'LW', name:'Foden' }, { type:'ST', name:'Haaland' }, { type:'RW', name:'Doku' },
+      { type:'GK', name:'Donnarumma' }, { type:'LB', name:'Gvardiol' }, { type:'CB', name:'Dias' }, { type:'CB', name:'Stones' }, { type:'RB', name:'Matheus Nunes' },
+      { type:'DM', name:'Rodri' }, { type:'CM', name:'Reijnders' }, { type:'CM', name:'Bernardo Silva' },
+      { type:'LW', name:'Doku' }, { type:'ST', name:'Haaland' }, { type:'RW', name:'Foden' },
     ]},
     { team: 'FC Barcelona', formation: '4-3-3', slots: [
       { type:'GK', name:'ter Stegen' }, { type:'LB', name:'Balde' }, { type:'CB', name:'Cubarsí' }, { type:'CB', name:'Araujo' }, { type:'RB', name:'Koundé' },
@@ -4655,7 +4678,7 @@
       { type:'LW', name:'Gakpo' }, { type:'ST', name:'Isak' }, { type:'RW', name:'Salah' },
     ]},
     { team: 'Paris SG', formation: '4-3-3', slots: [
-      { type:'GK', name:'Donnarumma' }, { type:'LB', name:'Mendes' }, { type:'CB', name:'Marquinhos' }, { type:'CB', name:'Beraldo' }, { type:'RB', name:'Hakimi' },
+      { type:'GK', name:'Chevalier' }, { type:'LB', name:'Mendes' }, { type:'CB', name:'Marquinhos' }, { type:'CB', name:'Pacho' }, { type:'RB', name:'Hakimi' },
       { type:'CM', name:'Vitinha' }, { type:'DM', name:'Neves' }, { type:'CM', name:'Zaïre-Emery' },
       { type:'LW', name:'Doué' }, { type:'ST', name:'Dembélé' }, { type:'RW', name:'Barcola' },
     ]},
@@ -4675,8 +4698,8 @@
       { type:'ST', name:'Vlahović' }, { type:'ST', name:'Yıldız' },
     ]},
     { team: 'Atlético Madrid', formation: '4-4-2', slots: [
-      { type:'GK', name:'Oblak' }, { type:'LB', name:'Lino' }, { type:'CB', name:'Witsel' }, { type:'CB', name:'Le Normand' }, { type:'RB', name:'Llorente' },
-      { type:'LM', name:'Koke' }, { type:'CM', name:'De Paul' }, { type:'CM', name:'Barrios' }, { type:'RM', name:'Griezmann' },
+      { type:'GK', name:'Oblak' }, { type:'LB', name:'Hancko' }, { type:'CB', name:'José Giménez' }, { type:'CB', name:'Le Normand' }, { type:'RB', name:'Llorente' },
+      { type:'LM', name:'Gallagher' }, { type:'CM', name:'Koke' }, { type:'CM', name:'Barrios' }, { type:'RM', name:'Griezmann' },
       { type:'ST', name:'Alvarez' }, { type:'ST', name:'Sørloth' },
     ]},
     { team: 'Chelsea', formation: '4-2-3-1', slots: [
@@ -4771,18 +4794,19 @@
     'Qatar':'🇶🇦','UAE':'🇦🇪','Israel':'🇮🇱','Norway':'🇳🇴','Iceland':'🇮🇸',
     'Albania':'🇦🇱','Bosnia':'🇧🇦','Romania':'🇷🇴','Bulgaria':'🇧🇬','Slovenia':'🇸🇮',
     'Georgia':'🇬🇪','Armenia':'🇦🇲','Finland':'🇫🇮','Estonia':'🇪🇪','Latvia':'🇱🇻',
-    'Lithuania':'🇱🇹','North Macedonia':'🇲🇰','Montenegro':'🇲🇪',
+    'Lithuania':'🇱🇹','North Macedonia':'🇲🇰','Montenegro':'🇲🇪','Kosovo':'🇽🇰',
   };
   function flagFor(nationality) {
     if (!nationality) return '·';
     return NATION_FLAGS[nationality] || nationality.slice(0,3).toUpperCase();
   }
-  // Normalisation robuste (accents + lettres spéciales) pour matcher les noms
+  // Normalisation robuste (accents + lettres spéciales + parenthèses) pour matcher les noms
   function normName(s) {
-    return (s || '').normalize('NFD').replace(/[̀-ͯ]/g, '')
+    return (s || '').replace(/\([^)]*\)/g, ' ')
+      .normalize('NFD').replace(/[̀-ͯ]/g, '')
       .replace(/ø/gi, 'o').replace(/å/gi, 'a').replace(/[æ]/gi, 'ae')
       .replace(/ł/gi, 'l').replace(/[đð]/gi, 'd').replace(/ı/gi, 'i')
-      .replace(/ß/gi, 'ss').toLowerCase().trim();
+      .replace(/ß/gi, 'ss').toLowerCase().replace(/\s+/g, ' ').trim();
   }
   // Retrouve un joueur de la DB depuis un nom de compo (tolérant aux accents)
   function findGuessPlayer(name) {
@@ -4796,6 +4820,39 @@
     const ql = q.split(' ').pop();
     p = P.find(x => normName(x.name).split(' ').pop() === ql);
     return p || null;
+  }
+  // Joueurs ABSENTS de la base (2500 entrées) : nat + club fournis à la main
+  // pour que Guess affiche toujours drapeau/écusson (jamais de fallback vide).
+  const GUESS_DB_FIX = {
+    'Messi':             { nat: 'Argentina',   club: 'Inter Miami' },
+    'Cristiano Ronaldo': { nat: 'Portugal',    club: 'Al-Nassr' },
+    'Neuer':             { nat: 'Germany',     club: 'Bayern Munich' },
+    'Pickford':          { nat: 'England',     club: 'Everton' },
+    'Martinelli':        { nat: 'Brazil',      club: 'Arsenal' },
+    'Zaïre-Emery':       { nat: 'France',      club: 'Paris SG' },
+    'Dumfries':          { nat: 'Netherlands', club: 'Inter' },
+    'de Vrij':           { nat: 'Netherlands', club: 'Inter' },
+    'Aké':               { nat: 'Netherlands', club: 'Manchester City' },
+    'Depay':             { nat: 'Netherlands', club: 'Corinthians' },
+    'Gatti':             { nat: 'Italy',       club: 'Juventus' },
+    'Koke':              { nat: 'Spain',       club: 'Atlético Madrid' },
+    'Bentancur':         { nat: 'Uruguay',     club: 'Tottenham' },
+    'Burn':              { nat: 'England',     club: 'Newcastle' },
+    'Schär':             { nat: 'Switzerland', club: 'Newcastle' },
+    'Trippier':          { nat: 'England',     club: 'Newcastle' },
+    'Meret':             { nat: 'Italy',       club: 'Napoli' },
+    'Rrahmani':          { nat: 'Kosovo',      club: 'Napoli' },
+    'Di Lorenzo':        { nat: 'Italy',       club: 'Napoli' },
+    'Politano':          { nat: 'Italy',       club: 'Napoli' },
+    'Wendell':           { nat: 'Brazil',      club: 'São Paulo' },
+    'Danilo':            { nat: 'Brazil',      club: 'Flamengo' },
+    'Andrich':           { nat: 'Germany',     club: 'Bayer Leverkusen' },
+    'Cancelo':           { nat: 'Portugal',    club: 'Al-Hilal' },
+    'Otamendi':          { nat: 'Argentina',   club: 'River Plate' },
+  };
+  // Méta d'affichage (nat/club) d'un slot : DB d'abord, sinon override
+  function guessMeta(name) {
+    return findGuessPlayer(name) || GUESS_DB_FIX[name] || null;
   }
   // Badge club court : initiales (max 4 chars) avec accent couleur
   function clubBadge(club) {
@@ -4945,7 +5002,7 @@
     target.slots.forEach((slotData, i) => {
       const formSlot = formation.slots[i];
       if (!formSlot) return;
-      const playerData = findGuessPlayer(slotData.name);
+      const playerData = guessMeta(slotData.name);
       const slot = el('div', { class: 'gp-slot', style: `left:${formSlot.x}%; top:${formSlot.y}%` });
       const bubble = el('div', { class: 'gp-bubble' });
       if (s.variant === 'club') {
@@ -4957,7 +5014,8 @@
         // Variante sélection → afficher l'écusson du club (sinon initiales)
         const club = playerData ? playerData.club : '';
         const logo = clubLogoSrc(club);
-        const clubBg = playerData && playerData.club ? glowColorFor(playerData) : [180, 180, 180];
+        // glowColorFor exige un vrai joueur DB (les overrides n'ont que nat/club)
+        const clubBg = playerData && playerData.id && playerData.club ? glowColorFor(playerData) : [120, 130, 150];
         const badge = el('div', {
           class: 'gp-club-badge' + (logo ? ' has-logo' : ''),
           style: logo ? '' : `background:rgb(${clubBg[0]},${clubBg[1]},${clubBg[2]})`,
@@ -5113,7 +5171,30 @@
     });
     $('#underStart').disabled = underState.players.length < 3;
   }
-  // Paires de mots pour le bluff — civils / imposteur
+  // Paire DYNAMIQUE tirée de la base : 2 joueurs du même registre (poste +
+  // valeur proche) → imposteur difficile à coincer, et un pool quasi infini.
+  function pickUnderPair() {
+    const P = window.PLAYERS || [];
+    const pool = P.filter(p => p.value >= 30 && p.name && !/\(/.test(p.name));
+    if (pool.length < 20) return null;
+    const bucketOf = p => {
+      const pos = (p.posMain || p.positions || [])[0] || '';
+      if (pos === 'GK') return 'GK';
+      if (['CB','LB','RB','LWB','RWB'].includes(pos)) return 'DEF';
+      if (['DM','CM','AM','LM','RM'].includes(pos)) return 'MID';
+      return 'ATT';
+    };
+    const buckets = { GK: [], DEF: [], MID: [], ATT: [] };
+    pool.forEach(p => buckets[bucketOf(p)].push(p));
+    // pondéré vers MID/ATT (plus connus), GK rare
+    const keys = ['ATT','ATT','MID','MID','DEF','GK'].filter(k => buckets[k].length >= 2);
+    const arr = buckets[keys[Math.floor(Math.random() * keys.length)]];
+    const a = arr[Math.floor(Math.random() * arr.length)];
+    const cands = arr.filter(x => x.id !== a.id && x.value >= a.value * 0.55 && x.value <= a.value * 1.8);
+    const b = cands.length ? cands[Math.floor(Math.random() * cands.length)] : arr.find(x => x.id !== a.id);
+    return Math.random() < 0.5 ? [a.name, b.name] : [b.name, a.name];
+  }
+  // Paires de secours si la base n'est pas chargée
   const UNDER_WORDS = [
     ['Messi', 'Cristiano Ronaldo'],
     ['Mbappé', 'Haaland'],
@@ -5160,7 +5241,7 @@
     // Restaure le stage (la discussion l'a peut-être remplacé)
     const stage = $('.under-card-stage');
     if (stage) stage.innerHTML = UNDER_STAGE_HTML;
-    const pair = UNDER_WORDS[Math.floor(Math.random() * UNDER_WORDS.length)];
+    const pair = pickUnderPair() || UNDER_WORDS[Math.floor(Math.random() * UNDER_WORDS.length)];
     const civilWord = pair[0];
     const impostorWord = pair[1];
     const playersShuffled = underState.players.slice().sort(() => Math.random() - 0.5);
@@ -5188,28 +5269,34 @@
     if (!p) return;
     const card = $('#underRevealCard');
     card.classList.remove('revealed');
+    // ANTI-FUITE : le dos est vidé tout de suite (le secret du joueur
+    // précédent disparaît pendant la rotation retour) et n'est rempli
+    // qu'au moment où CE joueur touche la carte.
+    $('#underRoleLabel').textContent = '';
+    $('#underMot').innerHTML = '';
     const prompt = $('#underPrompt');
     prompt.innerHTML = '📱 Passe l\'appareil à <strong>' + p.name + '</strong>';
-    $('#underRoleLabel').textContent = p.role === 'impostor' ? 'IMPOSTEUR' : 'CIVIL';
-    // Affiche le JOUEUR secret en PHOTO (pas un mot)
-    const mot = $('#underMot');
-    mot.innerHTML = '';
-    const secret = findGuessPlayer(p.word);
-    if (secret) {
-      const ph = el('div', { class: 'uc-secret-photo', style: `background:${gradientFor(secret)}` });
-      attachPhoto(ph, secret, 'uc-secret-img');
-      ph.appendChild(el('span', { class: 'uc-secret-fb' }, initials(secret)));
-      mot.appendChild(ph);
-      mot.appendChild(el('div', { class: 'uc-secret-name' }, secret.name));
-    } else {
-      mot.textContent = p.word;
-    }
     // Le front de la carte montre "Je suis X — toucher pour voir mon joueur"
     const front = card.querySelector('.urc-front .urc-eyebrow');
     if (front) front.textContent = 'Je suis ' + p.name + ' — toucher';
     const nextBtn = $('#underNextTurn');
     nextBtn.textContent = (round.turnIdx >= underState.players.length - 1) ? 'Lancer la discussion →' : 'Joueur suivant →';
-    card.onclick = () => card.classList.add('revealed');
+    card.onclick = () => {
+      $('#underRoleLabel').textContent = p.role === 'impostor' ? 'IMPOSTEUR' : 'CIVIL';
+      const mot = $('#underMot');
+      mot.innerHTML = '';
+      const secret = findGuessPlayer(p.word);
+      if (secret) {
+        const ph = el('div', { class: 'uc-secret-photo', style: `background:${gradientFor(secret)}` });
+        attachPhoto(ph, secret, 'uc-secret-img');
+        ph.appendChild(el('span', { class: 'uc-secret-fb' }, initials(secret)));
+        mot.appendChild(ph);
+        mot.appendChild(el('div', { class: 'uc-secret-name' }, secret.name));
+      } else {
+        mot.textContent = p.word;
+      }
+      card.classList.add('revealed');
+    };
     nextBtn.onclick = () => {
       round.turnIdx++;
       if (round.turnIdx >= underState.players.length) {
