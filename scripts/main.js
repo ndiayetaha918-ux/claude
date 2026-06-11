@@ -133,6 +133,7 @@
     onePerClub: false,
     clubMode: '',        // '' = off, sinon = nom du club
     clubModeFormer: false, // true = inclure anciens joueurs
+    wcMode: false,       // Draft Coupe du Monde : pool = nations qualifiées
     leagues: new Set(),  // Championnats activés
     ageSlider: 9,        // 9 = "Tous âges" par défaut
     participants: [],
@@ -213,6 +214,13 @@
       hit.addEventListener('mouseenter', () => {
         card.style.setProperty('--liftY', '-16px');
         card.classList.add('is-hover');
+        // PRÉVIEW du mode survolé : thème global + panneau de setup affiché
+        // (léger : pas de rebuild des participants, pas de scroll)
+        const m = order[i];
+        document.body.setAttribute('data-mode', m);
+        document.body.classList.remove('mode-hover-five','mode-hover-draft','mode-hover-juste','mode-hover-under','mode-hover-guess');
+        document.body.classList.add('mode-hover-' + m);
+        showModeSetup(m);
       });
       hit.addEventListener('mousemove', (ev) => {
         if (raf) return;                       // 1 update max par frame (perf)
@@ -385,6 +393,10 @@
   }
 
   function refreshFormationDropdown() {
+    // Bascule le contenu de FORMATIONS sans casser les références — TOUJOURS,
+    // même sans dropdown global (#formationSelect a été retiré du HTML ;
+    // l'early-return d'avant laissait Five en formations 11v11).
+    applyFormationSet(state.fiveMode ? window.FIVE_FORMATIONS : window.FORMATIONS_11);
     const sel = $('#formationSelect');
     if (!sel) return;
     const FORMS = state.fiveMode ? (window.FIVE_FORMATIONS || {}) : (window.FORMATIONS_11 || window.FORMATIONS);
@@ -394,14 +406,31 @@
       if (i === 0) opt.selected = true;
       sel.appendChild(opt);
     });
-    // Bascule le contenu de FORMATIONS sans casser les références
-    applyFormationSet(state.fiveMode ? window.FIVE_FORMATIONS : window.FORMATIONS_11);
   }
 
   // ============================================================
   // SETUP
   // ============================================================
   const ALL_LEAGUES = Array.from(new Set(PLAYERS.map(p => p.league))).sort();
+
+  // Nations de la Coupe du Monde 2026 (hôtes + qualifiées)
+  const WC_NATIONS = new Set([
+    'USA','United States','Canada','Mexico',
+    'Argentina','Brazil','Ecuador','Colombia','Uruguay','Paraguay',
+    'France','Spain','England','Germany','Portugal','Netherlands','Belgium',
+    'Croatia','Italy','Norway','Scotland','Austria','Switzerland','Türkiye','Turkey',
+    'Denmark','Poland','Czech Republic','Czechia','Ukraine','Wales','Slovakia','Slovenia',
+    'Morocco','Senegal','Egypt','Algeria','Tunisia',"Côte d'Ivoire",'Ivory Coast',
+    'Ghana','Cape Verde','South Africa','Nigeria','Cameroon',
+    'Japan','South Korea','Korea Republic','Iran','Australia','Saudi Arabia',
+    'Qatar','Uzbekistan','Jordan','Iraq','New Zealand',
+    'Panama','Costa Rica','Haiti','Curacao','Jamaica','Honduras',
+  ]);
+  // Filtre de pool central : Coupe du Monde → nation qualifiée,
+  // sinon → championnat activé.
+  function inDraftPool(p) {
+    return state.wcMode ? WC_NATIONS.has(p.nat) : state.leagues.has(p.league);
+  }
 
   // Top 5 leagues activés par défaut (UX clearer que tout activé)
   const TOP5_LEAGUES = ['Premier League', 'La Liga', 'Bundesliga', 'Serie A', 'Ligue 1'];
@@ -412,6 +441,17 @@
   }
 
   function bindSetup() {
+    // Type de draft : classique / Coupe du Monde
+    $$('#draftType .dt-box').forEach(b => {
+      b.addEventListener('click', () => {
+        $$('#draftType .dt-box').forEach(x => x.classList.remove('active'));
+        b.classList.add('active');
+        state.wcMode = b.dataset.dtype === 'wc';
+        // En mode CdM : championnats + mode club n'ont plus de sens → grisés
+        document.body.classList.toggle('wc-mode', state.wcMode);
+      });
+    });
+
     // Segmented buttons
     function bindSeg(id, key, type) {
       $(id).addEventListener('click', (e) => {
@@ -1129,7 +1169,7 @@
     // League/Club selects scoped to allowed leagues + accepted positions
     const accepted = SLOT_RULES[slot.type];
     const candidates = PLAYERS.filter(p =>
-      state.leagues.has(p.league) &&
+      inDraftPool(p) &&
       !state.takenIds.has(p.id) &&
       p.positions.some(pos => accepted.includes(pos))
     );
@@ -1181,7 +1221,7 @@
         if (!inCurrent && !inFormer) return false;
       } else {
         // Filtre championnat (ignoré si mode club actif)
-        if (!state.leagues.has(p.league)) return false;
+        if (!inDraftPool(p)) return false;
       }
       if (!passesAge(p.age, state.ageSlider)) return false;
       if (state.takenIds.has(p.id)) return false;
@@ -2087,7 +2127,7 @@
 
     // Leagues/clubs from candidates
     const candidates = PLAYERS.filter(p =>
-      state.leagues.has(p.league) &&
+      inDraftPool(p) &&
       !state.takenIds.has(p.id) &&
       !state.online.shortlist.find(s => s.id === p.id) &&
       p.positions.some(pos => acceptedPositions.has(pos))
@@ -3107,6 +3147,7 @@
       FORMATIONS[part.formation].slots.forEach(slot => {
         const pid = part.slots[slot.id];
         const pl = pid ? playerById(pid) : null;
+        if (!pl) return;   // slot jamais rempli → l'équipe joue VRAIMENT en infériorité
         // Position ajustée selon le rôle (posDx en largeur, posDy en profondeur)
         let adj = { x: 0, y: 0 };
         if (ts && ts.players && ts.players[slot.id] && ts.players[slot.id].sliders) {
@@ -3180,12 +3221,19 @@
       const dir = side === 'A' ? 1 : -1;          // A attaque vers la droite
       const baseX = p.baseX != null ? p.baseX : (p.baseX = p.x);
       const baseY = p.baseY != null ? p.baseY : (p.baseY = p.y);
-      // appel court vers l'avant (18px) + léger réajustement latéral
-      movePawnTo(p, baseX + 18 * dir, baseY);
+      // COURSE INDIVIDUELLE réaliste : la profondeur dépend du poste —
+      // les attaquants plongent DANS la moitié adverse, les milieux
+      // accompagnent, les défenseurs sortent court. + variation latérale.
+      const RUN = { GK: 0, CB: 36, LB: 70, RB: 70, LWB: 90, RWB: 90,
+                    DM: 70, CM: 95, AM: 120, LM: 110, RM: 110,
+                    LW: 150, RW: 150, SS: 140, CF: 150, ST: 150 };
+      const run = (RUN[p.slotType] != null ? RUN[p.slotType] : 90) * (0.8 + Math.random() * 0.45);
+      const lat = (Math.random() - 0.5) * 46;
+      movePawnTo(p, baseX + run * dir, baseY + lat);
       setTimeout(() => {
         p.ring.classList.remove('pawn-on-ball');
         movePawnTo(p, baseX, baseY);              // retour à sa zone
-      }, 760);
+      }, 980);
     }
 
     // === HEAT ZONE : illumine la zone du terrain où se passe l'action ===
@@ -3271,13 +3319,14 @@
         const dx2 = y.x - c.x, dy2 = y.y - c.y;
         return (dx1*dx1+dy1*dy1) - (dx2*dx2+dy2*dy2);
       });
+      // 3 soutiens : 2 proches en appui + 1 attaquant qui plonge en profondeur
       sorted.slice(0, 2).forEach((m, i) => {
         const lateral = (i === 0 ? 1 : -1) * (40 + Math.random() * 20);
-        const forward = 30 + Math.random() * 25;
-        const nx = c.x + forward * dir;
-        const ny = c.y + lateral;
-        movePawnTo(m, nx, ny);
+        const forward = 45 + Math.random() * 40;
+        movePawnTo(m, c.x + forward * dir, c.y + lateral);
       });
+      const runner = mates.find(m => ['ST','CF','LW','RW','SS'].includes(m.slotType) && !sorted.slice(0,2).includes(m));
+      if (runner) movePawnTo(runner, c.x + (110 + Math.random() * 50) * dir, runner.y + (Math.random() - 0.5) * 40);
     }
     // Le gardien suit la trajectoire de l'attaque (latéralement)
     function gkTrack(attSide) {
@@ -3773,6 +3822,7 @@
   function renderFivePitch() {
     const mount = $('#fivePitch');
     mount.innerHTML = '';
+    mount.classList.add('pitch-street');   // ambiance street/urbain pour le 5v5
     appendPitchFeatures(mount);
     const F = FIVE_FORMATIONS[fiveTeam.formation];
     F.slots.forEach(slot => {
@@ -3823,7 +3873,7 @@
     $('#pickerAffordable').checked = true;
     // dropdowns
     const accepted = SLOT_RULES[slot.type] || [];
-    const cand = PLAYERS.filter(p => state.leagues.has(p.league) && p.positions.some(pp => accepted.includes(pp)));
+    const cand = PLAYERS.filter(p => inDraftPool(p) && p.positions.some(pp => accepted.includes(pp)));
     const leagues = Array.from(new Set(cand.map(p => p.league))).sort();
     $('#pickerLeague').innerHTML = '<option value="">Tous championnats</option>' + leagues.map(l => `<option>${l}</option>`).join('');
     const clubs = Array.from(new Set(cand.map(p => p.club))).sort();
@@ -3835,7 +3885,7 @@
   function renderPickerFive() {
     const slot = pickerState.slot;
     const accepted = SLOT_RULES[slot.type] || [];
-    let list = PLAYERS.filter(p => state.leagues.has(p.league) && p.positions.some(pp => accepted.includes(pp)));
+    let list = PLAYERS.filter(p => inDraftPool(p) && p.positions.some(pp => accepted.includes(pp)));
     if (pickerState.search) list = list.filter(p => normSearch(p.name).includes(pickerState.search));
     if (pickerState.age === 'u21') list = list.filter(p => p.age < 21);
     else if (pickerState.age === 'u25') list = list.filter(p => p.age < 25);
@@ -4416,6 +4466,9 @@
       slotEl.addEventListener('click', () => {
         tacticsState.selectedSlotId = slot.id;
         renderTacticsBoard();
+        // le panneau de rôle est hors-viewport sur laptop → l'amener à l'écran
+        const rp = $('#tacticsRolePanel');
+        if (rp) rp.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       });
       pitch.appendChild(slotEl);
     });
@@ -4800,6 +4853,40 @@
     if (!nationality) return '·';
     return NATION_FLAGS[nationality] || nationality.slice(0,3).toUpperCase();
   }
+  // ISO-3166 alpha-2 pour flagcdn.com (les emoji drapeaux s'affichent en
+  // LETTRES sous Windows → on sert de vraies images de drapeaux)
+  const NATION_ISO = {
+    'France':'fr','Spain':'es','England':'gb-eng','Brazil':'br','Argentina':'ar',
+    'Germany':'de','Italy':'it','Portugal':'pt','Netherlands':'nl','Belgium':'be',
+    'Croatia':'hr','Uruguay':'uy','Norway':'no','Sweden':'se','Denmark':'dk',
+    'Poland':'pl','Morocco':'ma','Senegal':'sn',"Côte d'Ivoire":'ci','Ivory Coast':'ci',
+    'Nigeria':'ng','Cameroon':'cm','Egypt':'eg','Algeria':'dz','Tunisia':'tn',
+    'Ghana':'gh','Switzerland':'ch','Austria':'at','Czech Republic':'cz','Czechia':'cz',
+    'Slovakia':'sk','Serbia':'rs','Hungary':'hu','Türkiye':'tr','Turkey':'tr',
+    'Ukraine':'ua','Russia':'ru','Wales':'gb-wls','Scotland':'gb-sct','Republic of Ireland':'ie',
+    'Northern Ireland':'gb-nir','Greece':'gr','Mexico':'mx','USA':'us','United States':'us',
+    'Canada':'ca','Colombia':'co','Chile':'cl','Peru':'pe','Ecuador':'ec',
+    'Paraguay':'py','Venezuela':'ve','Bolivia':'bo','Japan':'jp','South Korea':'kr',
+    'Korea Republic':'kr','Australia':'au','New Zealand':'nz','Iran':'ir','Saudi Arabia':'sa',
+    'Qatar':'qa','UAE':'ae','Israel':'il','Iceland':'is','Albania':'al','Bosnia':'ba',
+    'Bosnia-Herzegovina':'ba','Romania':'ro','Bulgaria':'bg','Slovenia':'si','Georgia':'ge',
+    'Armenia':'am','Finland':'fi','Estonia':'ee','Latvia':'lv','Lithuania':'lt',
+    'North Macedonia':'mk','Montenegro':'me','Kosovo':'xk','Mali':'ml','Guinea':'gn',
+    'Burkina Faso':'bf','DR Congo':'cd','Gabon':'ga','Angola':'ao','Mozambique':'mz',
+    'Cape Verde':'cv','Gambia':'gm','Togo':'tg','Benin':'bj','Zambia':'zm',
+    'Uzbekistan':'uz','Jordan':'jo','Iraq':'iq','Costa Rica':'cr','Panama':'pa',
+    'Honduras':'hn','Jamaica':'jm','Haiti':'ht','Curacao':'cw','Suriname':'sr',
+  };
+  // Élément drapeau : image flagcdn (fallback emoji si nation inconnue)
+  function flagEl(nationality) {
+    const iso = NATION_ISO[nationality];
+    if (!iso) return el('div', { class: 'gp-flag' }, flagFor(nationality));
+    const wrap = el('div', { class: 'gp-flag gp-flag-img' });
+    const img = el('img', { src: `https://flagcdn.com/w80/${iso}.png`, alt: nationality || '', loading: 'lazy' });
+    img.addEventListener('error', () => { wrap.textContent = flagFor(nationality); wrap.classList.remove('gp-flag-img'); });
+    wrap.appendChild(img);
+    return wrap;
+  }
   // Normalisation robuste (accents + lettres spéciales + parenthèses) pour matcher les noms
   function normName(s) {
     return (s || '').replace(/\([^)]*\)/g, ' ')
@@ -5007,7 +5094,7 @@
       const bubble = el('div', { class: 'gp-bubble' });
       if (s.variant === 'club') {
         // Variante club → afficher le drapeau de la nationalité du joueur
-        const flag = el('div', { class: 'gp-flag' }, flagFor(playerData ? playerData.nat : null));
+        const flag = flagEl(playerData ? playerData.nat : null);
         flag.title = playerData ? playerData.nat : '';
         bubble.appendChild(flag);
       } else {
@@ -5175,7 +5262,8 @@
   // valeur proche) → imposteur difficile à coincer, et un pool quasi infini.
   function pickUnderPair() {
     const P = window.PLAYERS || [];
-    const pool = P.filter(p => p.value >= 30 && p.name && !/\(/.test(p.name));
+    // seuil bas (≥12 M€) → ~900 joueurs au lieu de 300 : énorme variété
+    const pool = P.filter(p => p.value >= 12 && p.name && !/\(/.test(p.name));
     if (pool.length < 20) return null;
     const bucketOf = p => {
       const pos = (p.posMain || p.positions || [])[0] || '';
@@ -5212,7 +5300,7 @@
     ['Rodri', 'Casemiro'],
     ['Rashford', 'Sancho'],
   ];
-  // Deck de questions de déduction (façon apps Undercover mobiles)
+  // Deck de questions de déduction (façon apps Undercover mobiles) — créatives
   const UNDER_QUESTIONS = [
     'Quel premier mot vous vient à l\'esprit en pensant à ce joueur ?',
     'Ce joueur est-il surcoté ou sous-coté ? Pourquoi ?',
@@ -5226,6 +5314,30 @@
     'Titulaire ou remplaçant dans votre équipe de rêve ?',
     'Plutôt génie ou travailleur acharné ?',
     'En une émotion, qu\'est-ce qu\'il vous inspire ?',
+    'S\'il était un plat, ce serait quoi ?',
+    'Quelle musique passerait quand il entre sur le terrain ?',
+    'S\'il était un métier hors football, lequel ?',
+    'Sa célébration de but idéale en deux mots ?',
+    'Plutôt match de gala ou derby sous la pluie ?',
+    'Quel super-pouvoir lui collerait à la peau ?',
+    'S\'il était une voiture, laquelle ?',
+    'Tu lui prêtes ta PS5 : il te la rend dans quel état ?',
+    'Son emoji signature ?',
+    'Il rate un penalty décisif : quelle est sa réaction ?',
+    'Plutôt insta-foot ou fantôme des réseaux ?',
+    'S\'il était un prof, il enseignerait quoi ?',
+    'Un mot pour décrire sa coupe de cheveux ?',
+    'Capitaine de soirée ou premier parti ?',
+    'S\'il était une météo, laquelle ?',
+    'Combien de temps il survivrait dans Koh-Lanta ?',
+    'Son point faible caché, en un mot ?',
+    'Plutôt tunnel de dribbles ou passe décisive sobre ?',
+    'Quelle pub pourrait-il tourner demain ?',
+    'S\'il était un jeu vidéo, lequel ?',
+    'Sa réaction quand l\'arbitre sort le jaune ?',
+    'Tu le croises au marché : il achète quoi ?',
+    'Un sport où il serait nul ?',
+    'Son surnom dans le vestiaire, à votre avis ?',
   ];
 
   const UNDER_STAGE_HTML =
@@ -5268,12 +5380,18 @@
     const p = underState.players[round.turnIdx];
     if (!p) return;
     const card = $('#underRevealCard');
+    // ANTI-FUITE : on coupe la transition de flip pendant le reset → la carte
+    // revient face cachée INSTANTANÉMENT (aucune rotation où on verrait le
+    // secret du joueur précédent), puis on réactive l'animation pour le tap.
+    card.style.transition = 'none';
+    card.querySelectorAll('.urc-front, .urc-back').forEach(f => f.style.transition = 'none');
     card.classList.remove('revealed');
-    // ANTI-FUITE : le dos est vidé tout de suite (le secret du joueur
-    // précédent disparaît pendant la rotation retour) et n'est rempli
-    // qu'au moment où CE joueur touche la carte.
     $('#underRoleLabel').textContent = '';
     $('#underMot').innerHTML = '';
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      card.style.transition = '';
+      card.querySelectorAll('.urc-front, .urc-back').forEach(f => f.style.transition = '');
+    }));
     const prompt = $('#underPrompt');
     prompt.innerHTML = '📱 Passe l\'appareil à <strong>' + p.name + '</strong>';
     // Le front de la carte montre "Je suis X — toucher pour voir mon joueur"

@@ -421,6 +421,54 @@ h1, h2, h3, h4 { margin: 0; font-weight: 800; letter-spacing: -0.02em; color: va
   transform-style: preserve-3d;
   cursor: pointer;
 }
+/* BOX BLUR derrière le carrousel : nappe floutée statique (1 seul rendu,
+   pas de backdrop-filter animé → pas de lag) */
+.mode-bento::before {
+  content: "";
+  position: absolute;
+  left: 8%; right: 8%; top: 18%; bottom: 12%;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(60% 60% at 50% 55%, color-mix(in srgb, var(--neon) 14%, transparent) 0%, transparent 70%),
+    radial-gradient(45% 50% at 28% 50%, rgba(255,255,255,0.05) 0%, transparent 70%),
+    radial-gradient(45% 50% at 72% 50%, rgba(255,255,255,0.05) 0%, transparent 70%);
+  filter: blur(56px);
+  transition: background 0.7s ease;
+}
+
+/* === APPARITION : cards en fondu-montée staggerée, textes ensuite === */
+@keyframes cardIn {
+  from { opacity: 0; transform: translate(-50%, -44%) scale(0.96); }
+}
+@keyframes textIn {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.mode-card { animation: cardIn 0.7s cubic-bezier(0.22, 1, 0.36, 1) backwards; }
+.mode-card:nth-child(1) { animation-delay: 0.30s; }
+.mode-card:nth-child(2) { animation-delay: 0.22s; }
+.mode-card:nth-child(3) { animation-delay: 0.14s; }
+.mode-card:nth-child(4) { animation-delay: 0.38s; }
+.mode-card:nth-child(5) { animation-delay: 0.46s; }
+.mc-body { animation: textIn 0.6s ease 0.65s backwards; }
+.hero-intro .hero-eyebrow   { animation: textIn 0.6s ease 0.05s backwards; }
+.hero-intro .hero-title-v3  { animation: textIn 0.7s ease 0.15s backwards; }
+.hero-intro .hero-sub-v3    { animation: textIn 0.7s ease 0.28s backwards; }
+
+/* === FADE des textes : l'opacité décroît vers le bas (masque dégradé) === */
+.mc-title, .mc-desc {
+  -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 55%, rgba(0,0,0,0.45) 100%);
+          mask-image: linear-gradient(180deg, #000 0%, #000 55%, rgba(0,0,0,0.45) 100%);
+}
+.hero-title-v3 {
+  -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 50%, rgba(0,0,0,0.35) 100%);
+          mask-image: linear-gradient(180deg, #000 0%, #000 50%, rgba(0,0,0,0.35) 100%);
+}
+.hero-sub-v3 {
+  -webkit-mask-image: linear-gradient(180deg, #000 0%, rgba(0,0,0,0.5) 100%);
+          mask-image: linear-gradient(180deg, #000 0%, rgba(0,0,0,0.5) 100%);
+}
 
 /* CHANGEMENT MAJEUR : les cards sont absolument positionnées,
    superposées au CENTRE, et placées en arrière par translateZ négatif.
@@ -504,6 +552,14 @@ h1, h2, h3, h4 { margin: 0; font-weight: 800; letter-spacing: -0.02em; color: va
   pointer-events: auto;         /* capte le clic (la card parente est none) */
   cursor: pointer;
 }
+/* Mouvement AUTOMATIQUE lent (indépendant du curseur) sur la carte centrale
+   et la carte survolée — se compose avec le tilt souris (porté par .mode-card) */
+.mode-card.is-center .mc-inner,
+.mode-card.is-hover  .mc-inner { animation: mcIdle 11s ease-in-out infinite; }
+@keyframes mcIdle {
+  0%, 100% { transform: rotateY(-5deg) rotateX(2.5deg); }
+  50%      { transform: rotateY(5deg)  rotateX(-2.5deg); }
+}
 /* LIQUID GLASS sombre (réfs Unleash / Inbox Sorting) — verre fumé foncé en
    haut, le glow coloré irradie du bas. Aucune stripe. */
 .mc-bg {
@@ -514,8 +570,8 @@ h1, h2, h3, h4 { margin: 0; font-weight: 800; letter-spacing: -0.02em; color: va
       rgba(18,21,32,0.72) 0%,
       rgba(13,15,24,0.55) 50%,
       rgba(10,12,20,0.38) 100%);
-  -webkit-backdrop-filter: blur(14px) saturate(1.5);
-  backdrop-filter: blur(14px) saturate(1.5);
+  -webkit-backdrop-filter: blur(10px) saturate(1.5);
+  backdrop-filter: blur(10px) saturate(1.5);
   box-shadow:
     inset 0 1.5px 0 rgba(255,255,255,0.32),
     inset 0 0 0 1px rgba(255,255,255,0.09),
@@ -556,12 +612,15 @@ h1, h2, h3, h4 { margin: 0; font-weight: 800; letter-spacing: -0.02em; color: va
   -webkit-user-drag: none; user-select: none;
   filter: drop-shadow(0 10px 18px rgba(0,0,0,0.45));   /* allégé (perf) */
 }
-/* Réglages par sujet : CENTRÉS (pw raisonnable), tête qui dépasse en haut */
-.mode-under .mc-player { --ph: 150%; --pb: 0%; --pw: 116%; }   /* Dembélé */
-.mode-draft .mc-player { --ph: 138%; --pb: 0%; --pw: 110%; }   /* Yamal */
-.mode-guess .mc-player { --ph: 120%; --pb: 0%; --pw: 100%; }   /* Yildiz */
-.mode-five  .mc-player { --ph: 134%; --pb: 0%; --pw: 104%; }
-.mode-juste .mc-player { --ph: 134%; --pb: 0%; --pw: 104%; }
+/* Réglages par sujet : CENTRÉS (pw ≤ 106% pour éviter le crop latéral),
+   la tête doit LÉGÈREMENT déborder du haut (~8-12% au-dessus du cadre).
+   Nouvelle image Dembélé : la tête touche le HAUT de l'image → le
+   débordement = ph - 100% exactement. */
+.mode-under .mc-player { --ph: 110%; --pb: 0%; --pw: 100%; }   /* Dembélé (img recadrée) */
+.mode-draft .mc-player { --ph: 136%; --pb: 0%; --pw: 104%; }   /* Yamal */
+.mode-guess .mc-player { --ph: 118%; --pb: 0%; --pw: 100%; }   /* Yildiz */
+.mode-five  .mc-player { --ph: 132%; --pb: 0%; --pw: 102%; }
+.mode-juste .mc-player { --ph: 132%; --pb: 0%; --pw: 102%; }
 
 /* === GLOW réf "Unleash / Inbox Sorting" : bloom radial DOUX qui monte du
    bas, cœur presque blanc au ras du bord, fondu très progressif vers le
@@ -1069,6 +1128,94 @@ body[data-mode="under"] .mode-cloud {
   gap: 22px;
 }
 .setup-field-wide { grid-column: 1 / -1; }
+/* === TYPE DE DRAFT : classique / Coupe du Monde === */
+.draft-type {
+  display: grid;
+  grid-template-columns: 1fr 1.35fr;
+  gap: 16px;
+  margin-bottom: 26px;
+}
+.dt-box {
+  position: relative;
+  text-align: left;
+  border-radius: 20px;
+  padding: 22px 24px;
+  min-height: 130px;
+  overflow: visible;
+  background: linear-gradient(180deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 100%);
+  border: 1px solid rgba(255,255,255,0.10);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.10), 0 12px 28px rgba(0,0,0,0.25);
+  cursor: pointer;
+  transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+}
+.dt-box:hover { transform: translateY(-3px); }
+.dt-box.active { border-color: var(--neon); box-shadow: inset 0 1px 0 rgba(255,255,255,0.14), 0 0 0 1px var(--neon), 0 16px 36px rgba(0,0,0,0.3); }
+.dt-eyebrow {
+  font-family: var(--mono); font-size: 10px; letter-spacing: 0.26em;
+  text-transform: uppercase; color: var(--slate); margin-bottom: 6px;
+}
+.dt-title {
+  font-family: var(--display); font-size: 24px; font-weight: 600;
+  letter-spacing: -0.02em; color: #fff; margin-bottom: 6px;
+}
+.dt-desc { font-size: 12.5px; line-height: 1.45; color: rgba(255,255,255,0.65); max-width: 75%; }
+
+/* Box COUPE DU MONDE : festive — light leaks multicolores, logo, égéries */
+.dt-wc { overflow: hidden; }
+.dt-wc .dt-body { position: relative; z-index: 3; }
+.dt-leaks {
+  position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  border-radius: inherit;
+  background:
+    radial-gradient(55% 70% at 8% 110%,  rgba(46,204,113,0.55) 0%, transparent 65%),
+    radial-gradient(50% 65% at 38% 118%, rgba(231,76,60,0.50) 0%, transparent 62%),
+    radial-gradient(55% 70% at 70% 112%, rgba(52,152,219,0.55) 0%, transparent 65%),
+    radial-gradient(45% 60% at 98% 115%, rgba(241,196,15,0.50) 0%, transparent 62%),
+    radial-gradient(60% 45% at 85% -8%,  rgba(155,89,182,0.35) 0%, transparent 60%);
+  mix-blend-mode: screen;
+}
+.dt-wc-logo {
+  position: absolute; top: 10px; right: 12px; z-index: 4;
+  width: 54px; height: auto;
+  filter: drop-shadow(0 4px 10px rgba(0,0,0,0.4));
+}
+.dt-wc-duo {
+  position: absolute; right: 56px; bottom: 0; z-index: 2;
+  height: 118%;            /* la tête déborde légèrement du haut */
+  width: auto;
+  object-fit: contain; object-position: bottom;
+  filter: drop-shadow(0 8px 16px rgba(0,0,0,0.45));
+  pointer-events: none;
+}
+.dt-wc { overflow: visible; }
+.dt-wc .dt-leaks { overflow: hidden; }
+@media (max-width: 860px) {
+  .draft-type { grid-template-columns: 1fr; }
+  .dt-wc-duo { height: 105%; right: 40px; }
+}
+/* Mode CdM actif : championnats + mode club grisés (sans effet) */
+body.wc-mode #leagueChips,
+body.wc-mode #clubModeSelect {
+  opacity: 0.35; pointer-events: none; filter: grayscale(0.8);
+}
+
+/* Têtes de section du panneau : guident le regard dans la grille */
+.setup-section-head {
+  grid-column: 1 / -1;
+  display: flex; align-items: center; gap: 10px;
+  font-family: var(--display); font-size: 17px; font-weight: 600;
+  letter-spacing: 0.01em; color: rgba(255,255,255,0.92);
+  margin-top: 8px;
+}
+.setup-section-head:first-child { margin-top: 0; }
+.setup-section-head span {
+  font-family: var(--mono); font-size: 11px; color: var(--neon);
+}
+.setup-section-head::after {
+  content: ""; flex: 1; height: 1px;
+  background: linear-gradient(90deg, rgba(255,255,255,0.18), transparent);
+}
+
 /* Chaque réglage = bloc de verre arrondi (sans backdrop-filter : perf) */
 .setup-field {
   position: relative;
@@ -2236,6 +2383,32 @@ body[data-mode="under"] .mode-cloud {
 /* ==========================================================================
    PITCH PREMIUM — herbe rayée fine, surfaces ciselées, halo doux
    ========================================================================== */
+/* Variante STREET (mode Five) : bitume urbain, lignes peintes, grillage */
+.pitch.pitch-street {
+  background:
+    /* grain bitume */
+    repeating-linear-gradient(37deg, rgba(255,255,255,0.022) 0 2px, transparent 2px 5px),
+    repeating-linear-gradient(-29deg, rgba(0,0,0,0.10) 0 1px, transparent 1px 7px),
+    radial-gradient(140% 100% at 50% 38%, rgba(255,170,60,0.10) 0%, transparent 55%),
+    linear-gradient(180deg, #2c2f36 0%, #23252b 55%, #1b1d22 100%);
+  box-shadow:
+    inset 0 0 0 2px rgba(255,255,255,0.10),
+    inset 0 0 0 6px rgba(20,22,26,0.9),       /* bordure béton */
+    inset 0 0 90px rgba(0,0,0,0.6),
+    0 30px 70px rgba(0,0,0,0.55);
+}
+/* grillage léger au-dessus du bitume */
+.pitch.pitch-street::after {
+  content: "";
+  position: absolute; inset: 0; z-index: 0;
+  pointer-events: none;
+  background:
+    repeating-linear-gradient(45deg, rgba(255,255,255,0.028) 0 1px, transparent 1px 16px),
+    repeating-linear-gradient(-45deg, rgba(255,255,255,0.028) 0 1px, transparent 1px 16px);
+  -webkit-mask-image: linear-gradient(180deg, #000 0%, transparent 28%);
+          mask-image: linear-gradient(180deg, #000 0%, transparent 28%);
+}
+
 .pitch {
   position: relative;
   aspect-ratio: 3 / 4.4;
@@ -4929,6 +5102,14 @@ body[data-mode="under"] .mode-cloud {
   line-height: 1;
   filter: drop-shadow(0 2px 4px rgba(0,0,0,0.6));
 }
+/* Drapeau en IMAGE (flagcdn) : disque propre, pas d'emoji */
+.gp-flag-img {
+  width: 78%; height: 78%; border-radius: 50%;
+  overflow: hidden;
+  border: 1.5px solid rgba(255,255,255,0.35);
+  display: grid; place-items: center;
+}
+.gp-flag-img img { width: 100%; height: 100%; object-fit: cover; }
 .gp-club-badge {
   width: 80%; height: 80%; border-radius: 50%;
   display: grid; place-items: center;

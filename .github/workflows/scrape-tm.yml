@@ -3,6 +3,15 @@ name: Sync Transfermarkt values
 # Synchronisation automatique des valeurs joueurs depuis Transfermarkt.
 # Tourne 2× par semaine (lundi + jeudi à 6h UTC) ou manuellement.
 on:
+  # Auto : tourne quand le scraper ou ce workflow changent sur la branche app
+  # (le cron seul tournait sur la branche par défaut, qui n'a pas l'app →
+  # les valeurs n'étaient JAMAIS synchronisées).
+  push:
+    branches:
+      - claude/drafter-football-app-ZhrSH
+    paths:
+      - tools/scrape-tm.js
+      - .github/workflows/scrape-tm.yml
   schedule:
     - cron: '0 6 * * 1,4'
   workflow_dispatch:
@@ -23,6 +32,9 @@ jobs:
     timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
+        with:
+          # le cron part de la branche par défaut → forcer la branche app
+          ref: claude/drafter-football-app-ZhrSH
 
       - uses: actions/setup-node@v4
         with:

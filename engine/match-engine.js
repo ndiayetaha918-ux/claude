@@ -47,6 +47,18 @@
     const gradeA = Drafter.TeamGrade.gradeTeam(teamA, { grid });
     const gradeB = Drafter.TeamGrade.gradeTeam(teamB, { grid });
 
+    // Pénalité d'effectif INCOMPLET : jouer à 10 (ou sans gardien) coûte cher —
+    // les moyennes par joueur ne capturent pas l'infériorité numérique.
+    function shortagePenalty(team) {
+      let missing = 0, gkMissing = false;
+      team.formationDef.slots.forEach(s => {
+        if (!team.slots[s.id]) { missing++; if (s.type === 'GK') gkMissing = true; }
+      });
+      return Math.pow(0.91, missing) * (gkMissing ? 0.72 : 1);
+    }
+    gradeA.grade *= shortagePenalty(teamA);
+    gradeB.grade *= shortagePenalty(teamB);
+
     // === 2) Scénario ===
     const scenario = Drafter.Scenario.buildScenario(analysis, {
       rng,

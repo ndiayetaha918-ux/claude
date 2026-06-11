@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles/main.css?v=12" />
+  <link rel="stylesheet" href="styles/main.css?v=13" />
 </head>
 <body>
 
@@ -150,6 +150,25 @@
         <!-- ============================================== -->
         <div id="setupDraftPanel">
 
+        <!-- Type de draft : classique / Coupe du Monde -->
+        <div class="draft-type" id="draftType">
+          <button class="dt-box dt-classic active" data-dtype="classic">
+            <div class="dt-eyebrow">FORMAT</div>
+            <div class="dt-title">Draft classique</div>
+            <div class="dt-desc">Tous championnats, tous joueurs. Le draft de référence.</div>
+          </button>
+          <button class="dt-box dt-wc" data-dtype="wc">
+            <div class="dt-leaks" aria-hidden="true"></div>
+            <img class="dt-wc-logo" src="assets/wc26-logo.png" alt="" aria-hidden="true" />
+            <img class="dt-wc-duo" src="assets/wc-duo.png" alt="" aria-hidden="true" />
+            <div class="dt-body">
+              <div class="dt-eyebrow">ÉDITION SPÉCIALE</div>
+              <div class="dt-title">Draft Coupe du Monde</div>
+              <div class="dt-desc">Uniquement les joueurs des nations qualifiées. Budget et règles conservés.</div>
+            </div>
+          </button>
+        </div>
+
         <!-- Mode toggle -->
         <div class="mode-tabs" id="modeTabs">
           <button class="mode-tab active" data-mode="local">
@@ -224,6 +243,7 @@
           <p class="card-sub" id="configCardSub">Règle ta partie : nombre de joueurs, budget, championnats, timer.</p>
 
           <div class="setup-grid">
+            <div class="setup-section-head"><span>01</span>Essentiels</div>
             <div class="setup-field">
               <label>Nombre de joueurs</label>
               <div class="seg" id="segPlayers">
@@ -251,6 +271,7 @@
               </div>
             </div>
 
+            <div class="setup-section-head"><span>02</span>Règles avancées</div>
             <div class="setup-field setup-field-wide">
               <label>Filtre d'âge <span class="age-label" id="ageLabel">Tous âges</span></label>
               <div class="slider-wrap age-slider-wrap">
@@ -1118,8 +1139,8 @@
     </div>
   </div>
 
-  <script src="scripts/players.js?v=12"></script>
-  <script src="scripts/club-logos.js?v=12"></script>
+  <script src="scripts/players.js?v=13"></script>
+  <script src="scripts/club-logos.js?v=13"></script>
   <script src="scripts/mosaic-images.js"></script>
   <script src="scripts/legends.js"></script>
   <script src="scripts/naruto.js"></script>
@@ -1140,6 +1161,6 @@
   <script src="scripts/ai_reasoner.js"></script>
   <script src="scripts/juste.js"></script>
   <script src="scripts/season.js"></script>
-  <script src="scripts/main.js?v=12"></script>
+  <script src="scripts/main.js?v=13"></script>
 </body>
 </html>
