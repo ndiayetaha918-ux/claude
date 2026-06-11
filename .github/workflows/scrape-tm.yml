@@ -26,6 +26,9 @@ on:
           - update200
           - updateAll
 
+permissions:
+  contents: write
+
 jobs:
   scrape:
     runs-on: ubuntu-latest

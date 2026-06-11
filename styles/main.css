@@ -1160,38 +1160,57 @@ body[data-mode="under"] .mode-cloud {
 }
 .dt-desc { font-size: 12.5px; line-height: 1.45; color: rgba(255,255,255,0.65); max-width: 75%; }
 
-/* Box COUPE DU MONDE : festive — light leaks multicolores, logo, égéries */
-.dt-wc { overflow: hidden; }
-.dt-wc .dt-body { position: relative; z-index: 3; }
+/* === Box COUPE DU MONDE — festive, VRAIMENT colorée ===
+   Spec : texte à GAUCHE (titre + mini description en bas), light leaks
+   multicolores, logo CdM au corner haut-droit, égéries à DROITE qui
+   dépassent légèrement du haut. */
+.dt-wc {
+  overflow: visible;                  /* les têtes des égéries sortent du cadre */
+  min-height: 172px;
+  display: flex; flex-direction: column; justify-content: flex-end;
+  background:
+    radial-gradient(90% 120% at 85% 0%, rgba(120,40,160,0.45) 0%, transparent 55%),
+    linear-gradient(120deg, #1b1040 0%, #232a6e 45%, #0d4f4a 100%);
+  border-color: rgba(255,255,255,0.18);
+}
+.dt-wc .dt-body {
+  position: relative; z-index: 3;
+  max-width: 56%;                     /* le texte reste à gauche des égéries */
+}
+.dt-wc .dt-eyebrow { color: rgba(255,225,140,0.95); }
+.dt-wc .dt-desc { color: rgba(255,255,255,0.80); max-width: 100%; }
+/* light leaks multicolores — vives, qui montent du bas comme des projecteurs */
 .dt-leaks {
   position: absolute; inset: 0; z-index: 1; pointer-events: none;
   border-radius: inherit;
+  overflow: hidden;
   background:
-    radial-gradient(55% 70% at 8% 110%,  rgba(46,204,113,0.55) 0%, transparent 65%),
-    radial-gradient(50% 65% at 38% 118%, rgba(231,76,60,0.50) 0%, transparent 62%),
-    radial-gradient(55% 70% at 70% 112%, rgba(52,152,219,0.55) 0%, transparent 65%),
-    radial-gradient(45% 60% at 98% 115%, rgba(241,196,15,0.50) 0%, transparent 62%),
-    radial-gradient(60% 45% at 85% -8%,  rgba(155,89,182,0.35) 0%, transparent 60%);
+    radial-gradient(48% 85% at 4% 112%,  rgba(46,230,130,0.80) 0%, transparent 62%),
+    radial-gradient(44% 78% at 30% 120%, rgba(255,70,80,0.75) 0%, transparent 60%),
+    radial-gradient(48% 85% at 56% 114%, rgba(60,160,255,0.78) 0%, transparent 62%),
+    radial-gradient(42% 75% at 82% 118%, rgba(255,200,40,0.75) 0%, transparent 60%),
+    radial-gradient(55% 50% at 100% -5%, rgba(255,80,200,0.40) 0%, transparent 58%),
+    radial-gradient(40% 40% at 20% -8%,  rgba(80,230,220,0.30) 0%, transparent 55%);
   mix-blend-mode: screen;
+  filter: saturate(1.35);
 }
 .dt-wc-logo {
-  position: absolute; top: 10px; right: 12px; z-index: 4;
-  width: 54px; height: auto;
-  filter: drop-shadow(0 4px 10px rgba(0,0,0,0.4));
+  position: absolute; top: 12px; right: 14px; z-index: 4;
+  width: 64px; height: auto;
+  filter: drop-shadow(0 4px 12px rgba(0,0,0,0.5));
 }
 .dt-wc-duo {
-  position: absolute; right: 56px; bottom: 0; z-index: 2;
-  height: 118%;            /* la tête déborde légèrement du haut */
-  width: auto;
-  object-fit: contain; object-position: bottom;
-  filter: drop-shadow(0 8px 16px rgba(0,0,0,0.45));
+  position: absolute; right: 8%; bottom: 0; z-index: 2;
+  height: 112%;                       /* têtes légèrement au-dessus du cadre */
+  width: auto; max-width: 46%;
+  object-fit: contain; object-position: bottom right;
+  filter: drop-shadow(0 10px 20px rgba(0,0,0,0.5));
   pointer-events: none;
 }
-.dt-wc { overflow: visible; }
-.dt-wc .dt-leaks { overflow: hidden; }
 @media (max-width: 860px) {
   .draft-type { grid-template-columns: 1fr; }
-  .dt-wc-duo { height: 105%; right: 40px; }
+  .dt-wc .dt-body { max-width: 62%; }
+  .dt-wc-duo { height: 106%; right: 4%; }
 }
 /* Mode CdM actif : championnats + mode club grisés (sans effet) */
 body.wc-mode #leagueChips,
