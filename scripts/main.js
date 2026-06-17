@@ -3207,6 +3207,9 @@
 
     // Bouge un pion physiquement vers (x,y) avec une transition fluide
     function movePawnTo(pawn, x, y) {
+      // borne au terrain (les courses élargies pouvaient sortir du cadre)
+      x = Math.max(24, Math.min(SIMW - 24, x));
+      y = Math.max(24, Math.min(SIMH - 24, y));
       pawn.x = x; pawn.y = y;
       pawn.ring.setAttribute('cx', x); pawn.ring.setAttribute('cy', y);
       pawn.num.setAttribute('x', x);   pawn.num.setAttribute('y', y + 4.5);
