@@ -5263,27 +5263,48 @@
   }
   // Paire DYNAMIQUE tirée de la base : 2 joueurs du même registre (poste +
   // valeur proche) → imposteur difficile à coincer, et un pool quasi infini.
+  // Pool Undercover : joueurs RECONNAISSABLES uniquement → 5 grands
+  // championnats (+ Saudi/MLS pour les stars) + toutes les légendes.
+  const UNDER_TOP_LEAGUES = new Set([
+    'Premier League','La Liga','Bundesliga','Serie A','Ligue 1',
+    'Saudi Pro League','Major League Soccer','Légendes',
+  ]);
+  let _underPool = null;
+  function underPool() {
+    if (_underPool) return _underPool;
+    const cur = (window.PLAYERS || []).filter(p =>
+      p.name && !/\(/.test(p.name) && UNDER_TOP_LEAGUES.has(p.league) && (p.value >= 18 || p.league === 'Légendes'));
+    const legends = (window.LEGENDS || []);
+    _underPool = cur.concat(legends);
+    return _underPool;
+  }
+  const underBucketOf = p => {
+    const pos = (p.posMain || p.positions || [])[0] || '';
+    if (pos === 'GK') return 'GK';
+    if (['CB','LB','RB','LWB','RWB'].includes(pos)) return 'DEF';
+    if (['DM','CM','AM','LM','RM'].includes(pos)) return 'MID';
+    return 'ATT';
+  };
+  const underUsedIds = new Set();   // anti-répétition à l'échelle de la session
+  // Renvoie une PAIRE d'objets joueurs [a, b] similaires (même registre,
+  // valeur proche), jamais réutilisés tant que le pool n'est pas épuisé.
   function pickUnderPair() {
-    const P = window.PLAYERS || [];
-    // seuil bas (≥12 M€) → ~900 joueurs au lieu de 300 : énorme variété
-    const pool = P.filter(p => p.value >= 12 && p.name && !/\(/.test(p.name));
+    const pool = underPool().filter(p => p.value > 0);
     if (pool.length < 20) return null;
-    const bucketOf = p => {
-      const pos = (p.posMain || p.positions || [])[0] || '';
-      if (pos === 'GK') return 'GK';
-      if (['CB','LB','RB','LWB','RWB'].includes(pos)) return 'DEF';
-      if (['DM','CM','AM','LM','RM'].includes(pos)) return 'MID';
-      return 'ATT';
-    };
     const buckets = { GK: [], DEF: [], MID: [], ATT: [] };
-    pool.forEach(p => buckets[bucketOf(p)].push(p));
-    // pondéré vers MID/ATT (plus connus), GK rare
-    const keys = ['ATT','ATT','MID','MID','DEF','GK'].filter(k => buckets[k].length >= 2);
+    pool.forEach(p => { if (!underUsedIds.has(p.id)) buckets[underBucketOf(p)].push(p); });
+    let keys = ['ATT','ATT','MID','MID','DEF','GK'].filter(k => buckets[k].length >= 2);
+    if (!keys.length) {                 // pool épuisé → on repart à zéro
+      underUsedIds.clear();
+      return pickUnderPair();
+    }
     const arr = buckets[keys[Math.floor(Math.random() * keys.length)]];
     const a = arr[Math.floor(Math.random() * arr.length)];
-    const cands = arr.filter(x => x.id !== a.id && x.value >= a.value * 0.55 && x.value <= a.value * 1.8);
-    const b = cands.length ? cands[Math.floor(Math.random() * cands.length)] : arr.find(x => x.id !== a.id);
-    return Math.random() < 0.5 ? [a.name, b.name] : [b.name, a.name];
+    let cands = arr.filter(x => x.id !== a.id && x.value >= a.value * 0.5 && x.value <= a.value * 2);
+    if (!cands.length) cands = arr.filter(x => x.id !== a.id);
+    const b = cands[Math.floor(Math.random() * cands.length)];
+    underUsedIds.add(a.id); underUsedIds.add(b.id);
+    return Math.random() < 0.5 ? [a, b] : [b, a];
   }
   // Paires de secours si la base n'est pas chargée
   const UNDER_WORDS = [
@@ -5356,21 +5377,22 @@
     // Restaure le stage (la discussion l'a peut-être remplacé)
     const stage = $('.under-card-stage');
     if (stage) stage.innerHTML = UNDER_STAGE_HTML;
-    const pair = pickUnderPair() || UNDER_WORDS[Math.floor(Math.random() * UNDER_WORDS.length)];
-    const civilWord = pair[0];
-    const impostorWord = pair[1];
+    const pair = pickUnderPair();
+    if (!pair) { toast('Base indisponible', 'Recharge la page et réessaie.'); return; }
+    const civil = pair[0];        // objet joueur
+    const impostor = pair[1];     // objet joueur (similaire)
     const playersShuffled = underState.players.slice().sort(() => Math.random() - 0.5);
     const impostorIdx = Math.floor(Math.random() * playersShuffled.length);
     playersShuffled.forEach((p, i) => {
       p.role = i === impostorIdx ? 'impostor' : 'civil';
-      p.word = i === impostorIdx ? impostorWord : civilWord;
+      p.secret = i === impostorIdx ? impostor : civil;   // objet joueur à révéler
       p.revealed = false;
       p.alive = true;
     });
     // 3 questions aléatoires distinctes pour la discussion
     const qs = UNDER_QUESTIONS.slice().sort(() => Math.random() - 0.5).slice(0, 3);
     underState.players = playersShuffled;
-    underState.round = { civilWord, impostorWord, turnIdx: 0, questions: qs, phase: 'handoff' };
+    underState.round = { civil, impostor, turnIdx: 0, questions: qs, phase: 'handoff' };
     $('#underSetup').style.display = 'none';
     $('#underGame').style.display = '';
     $('#underVotePhase').style.display = 'none';
@@ -5403,18 +5425,18 @@
     const nextBtn = $('#underNextTurn');
     nextBtn.textContent = (round.turnIdx >= underState.players.length - 1) ? 'Lancer la discussion →' : 'Joueur suivant →';
     card.onclick = () => {
-      $('#underRoleLabel').textContent = p.role === 'impostor' ? 'IMPOSTEUR' : 'CIVIL';
+      // Pas de mention civil/imposteur : chacun voit juste SON joueur et doit
+      // deviner s'il est l'intrus (comme une vraie app Undercover).
+      $('#underRoleLabel').textContent = 'TON JOUEUR';
       const mot = $('#underMot');
       mot.innerHTML = '';
-      const secret = findGuessPlayer(p.word);
+      const secret = p.secret;
       if (secret) {
         const ph = el('div', { class: 'uc-secret-photo', style: `background:${gradientFor(secret)}` });
         attachPhoto(ph, secret, 'uc-secret-img');
         ph.appendChild(el('span', { class: 'uc-secret-fb' }, initials(secret)));
         mot.appendChild(ph);
         mot.appendChild(el('div', { class: 'uc-secret-name' }, secret.name));
-      } else {
-        mot.textContent = p.word;
       }
       card.classList.add('revealed');
     };
@@ -5467,13 +5489,13 @@
     const result = $('#underVoteResult');
     if (wasImpostor) {
       result.innerHTML = '<div class="uvr-win">✓ Les civils ont démasqué l\'imposteur !</div>' +
-        '<div class="uvr-detail">Joueur civil : <strong>' + underState.round.civilWord + '</strong> · Joueur imposteur : <strong>' + underState.round.impostorWord + '</strong></div>';
+        '<div class="uvr-detail">Joueur civil : <strong>' + underState.round.civil.name + '</strong> · Joueur imposteur : <strong>' + underState.round.impostor.name + '</strong></div>';
       underState.players.filter(p => p.role === 'civil').forEach(p => {
         underState.scores[p.id] = (underState.scores[p.id] || 0) + 1;
       });
     } else {
       result.innerHTML = '<div class="uvr-lose">✗ Mauvaise cible. ' + accused.name + ' était un CIVIL.</div>' +
-        '<div class="uvr-detail">L\'imposteur s\'en sort. Joueur civil : <strong>' + underState.round.civilWord + '</strong></div>';
+        '<div class="uvr-detail">L\'imposteur s\'en sort. Joueur civil : <strong>' + underState.round.civil.name + '</strong></div>';
       const impostor = underState.players.find(p => p.role === 'impostor');
       if (impostor) underState.scores[impostor.id] = (underState.scores[impostor.id] || 0) + 2;
     }
