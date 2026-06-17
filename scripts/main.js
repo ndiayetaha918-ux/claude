@@ -5263,17 +5263,17 @@
   }
   // Paire DYNAMIQUE tirée de la base : 2 joueurs du même registre (poste +
   // valeur proche) → imposteur difficile à coincer, et un pool quasi infini.
-  // Pool Undercover : joueurs RECONNAISSABLES uniquement → 5 grands
-  // championnats (+ Saudi/MLS pour les stars) + toutes les légendes.
+  // Pool Undercover : STARS uniquement. Le seuil de valeur sert de proxy de
+  // notoriété — ≥45 M€ écarte les role-players méconnus des 5 grands champ.
+  // (+ légendes, toujours iconiques). Saudi/MLS limités aux très grosses cotes.
   const UNDER_TOP_LEAGUES = new Set([
     'Premier League','La Liga','Bundesliga','Serie A','Ligue 1',
-    'Saudi Pro League','Major League Soccer','Légendes',
   ]);
   let _underPool = null;
   function underPool() {
     if (_underPool) return _underPool;
     const cur = (window.PLAYERS || []).filter(p =>
-      p.name && !/\(/.test(p.name) && UNDER_TOP_LEAGUES.has(p.league) && (p.value >= 18 || p.league === 'Légendes'));
+      p.name && !/\(/.test(p.name) && UNDER_TOP_LEAGUES.has(p.league) && p.value >= 45);
     const legends = (window.LEGENDS || []);
     _underPool = cur.concat(legends);
     return _underPool;
