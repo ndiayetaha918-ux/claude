@@ -5571,11 +5571,23 @@
     return sb;
   }
 
+  // Révélation au scroll (fade-up + blur) sur les blocs clés
+  function initScrollReveal() {
+    const targets = $$('.setup-header, .setup-card, .hero-intro, .juste-stage, .guess-shell, .under-setup, .draft-type, .season-controls');
+    if (!('IntersectionObserver' in window) || !targets.length) { targets.forEach(t => t.classList.add('reveal-in')); return; }
+    targets.forEach(t => t.setAttribute('data-reveal', ''));
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('reveal-in'); io.unobserve(e.target); } });
+    }, { threshold: 0.12, rootMargin: '0px 0px -8% 0px' });
+    targets.forEach(t => io.observe(t));
+  }
+
   function init() {
     const note = $('#datasetNote');
     if (note) note.textContent = `${PLAYERS.length} joueurs · données Transfermarkt saison 2025-26 · valeurs marchandes en temps réel`;
 
     buildHero();
+    initScrollReveal();
     bindSetup();
     bindInlineJusteSetup();
     bindInlineGuessSetup();
