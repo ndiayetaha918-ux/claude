@@ -18,8 +18,8 @@
   /* ink (légère teinte chaude) */
   --ink:       #ece6d6;
   --ink-soft:  #c7bba1;
-  --slate:     #7a7263;
-  --slate-d:   #524b41;
+  --slate:     #9b9079;
+  --slate-d:   #6b6253;
 
   /* accents — cuivre / ambre SOBRE */
   --neon:      #d68b3c;          /* cuivre principal (alias pour code existant) */
@@ -403,14 +403,12 @@ h1, h2, h3, h4 { margin: 0; font-weight: 800; letter-spacing: -0.02em; color: va
 }
 .hero-title-v3 {
   font-family: var(--display);  /* Space Grotesk — design, fin */
-  font-size: clamp(50px, 8.5vw, 108px);
+  font-size: clamp(48px, 8vw, 92px);
   line-height: 1.0; letter-spacing: -0.04em;
   color: var(--ink);
   margin: 0;
-  font-weight: 400;             /* plus fin */
-  /* léger fondu vers le bas (sans couleur) */
-  -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 78%, rgba(0,0,0,0.72) 100%);
-          mask-image: linear-gradient(180deg, #000 0%, #000 78%, rgba(0,0,0,0.72) 100%);
+  font-weight: 500;
+  text-wrap: balance;
 }
 .hero-title-v3 .accent {
   /* Contraste ÉDITORIAL : serif italique nacré face au grotesk (soft-skill) */
@@ -418,9 +416,7 @@ h1, h2, h3, h4 { margin: 0; font-weight: 800; letter-spacing: -0.02em; color: va
   font-style: italic;
   font-weight: 400;
   letter-spacing: -0.01em;
-  background: var(--grad-cta);
-  -webkit-background-clip: text; background-clip: text;
-  color: transparent;
+  color: var(--pearl);
   padding-right: 0.06em;
 }
 .hero-sub-v3 {
@@ -996,9 +992,7 @@ h1, h2, h3, h4 { margin: 0; font-weight: 800; letter-spacing: -0.02em; color: va
   text-transform: uppercase;
 }
 .hero-title .accent {
-  background: var(--grad-cta);
-  -webkit-background-clip: text; background-clip: text;
-  color: transparent;
+  color: var(--pearl);
   display: inline-block;
 }
 .hero-title .strike {
@@ -3814,7 +3808,7 @@ body.wc-mode #clubModeSelect {
 .jp-club { font-family: var(--mono); font-size: 11px; color: var(--ink-soft); margin-bottom: 16px; letter-spacing: 0.06em; opacity: 0.7; }
 .jp-value-known {
   font-family: var(--display); font-size: 50px;
-  background: var(--grad-ink); -webkit-background-clip: text; background-clip: text; color: transparent;
+  color: var(--pearl);
   letter-spacing: -0.01em;
 }
 .jp-value-hidden {
@@ -5418,3 +5412,9 @@ img { -webkit-user-drag: none; }
 @media (prefers-reduced-motion: reduce) {
   [data-reveal] { opacity: 1; transform: none; filter: none; transition: none; }
 }
+
+/* === IDENTITÉ — réglages typographiques transverses (impeccable) === */
+.hero-title-v3, .setup-title, .gv-title, .mc-title, .card-title, .under-vote-title { text-wrap: balance; }
+.hero-sub-v3, .mc-desc, .gv-desc, .ur-text { text-wrap: pretty; }
+/* Le titre de setup partage l'ADN du hero (serif italique pour le mot d'accent) */
+.setup-title { font-family: var(--display); letter-spacing: -0.035em; font-weight: 500; }
