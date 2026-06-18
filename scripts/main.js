@@ -185,6 +185,7 @@
     const cards = Array.from(bento.querySelectorAll('.mode-card'));
     const order = cards.map(c => c.dataset.bento);   // ordre DOM
     let activeIdx = order.indexOf('draft');           // draft au centre au départ
+    let previewedMode = null;                          // mode prévisualisé au survol
     if (activeIdx < 0) activeIdx = Math.floor(cards.length / 2);
 
     const MODE_AMBIANCE = { five:'five', draft:'draft', juste:'juste', under:'under', guess:'guess' };
@@ -214,13 +215,13 @@
       hit.addEventListener('mouseenter', () => {
         card.style.setProperty('--liftY', '-16px');
         card.classList.add('is-hover');
-        // PRÉVIEW du mode survolé : thème global + panneau de setup affiché
-        // (léger : pas de rebuild des participants, pas de scroll)
-        const m = order[i];
-        document.body.setAttribute('data-mode', m);
-        document.body.classList.remove('mode-hover-five','mode-hover-draft','mode-hover-juste','mode-hover-under','mode-hover-guess');
-        document.body.classList.add('mode-hover-' + m);
-        showModeSetup(m);
+        // PRÉVIEW complète du mode survolé (thème + menu + VRAIES compos),
+        // sans scroll. On ne reconstruit que si le mode prévisualisé change
+        // (évite de réinitialiser les saisies pendant qu'on bouge la souris).
+        if (previewedMode !== order[i]) {
+          previewedMode = order[i];
+          routeMode(order[i], { scroll: false });
+        }
       });
       hit.addEventListener('mousemove', (ev) => {
         if (raf) return;                       // 1 update max par frame (perf)
@@ -249,7 +250,8 @@
       hit.addEventListener('click', (ev) => {
         ev.stopPropagation();
         if (activeIdx !== i) { activeIdx = i; applyCoverflow(); }
-        routeMode(order[i]);
+        previewedMode = order[i];
+        routeMode(order[i], { scroll: true });
       });
     });
 
@@ -316,9 +318,10 @@
     });
   }
 
-  function routeMode(mode) {
+  function squadSize() { return state.fiveMode ? 5 : 11; }
+  function routeMode(mode, opts) {
+    opts = opts || {};
     // ===== Pas de redirection vers d'autres pages =====
-    // Tous les modes scrollent vers le setup, qui se reconfigure visuellement
     state.activeMode = mode;
     document.body.setAttribute('data-mode', mode);
     // Theming couleur global persistant (boutons, accents, logo)
@@ -343,14 +346,12 @@
       state.justeMode = true;
       showModeSetup('juste');
     } else if (mode === 'guess') {
-      // Pas de redirection : on configure le setup inline pour Guess
       state.fiveMode = false;
       state.justeMode = false;
       state.guessMode = true;
       state.underMode = false;
       showModeSetup('guess');
     } else if (mode === 'under') {
-      // Pas de redirection : on configure le setup inline pour Under
       state.fiveMode = false;
       state.justeMode = false;
       state.guessMode = false;
@@ -358,10 +359,12 @@
       showModeSetup('under');
     }
 
-    // Scroll vers le setup avec délai pour laisser le DOM se mettre à jour
-    requestAnimationFrame(() => {
-      $('#setupSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
-    });
+    // Scroll seulement au CLIC (pas au survol-préview)
+    if (opts.scroll !== false) {
+      requestAnimationFrame(() => {
+        $('#setupSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    }
   }
 
   function showModeSetup(mode) {
@@ -737,7 +740,7 @@
     const cur = state.currentParticipant;
     if (!cur) return;
     $('#turnName').textContent = cur.name;
-    $('#turnRound').textContent = `Round ${Math.min(state.round, 11)} / 11`;
+    $('#turnRound').textContent = `Round ${Math.min(state.round, squadSize())} / ${squadSize()}`;
     $('#turnPickIndex').textContent = `Pick ${state.pickIndex}`;
 
     const olist = $('#orderList');
@@ -796,7 +799,7 @@
       const info = el('div', { class: 'opp-info' });
       info.appendChild(el('div', { class: 'opp-name' }, p.name));
       info.appendChild(el('div', { class: 'opp-meta' },
-        `${FORMATIONS[p.formation].label} · ${filled}/11 · ${p.spent.toFixed(0)} M€`));
+        `${FORMATIONS[p.formation].label} · ${filled}/${squadSize()} · ${p.spent.toFixed(0)} M€`));
       head.appendChild(info);
       card.appendChild(head);
       // Mini pitch
@@ -1003,7 +1006,7 @@
       const filled = Object.values(p.slots).filter(Boolean).length;
       card.appendChild(el('h4', {}, p.name));
       card.appendChild(el('div', { class: 'meta' },
-        `${FORMATIONS[p.formation].label} · ${filled}/11 · ${p.spent.toFixed(0)} M€`));
+        `${FORMATIONS[p.formation].label} · ${filled}/${squadSize()} · ${p.spent.toFixed(0)} M€`));
       const pitch = el('div', { class: 'pitch' });
       const wrapPitch = el('div', { class: 'pitch-wrap' }, pitch);
       card.appendChild(wrapPitch);
@@ -1157,7 +1160,7 @@
 
     const cur = state.currentParticipant;
     const filled = Object.values(cur.slots).filter(Boolean).length;
-    $('#pickerEyebrow').textContent = `/ POSTE ${slot.type} · ${filled} / 11 picks faits`;
+    $('#pickerEyebrow').textContent = `/ POSTE ${slot.type} · ${filled} / ${squadSize()} picks faits`;
     $('#pickerTitle').textContent = `Choisir un ${POS_LABEL_FR[slot.type] || slot.type}`;
 
     // Reset UI
@@ -1699,7 +1702,7 @@
         el('div', { class: 'final-avatar', style: `background:${p.color.grad}` }, initials(p.name)),
         el('div', {},
           el('h3', {}, p.name),
-          el('div', { class: 'meta' }, `${FORMATIONS[p.formation].label} · ${filled}/11 · ${p.spent.toFixed(0)} / ${state.budget} M€`)),
+          el('div', { class: 'meta' }, `${FORMATIONS[p.formation].label} · ${filled}/${squadSize()} · ${p.spent.toFixed(0)} / ${state.budget} M€`)),
       ));
       const wrap = el('div', { class: 'pitch-wrap' });
       const pitch = el('div', { class: 'pitch' });
@@ -1977,7 +1980,7 @@
     const cur = state.currentParticipant;
     if (!cur) return;
     $('#turnName').textContent = cur.id === state.online.myId ? 'À toi !' : cur.name;
-    $('#turnRound').textContent = `Round ${Math.min(state.round, 11)} / 11`;
+    $('#turnRound').textContent = `Round ${Math.min(state.round, squadSize())} / ${squadSize()}`;
     $('#turnPickIndex').textContent = `Pick ${state.pickIndex}`;
     const olist = $('#orderList');
     olist.innerHTML = '';
@@ -2019,7 +2022,7 @@
       const info = el('div', {});
       info.appendChild(el('div', { class: 'opp-name' }, p.name));
       info.appendChild(el('div', { class: 'opp-meta' },
-        `${FORMATIONS[p.formation].label} · ${filled}/11 · ${p.spent.toFixed(0)} M€${isCurrent ? ' · pioche…' : ''}`));
+        `${FORMATIONS[p.formation].label} · ${filled}/${squadSize()} · ${p.spent.toFixed(0)} M€${isCurrent ? ' · pioche…' : ''}`));
       card.appendChild(info);
       wrap.appendChild(card);
     });
@@ -2252,7 +2255,7 @@
         el('div', { class: 'final-avatar', style: `background:${TEAM_COLORS[i % 4].grad}` }, initials(p.name)),
         el('div', {},
           el('h3', {}, p.name),
-          el('div', { class: 'meta' }, `${FORMATIONS[p.formation].label} · ${filled}/11 · ${(st.spent[p.id] || 0).toFixed(0)} / ${st.settings.budget} M€`)),
+          el('div', { class: 'meta' }, `${FORMATIONS[p.formation].label} · ${filled}/${squadSize()} · ${(st.spent[p.id] || 0).toFixed(0)} / ${st.settings.budget} M€`)),
       ));
       const wrap = el('div', { class: 'pitch-wrap' });
       const pitch = el('div', { class: 'pitch' });
@@ -2606,7 +2609,7 @@
         el('div', { class: 'avatar', style: `background:${p.color.grad}` }, initials(p.name)),
         el('div', {},
           el('h3', {}, p.name),
-          el('div', { class: 'meta' }, `${FORMATIONS[p.formation].label} · ${score.filled}/11 · ${score.totalValue.toFixed(0)} M€`)),
+          el('div', { class: 'meta' }, `${FORMATIONS[p.formation].label} · ${score.filled}/${squadSize()} · ${score.totalValue.toFixed(0)} M€`)),
       );
       card.appendChild(head);
 
@@ -5362,7 +5365,28 @@
     'Tu le croises au marché : il achète quoi ?',
     'Un sport où il serait nul ?',
     'Son surnom dans le vestiaire, à votre avis ?',
+    'Décris-le en 1 mot, mais mens à moitié.',
+    'Mime sa façon de courir (sans parler).',
+    'Une ville qui lui ressemble ?',
+    'Plutôt clip de rap ou doc Netflix ?',
+    'S\'il était une épice, laquelle ?',
+    'Le détail qui ferait dire « c\'est lui » ?',
+    'Une stat imaginaire qui le décrit.',
+    'S\'il jouait à un autre poste, lequel ?',
+    'Une appli forcément sur son téléphone ?',
+    'Plutôt feu, eau, terre ou air ?',
+    'Décris son tatouage (réel ou inventé).',
+    'Il arrive en retard : son excuse ?',
+    'Décris-le comme à ta grand-mère.',
+    'Une décennie qui lui irait mieux ?',
+    'Donne un seul mot… en chuchotant.',
   ];
+  // Angle d'indice unique par joueur (recyclage si plus de joueurs que d'angles)
+  function pickUnderAngles(n) {
+    const sh = UNDER_QUESTIONS.slice().sort(() => Math.random() - 0.5);
+    const out = []; for (let i = 0; i < n; i++) out.push(sh[i % sh.length]);
+    return out;
+  }
 
   const UNDER_STAGE_HTML =
     '<div class="uc-prompt" id="underPrompt">Téléphone à <strong id="underTurn">—</strong></div>' +
@@ -5452,22 +5476,23 @@
 
   // Phase discussion : questions aléatoires affichées pour guider la déduction
   function showUnderDiscussion() {
-    const round = underState.round;
     const stage = $('.under-card-stage');
-    if (stage) {
-      stage.innerHTML =
-        '<div class="uc-prompt">Phase de discussion</div>' +
-        '<div class="under-questions">' +
-          round.questions.map((q, i) =>
-            '<div class="under-q"><span class="uq-num">' + (i+1) + '</span><span>' + q + '</span></div>'
-          ).join('') +
-        '</div>' +
-        '<p class="under-q-hint">Chacun répond à voix haute, à tour de rôle. Repérez l\'intrus.</p>' +
-        '<button class="btn btn-primary" id="underToVote">Passer au vote →</button>';
-      $('#underToVote').onclick = () => startUnderVotePhase();
-    } else {
-      startUnderVotePhase();
-    }
+    if (!stage) { startUnderVotePhase(); return; }
+    // Un angle d'indice DIFFÉRENT pour chaque joueur → plus varié et ludique.
+    // Indice libre : un mot, un mime, une image… celui qui se sait flou bluffe.
+    const alive = underState.players.filter(p => p.alive);
+    const angles = pickUnderAngles(alive.length);
+    stage.innerHTML =
+      '<div class="uc-prompt">Indices — chacun son tour, à voix haute</div>' +
+      '<div class="under-questions">' +
+        alive.map((p, i) =>
+          '<div class="under-q"><span class="uq-num">' + (i + 1) + '</span>' +
+          '<span><strong>' + p.name + '</strong> — ' + angles[i] + '</span></div>'
+        ).join('') +
+      '</div>' +
+      '<p class="under-q-hint">Indice LIBRE (mot, mime, image). Si ton joueur te paraît seul de son genre, tu es peut-être l\'intrus : reste vague et oriente les soupçons.</p>' +
+      '<button class="btn btn-primary" id="underToVote">Passer au vote →</button>';
+    $('#underToVote').onclick = () => startUnderVotePhase();
   }
   function startUnderVotePhase() {
     $('#underVotePhase').style.display = '';
@@ -5486,23 +5511,64 @@
     const accused = underState.players.find(p => p.id === playerId);
     if (!accused) return;
     const wasImpostor = accused.role === 'impostor';
+    const impostor = underState.players.find(p => p.role === 'impostor');
     const result = $('#underVoteResult');
+    result.innerHTML = '';
+
+    // === POINTS ===
+    // Civils démasquent l'imposteur → +1 chaque civil.
+    // L'imposteur survit (mauvaise cible) → +3 (récompense le bluff).
     if (wasImpostor) {
-      result.innerHTML = '<div class="uvr-win">✓ Les civils ont démasqué l\'imposteur !</div>' +
-        '<div class="uvr-detail">Joueur civil : <strong>' + underState.round.civil.name + '</strong> · Joueur imposteur : <strong>' + underState.round.impostor.name + '</strong></div>';
-      underState.players.filter(p => p.role === 'civil').forEach(p => {
-        underState.scores[p.id] = (underState.scores[p.id] || 0) + 1;
-      });
-    } else {
-      result.innerHTML = '<div class="uvr-lose">✗ Mauvaise cible. ' + accused.name + ' était un CIVIL.</div>' +
-        '<div class="uvr-detail">L\'imposteur s\'en sort. Joueur civil : <strong>' + underState.round.civil.name + '</strong></div>';
-      const impostor = underState.players.find(p => p.role === 'impostor');
-      if (impostor) underState.scores[impostor.id] = (underState.scores[impostor.id] || 0) + 2;
+      underState.players.filter(p => p.role === 'civil')
+        .forEach(p => { underState.scores[p.id] = (underState.scores[p.id] || 0) + 1; });
+    } else if (impostor) {
+      underState.scores[impostor.id] = (underState.scores[impostor.id] || 0) + 3;
     }
-    // Bouton nouvelle manche
-    const again = el('button', { class: 'btn btn-primary', style: 'margin-top:16px' }, 'Nouvelle manche');
-    again.onclick = () => { $('#underSetup').style.display = ''; $('#underGame').style.display = 'none'; renderUnderPlayers(); };
+    underState.roundNo = (underState.roundNo || 1);
+
+    // Verdict + la PAIRE révélée (photos) pour voir à quel point c'était serré
+    const verdict = el('div', { class: wasImpostor ? 'uvr-win' : 'uvr-lose' },
+      wasImpostor ? '✓ Imposteur démasqué !' : '✗ Raté — ' + accused.name + ' était un civil. L\'imposteur s\'en sort (+3).');
+    result.appendChild(verdict);
+    const pair = el('div', { class: 'uvr-pair' });
+    [['Civils', underState.round.civil], ['Imposteur', underState.round.impostor]].forEach(([lab, pl]) => {
+      const cell = el('div', { class: 'uvr-pair-cell' });
+      const ph = el('div', { class: 'uc-secret-photo', style: `background:${gradientFor(pl)}` });
+      attachPhoto(ph, pl, 'uc-secret-img'); ph.appendChild(el('span', { class: 'uc-secret-fb' }, initials(pl)));
+      cell.appendChild(ph);
+      cell.appendChild(el('div', { class: 'uvr-pair-lab' }, lab));
+      cell.appendChild(el('div', { class: 'uvr-pair-name' }, pl.name));
+      pair.appendChild(cell);
+    });
+    result.appendChild(pair);
+
+    // === SCOREBOARD cumulé (trié) ===
+    result.appendChild(renderUnderScoreboard());
+
+    const again = el('button', { class: 'btn btn-primary', style: 'margin-top:16px' }, 'Manche suivante →');
+    again.onclick = () => { underState.roundNo = (underState.roundNo || 1) + 1; startUnderRound(); };
     result.appendChild(again);
+    const stop = el('button', { class: 'btn btn-ghost', style: 'margin-top:8px' }, 'Terminer · nouveaux joueurs');
+    stop.onclick = () => {
+      underState.scores = {}; underState.roundNo = 1;
+      $('#underSetup').style.display = ''; $('#underGame').style.display = 'none'; renderUnderPlayers();
+    };
+    result.appendChild(stop);
+  }
+  function renderUnderScoreboard() {
+    const sb = el('div', { class: 'under-scoreboard' });
+    sb.appendChild(el('div', { class: 'usb-title' }, 'Classement · manche ' + (underState.roundNo || 1)));
+    const rows = underState.players.slice()
+      .map(p => ({ name: p.name, score: underState.scores[p.id] || 0 }))
+      .sort((a, b) => b.score - a.score);
+    const best = rows.length ? rows[0].score : 0;
+    rows.forEach(r => {
+      const tile = el('div', { class: 'usb-row' + (r.score === best && best > 0 ? ' lead' : '') });
+      tile.appendChild(el('span', { class: 'usb-name' }, r.name));
+      tile.appendChild(el('span', { class: 'usb-pts' }, r.score + ' pt' + (r.score > 1 ? 's' : '')));
+      sb.appendChild(tile);
+    });
+    return sb;
   }
 
   function init() {

@@ -4984,6 +4984,33 @@ body.wc-mode #clubModeSelect {
 }
 .uvr-detail strong { color: white; font-weight: 600; }
 
+/* Paire révélée (civils vs imposteur) */
+.uvr-pair { display: flex; justify-content: center; gap: 28px; margin: 16px 0 6px; }
+.uvr-pair-cell { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.uvr-pair-cell .uc-secret-photo { width: 72px; height: 72px; }
+.uvr-pair-lab {
+  font-family: var(--mono); font-size: 10px; letter-spacing: 0.16em;
+  text-transform: uppercase; color: var(--slate);
+}
+.uvr-pair-name { font-family: var(--display); font-size: 15px; color: #fff; }
+/* Scoreboard cumulé */
+.under-scoreboard {
+  margin: 18px auto 4px; max-width: 360px; text-align: left;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.usb-title {
+  font-family: var(--mono); font-size: 11px; letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--slate); margin-bottom: 4px; text-align: center;
+}
+.usb-row {
+  display: flex; justify-content: space-between; align-items: baseline;
+  padding: 9px 14px; border-radius: 10px;
+  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07);
+}
+.usb-row.lead { border-color: var(--neon); background: rgba(0,224,255,0.08); }
+.usb-name { font-family: var(--display); text-transform: uppercase; font-size: 14px; color: #fff; }
+.usb-pts { font-family: var(--mono); font-weight: 800; color: var(--neon); }
+
 /* ============================================================
    GUESS THE TEAM — setup inline (in-page, descend dans setup)
    ============================================================ */
@@ -5303,3 +5330,50 @@ body.wc-mode #clubModeSelect {
 .under-q-hint { font-size: 12px; color: rgba(255,255,255,0.55); margin: 0 0 16px; text-align: center; }
 #underToVote { display: block; margin: 0 auto; }
 .under-reveal-card.revealed .urc-front .urc-icon { content: '🔓'; }
+
+/* ============================================================
+   POLISH GLOBAL — inspiré des skills (emil-design-eng, impeccable,
+   soft-skill). Additif : motion cohérent, focus accessible,
+   micro-interactions « premium », transitions de thème douces.
+   ============================================================ */
+:root {
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-soft: cubic-bezier(0.16, 1, 0.3, 1);
+}
+/* Transition douce quand le thème de mode change (couleurs/accents) */
+body, .btn, .btn-primary, .hero-eyebrow, .accent, .setup-title {
+  transition: background-color 0.5s var(--ease-out), color 0.4s var(--ease-out),
+              border-color 0.4s var(--ease-out), box-shadow 0.4s var(--ease-out);
+}
+/* Focus visible cohérent (clavier) — accessibilité sans polluer la souris */
+:focus-visible {
+  outline: 2px solid var(--neon, #00e0ff);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+:focus:not(:focus-visible) { outline: none; }
+/* Micro-interaction boutons : lift au survol, enfoncement au clic */
+.btn, .btn-primary, .btn-ghost, .btn-lg {
+  transition: transform 0.18s var(--ease-out), box-shadow 0.25s var(--ease-out),
+              background-color 0.25s var(--ease-out), filter 0.2s var(--ease-out);
+}
+.btn:hover, .btn-primary:hover, .btn-ghost:hover, .btn-lg:hover { transform: translateY(-1px); }
+.btn:active, .btn-primary:active, .btn-ghost:active, .btn-lg:active { transform: translateY(0) scale(0.985); }
+/* Sélection de texte teintée par le mode */
+::selection { background: color-mix(in srgb, var(--neon, #00e0ff) 38%, transparent); color: #fff; }
+/* Scrollbar discrète et raffinée */
+* { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.18) transparent; }
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.16); border-radius: 99px; border: 2px solid transparent; background-clip: padding-box; }
+*::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.28); background-clip: padding-box; }
+/* Images : pas de drag fantôme, rendu net */
+img { -webkit-user-drag: none; }
+/* Respect de prefers-reduced-motion : on coupe les grosses animations */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
