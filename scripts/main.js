@@ -416,19 +416,28 @@
   // ============================================================
   const ALL_LEAGUES = Array.from(new Set(PLAYERS.map(p => p.league))).sort();
 
-  // Nations de la Coupe du Monde 2026 (hôtes + qualifiées)
+  // Nations Coupe du Monde 2026 — CHAÎNES EXACTES de la base (sinon exclusion
+  // à tort). Hôtes + sélections crédibles des 6 confédérations.
   const WC_NATIONS = new Set([
-    'USA','United States','Canada','Mexico',
-    'Argentina','Brazil','Ecuador','Colombia','Uruguay','Paraguay',
-    'France','Spain','England','Germany','Portugal','Netherlands','Belgium',
-    'Croatia','Italy','Norway','Scotland','Austria','Switzerland','Türkiye','Turkey',
-    'Denmark','Poland','Czech Republic','Czechia','Ukraine','Wales','Slovakia','Slovenia',
-    'Morocco','Senegal','Egypt','Algeria','Tunisia',"Côte d'Ivoire",'Ivory Coast',
-    'Ghana','Cape Verde','South Africa','Nigeria','Cameroon',
-    'Japan','South Korea','Korea Republic','Iran','Australia','Saudi Arabia',
-    'Qatar','Uzbekistan','Jordan','Iraq','New Zealand',
-    'Panama','Costa Rica','Haiti','Curacao','Jamaica','Honduras',
+    // Hôtes
+    'United States', 'Mexico', 'Canada',
+    // CONMEBOL
+    'Argentina', 'Brazil', 'Uruguay', 'Colombia', 'Ecuador', 'Paraguay', 'Venezuela', 'Peru', 'Chile',
+    // UEFA
+    'France', 'Spain', 'England', 'Germany', 'Portugal', 'Netherlands', 'Belgium', 'Italy',
+    'Croatia', 'Switzerland', 'Denmark', 'Austria', 'Türkiye', 'Ukraine', 'Poland', 'Serbia',
+    'Scotland', 'Wales', 'Czech Republic', 'Norway', 'Sweden', 'Hungary', 'Greece', 'Slovakia', 'Slovenia',
+    // CAF
+    'Morocco', 'Senegal', 'Egypt', 'Algeria', 'Tunisia', "Cote d'Ivoire", 'Ghana', 'Nigeria',
+    'Cameroon', 'Cape Verde', 'Mali',
+    // AFC
+    'Japan', 'Korea, South', 'Australia', 'Saudi Arabia', 'Uzbekistan', 'Jordan', 'Iraq',
+    // CONCACAF + OFC
+    'Panama', 'Jamaica', 'Haiti', 'Curacao', 'New Zealand',
   ]);
+  // Clé d'unicité d'équipe : en CdM un joueur représente sa SÉLECTION (pas son
+  // club) → la règle « 1 par club » devient « 1 par sélection ».
+  function dedupKeyFor(p) { return state.wcMode ? p.nat : p.club; }
   // Filtre de pool central : Coupe du Monde → nation qualifiée,
   // sinon → championnat activé.
   function inDraftPool(p) {
@@ -452,6 +461,10 @@
         state.wcMode = b.dataset.dtype === 'wc';
         // En mode CdM : championnats + mode club n'ont plus de sens → grisés
         document.body.classList.toggle('wc-mode', state.wcMode);
+        const lbl = $('#onePerClubLabel');
+        if (lbl) lbl.textContent = state.wcMode ? 'Règle 1 joueur par sélection' : 'Règle 1 joueur par club';
+        // rebuild des participants si la compo est ouverte (pool change)
+        if (state.activeMode === 'draft' || state.activeMode === 'five') renderParticipants();
       });
     });
 
@@ -1204,13 +1217,14 @@
       ? Array.from(pickerState.acceptedPositionsOverride)
       : SLOT_RULES[slot.type] || [];
     // 1 joueur par club : compter clubs déjà présents dans MON équipe
+    // « 1 par club » (ou « 1 par sélection » en CdM) — clé = dedupKeyFor
     let myClubs = null;
     if (state.onePerClub && cur && cur.slots) {
       myClubs = new Set();
       Object.values(cur.slots).forEach(pid => {
         if (pid) {
           const pl = playerById(pid);
-          if (pl) myClubs.add(pl.club);
+          if (pl) myClubs.add(dedupKeyFor(pl));
         }
       });
     }
@@ -1228,8 +1242,8 @@
       }
       if (!passesAge(p.age, state.ageSlider)) return false;
       if (state.takenIds.has(p.id)) return false;
-      // Règle 1 par club
-      if (myClubs && myClubs.has(p.club)) return false;
+      // Règle 1 par club / 1 par sélection (CdM)
+      if (myClubs && myClubs.has(dedupKeyFor(p))) return false;
       // ===== Slot eligibility =====
       if (!p.positions.some(pos => accepted.includes(pos))) return false;
       // ===== Filtres affinés du picker =====

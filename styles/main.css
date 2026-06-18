@@ -191,16 +191,17 @@ body::before {
     radial-gradient(38vmax 38vmax at 78% 8%,  color-mix(in srgb, var(--neon) 22%, transparent) 0%, transparent 60%),
     radial-gradient(34vmax 34vmax at 12% 78%, color-mix(in srgb, var(--gold) 14%, transparent) 0%, transparent 60%),
     radial-gradient(28vmax 28vmax at 92% 88%, color-mix(in srgb, var(--neon) 12%, transparent) 0%, transparent 62%);
-  filter: blur(8px) saturate(1.1);
+  /* pas de filter:blur animé (coûteux) — les radiales sont déjà diffuses */
   opacity: 0.9;
-  animation: meshDrift 26s var(--ease-soft, ease-in-out) infinite alternate;
+  will-change: transform;
+  animation: meshDrift 40s linear infinite alternate;
   transition: background 0.7s ease;
 }
 @keyframes meshDrift {
-  0%   { transform: translate3d(0, 0, 0) scale(1); }
-  50%  { transform: translate3d(-2.5vmax, 1.5vmax, 0) scale(1.06); }
-  100% { transform: translate3d(2vmax, -2vmax, 0) scale(1.02); }
+  from { transform: translate3d(-1.5vmax, -1vmax, 0); }
+  to   { transform: translate3d(1.5vmax, 1vmax, 0); }
 }
+@media (prefers-reduced-motion: reduce) { body::before { animation: none; } }
 /* Grain fixe subtil par-dessus (physique, pas cheap) */
 body::after {
   content: "";
@@ -5418,3 +5419,40 @@ img { -webkit-user-drag: none; }
 .hero-sub-v3, .mc-desc, .gv-desc, .ur-text { text-wrap: pretty; }
 /* Le titre de setup partage l'ADN du hero (serif italique pour le mot d'accent) */
 .setup-title { font-family: var(--display); letter-spacing: -0.035em; font-weight: 500; }
+
+/* ============================================================
+   IDENTITÉ PAR MODE — l'environnement (pas juste l'accent) change.
+   Couche d'ambiance derrière le panneau de setup selon le mode actif.
+   Statique (pas de blur animé) → aucun coût de frame.
+   ============================================================ */
+.setup-section { position: relative; }
+.setup-section::before {
+  content: ""; position: absolute; inset: -4% -8% 0; z-index: 0;
+  pointer-events: none; opacity: 0; transition: opacity 0.6s var(--ease-out, ease);
+  background-size: cover; background-position: center;
+}
+.setup-section > * { position: relative; z-index: 1; }
+
+/* FIVE → street : béton, grillage, néon urbain */
+body.mode-hover-five .setup-section::before {
+  opacity: 1;
+  background:
+    repeating-linear-gradient(45deg, rgba(255,255,255,0.02) 0 1px, transparent 1px 18px),
+    repeating-linear-gradient(-45deg, rgba(255,255,255,0.02) 0 1px, transparent 1px 18px),
+    radial-gradient(60% 40% at 50% 0%, rgba(60,180,235,0.16) 0%, transparent 60%),
+    radial-gradient(40% 30% at 90% 10%, rgba(255,90,160,0.10) 0%, transparent 60%),
+    linear-gradient(180deg, rgba(20,22,26,0.6), transparent 40%);
+  -webkit-mask-image: linear-gradient(180deg, #000 0%, transparent 70%);
+          mask-image: linear-gradient(180deg, #000 0%, transparent 70%);
+}
+/* COUPE DU MONDE → festif, international, multicolore */
+body.wc-mode .setup-section::before {
+  opacity: 1;
+  background:
+    radial-gradient(40% 50% at 8% 4%,  rgba(46,230,130,0.16) 0%, transparent 60%),
+    radial-gradient(40% 50% at 38% 0%, rgba(255,70,80,0.14) 0%, transparent 60%),
+    radial-gradient(40% 50% at 66% 2%, rgba(60,160,255,0.16) 0%, transparent 60%),
+    radial-gradient(40% 50% at 95% 6%, rgba(255,200,40,0.14) 0%, transparent 60%);
+  -webkit-mask-image: linear-gradient(180deg, #000 0%, transparent 55%);
+          mask-image: linear-gradient(180deg, #000 0%, transparent 55%);
+}

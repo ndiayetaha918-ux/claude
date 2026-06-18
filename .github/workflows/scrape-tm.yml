@@ -45,7 +45,12 @@ jobs:
 
       - name: Run scraper
         run: |
-          MODE="${{ github.event.inputs.mode || 'update200' }}"
+          MODE="${{ github.event.inputs.mode }}"
+          # push (évolution du scraper) → SYNC COMPLÈTE TM (source de vérité) ;
+          # cron → top 200 ; dispatch → choix manuel.
+          if [ -z "$MODE" ]; then
+            if [ "${{ github.event_name }}" = "push" ]; then MODE="updateAll"; else MODE="update200"; fi
+          fi
           if [ "$MODE" = "check" ]; then
             node tools/scrape-tm.js --check
           elif [ "$MODE" = "updateAll" ]; then
