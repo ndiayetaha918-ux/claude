@@ -68,8 +68,16 @@ function fetchHTML(url) {
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 // -------- Parsing TM --------
+// Récupère un détail de l'en-tête TM par libellé (Citizenship, Height, Foot…)
+function headerDetail(html, label) {
+  const re = new RegExp(label + ':?\\s*<\\/span>?[\\s\\S]{0,200}?data-header__content"[^>]*>([\\s\\S]*?)<\\/span>', 'i');
+  const m = html.match(re);
+  if (!m) return null;
+  return m[1].replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim() || null;
+}
 function parseTM(html) {
-  const out = { value: null, position: null, photo: null, club: null };
+  const out = { value: null, position: null, photo: null, club: null,
+                nat: null, age: null, height: null, foot: null, shirt: null, contract: null };
   // Valeur marchande — format "€200.00m" ou "€85.00m" ou "200.00m €"
   const valMatch = html.match(/class="data-header__market-value-wrapper"[^>]*>([\s\S]*?)<\/a>/i);
   if (valMatch) {
@@ -94,6 +102,19 @@ function parseTM(html) {
   // Club actuel
   const clubMatch = html.match(/class="data-header__club"[^>]*>[\s\S]*?<a[^>]*>([^<]+)<\/a>/i);
   if (clubMatch) out.club = clubMatch[1].trim();
+  // --- Infos utiles supplémentaires ---
+  const dob = headerDetail(html, 'Date of birth\\/Age') || headerDetail(html, 'Age');
+  if (dob) { const a = dob.match(/\((\d{1,2})\)/); if (a) out.age = parseInt(a[1], 10); }
+  const cit = headerDetail(html, 'Citizenship');
+  if (cit) out.nat = cit.split(/[,/]/)[0].trim();
+  const h = headerDetail(html, 'Height');
+  if (h) { const cm = h.match(/([\d.,]+)\s*m/i); if (cm) out.height = Math.round(parseFloat(cm[1].replace(',', '.')) * 100); }
+  const foot = headerDetail(html, 'Foot');
+  if (foot) out.foot = foot.toLowerCase();
+  const contract = headerDetail(html, 'Contract expires');
+  if (contract && /\d{4}/.test(contract)) out.contract = contract;
+  const shirt = html.match(/data-header__shirt-number"[^>]*>\s*#?\s*(\d{1,2})/i);
+  if (shirt) out.shirt = parseInt(shirt[1], 10);
   return out;
 }
 
@@ -226,6 +247,13 @@ async function main() {
       if (parsed.club && parsed.club !== p.club) {
         changes.club = { old: p.club, new: parsed.club };
       }
+      // Infos utiles supplémentaires (n'écrase que si TM fournit une valeur)
+      [['nat', 'nat'], ['age', 'age'], ['height', 'height'], ['foot', 'foot'],
+       ['shirt', 'shirt'], ['contract', 'contract']].forEach(([k, pk]) => {
+        if (parsed[k] != null && parsed[k] !== '' && parsed[k] !== p[pk]) {
+          changes[k] = { old: p[pk] != null ? p[pk] : '(none)', new: parsed[k] };
+        }
+      });
       // Si on a découvert le tmid via search, on l'enregistre
       if (!p.tmid && tmid) {
         changes.tmid = { old: '(none)', new: tmid };
@@ -243,6 +271,9 @@ async function main() {
           if (changes.photo) p.photo = changes.photo.new;
           if (changes.club) p.club = changes.club.new;
           if (changes.tmid) p.tmid = changes.tmid.new;
+          ['nat', 'age', 'height', 'foot', 'shirt', 'contract'].forEach(k => {
+            if (changes[k]) p[k] = changes[k].new;
+          });
         }
       }
       process.stdout.write('\n');
